@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Project APE - Multi-Process Mode</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Red Hat Text", "Roboto", Arial, sans-serif;
+            background: #0f1419;
+            color: #e6edf3;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #0a0d14 0%, #1a1f2e 50%, #0f1419 100%);
+            border-bottom: 3px solid #ee0000;
+            padding: 50px 60px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            position: relative;
+            min-height: 180px;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #ee0000 50%, transparent);
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 50px;
+            margin-bottom: 20px;
+        }
+        .logo-section {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 20px;
+        }
+        .title-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .title-main {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 10px rgba(238,0,0,0.4);
+        }
+        .title-sub {
+            font-size: 0.95rem;
+            color: #c0c8d0;
+            font-weight: 400;
+            letter-spacing: 1px;
+            opacity: 0.85;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+        }
+        .monkey-logo {
+            border: 3px solid #ee0000;
+            box-shadow: 0 8px 24px rgba(238,0,0,0.6), 0 0 20px rgba(238,0,0,0.3);
+            border-radius: 8px;
+            padding: 6px;
+        }
+        .timer-box {
+            background: rgba(238,0,0,0.1);
+            border: 2px solid #ee0000;
+            border-radius: 12px;
+            padding: 15px 25px;
+            text-align: center;
+            min-width: 200px;
+        }
+        .timer-label {
+            font-size: 0.8rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .timer-value {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ee0000;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 2px 8px rgba(238,0,0,0.3);
+        }
+        .header-right {
+            text-align: right;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 12px 16px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-completed { color: #3fb950; }
+        .stat-running { color: #f0883e; }
+        .stat-failed { color: #f85149; }
+        .stat-pending { color: #58a6ff; }
+
+        /* Overall Progress */
+        .overall-progress {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .overall-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #8b949e;
+        }
+        .progress-bar-main {
+            height: 24px;
+            background: #161b22;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #30363d;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .progress-fill-main {
+            height: 100%;
+            background: linear-gradient(90deg, #3fb950 0%, #56d364 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* Client Cards Grid */
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 30px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .card:hover {
+            border-color: #ee0000;
+            box-shadow: 0 4px 16px rgba(238,0,0,0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Card Header */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #30363d;
+        }
+        .client-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+            flex: 1;
+        }
+        .status-pill {
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 5px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .pill-RUNNING { background: rgba(240,136,62,0.2); color: #f0883e; border: 1px solid #f0883e; }
+        .pill-COMPLETE { background: rgba(63,185,80,0.2); color: #3fb950; border: 1px solid #3fb950; }
+        .pill-FAILED { background: rgba(248,81,73,0.2); color: #f85149; border: 1px solid #f85149; }
+        .pill-DEGRADED { background: rgba(240,136,62,0.2); color: #f0883e; border: 1px solid #f0883e; }
+        .pill-PENDING { background: rgba(88,166,255,0.2); color: #58a6ff; border: 1px solid #58a6ff; }
+
+        /* Progress Bar in Card */
+        .card-progress {
+            margin: 16px 0;
+        }
+        .card-progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+        }
+        .progress-percentage {
+            font-weight: 700;
+            color: #ee0000;
+        }
+        .card-progress-bar {
+            height: 8px;
+            background: #0d1117;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .card-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ee0000 0%, #ff4444 100%);
+            transition: width 0.4s ease;
+        }
+
+        /* Step Info */
+        .step-info {
+            background: #0d1117;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #21262d;
+            margin: 12px 0;
+        }
+        .step-label {
+            font-size: 0.75rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+        .step-text {
+            font-size: 0.95rem;
+            color: #e6edf3;
+            font-weight: 500;
+        }
+
+        /* Metrics */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .metric {
+            background: #0d1117;
+            padding: 8px 10px;
+            border-radius: 4px;
+            border: 1px solid #21262d;
+            font-size: 0.8rem;
+        }
+        .metric-label {
+            color: #8b949e;
+            margin-right: 6px;
+        }
+        .metric-value {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        /* Action Links */
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .btn {
+            flex: 1;
+            display: block;
+            background: #238636;
+            color: #fff;
+            text-decoration: none;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 6px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            background: #2ea043;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(35,134,54,0.3);
+        }
+        .btn-secondary {
+            background: #21262d;
+            color: #e6edf3;
+        }
+        .btn-secondary:hover {
+            background: #30363d;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #8b949e;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-top">
+            <div class="logo-section">
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='kingkong.png') }}" class="monkey-logo" style="width: 150px; height: 150px; object-fit: cover;">
+                </div>
+                <div class="title-container">
+                    <div class="title-main" id="page-title">Project APE - Multi-Process Mode</div>
+                    <div class="title-sub">Account Planning Engine</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="timer-box">
+                    <div class="timer-label">EXECUTION TIME</div>
+                    <div class="timer-value" id="execution-time">00m 00s</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-bar" id="stats-bar">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-label">Total Clients</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-running" id="stat-running">0</div>
+                <div class="stat-label">Running</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-completed" id="stat-complete">0</div>
+                <div class="stat-label">Complete</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-failed" id="stat-failed">0</div>
+                <div class="stat-label">Failed</div>
+            </div>
+        </div>
+
+        <div class="overall-progress">
+            <div class="overall-label">
+                <span>Overall Pipeline Progress</span>
+                <span id="overall-clients-count">0 of 0 clients</span>
+            </div>
+            <div class="progress-bar-main">
+                <div class="progress-fill-main" id="overall-progress-fill" style="width: 0%">
+                    <span id="overall-progress-text"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="grid" id="clients-grid">
+            <div style="text-align: center; color: #8b949e; padding: 60px 20px; grid-column: 1 / -1;">
+                <div style="font-size: 1.5rem; margin-bottom: 10px;">⏳ Loading client status...</div>
+                <div style="font-size: 0.9rem; opacity: 0.7;">Waiting for processes to initialize</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Auto-refreshing every 2 seconds • <span id="lastUpdate">Never updated</span>
+    </div>
+
+    <script>
+        // Cache for graceful server shutdown
+        let lastSuccessfulData = null;
+        let allClientsComplete = false;
+
+        function updateDashboard() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Cache successful data
+                    lastSuccessfulData = data;
+                    // Update mode in title
+                    const mode = data.mode || 'deep';
+                    const modeText = mode.charAt(0).toUpperCase() + mode.slice(1);
+                    document.getElementById('page-title').textContent = `Project APE - ${modeText} Mode`;
+
+                    // Update stats
+                    document.getElementById('stat-total').textContent = data.total;
+                    document.getElementById('stat-running').textContent = data.running;
+                    document.getElementById('stat-complete').textContent = data.complete;
+                    document.getElementById('stat-failed').textContent = data.failed;
+
+                    // Detect if this is a new pipeline run by checking status file timestamps
+                    const hasRunningClients = data.clients.some(c => c.status === 'RUNNING' || c.status === 'PENDING' || c.status === 'QUEUED');
+                    const allComplete = data.total > 0 && (data.complete + data.failed) === data.total;
+                    allClientsComplete = allComplete;  // Store for use in error handler
+
+                    // Initialize timer on first data load if we detect active pipeline
+                    if (!timerInitialized && hasRunningClients) {
+                        // Check if status files are fresh (updated within last 60 seconds)
+                        const now = Date.now() / 1000; // Convert to seconds
+                        const mostRecentUpdate = Math.max(...data.clients.map(c => c.last_update || 0));
+                        const isNewRun = (now - mostRecentUpdate) < 60; // Files updated in last minute = new run
+
+                        initializeTimer(isNewRun);
+                        updateTimer(); // Update display immediately
+                    }
+
+                    // Stop timer when all clients are complete or failed
+                    if (allComplete && !timerStopped) {
+                        stopTimer();
+
+                        // Record completion time for auto-refresh delay
+                        if (!completionTime) {
+                            completionTime = Date.now();
+                            console.log('Pipeline complete - will stop refreshing in 5 minutes');
+                        }
+                    }
+
+                    // Stop auto-refresh 5 minutes after completion
+                    if (completionTime && (Date.now() - completionTime) > POST_COMPLETION_DELAY) {
+                        stopAutoRefresh();
+                    }
+
+                    // Calculate overall progress based on AVERAGE client progress (not just completed count)
+                    const completedCount = data.complete;
+                    let totalProgress = 0;
+                    data.clients.forEach(client => {
+                        totalProgress += client.progress || 0;
+                    });
+                    const overallPercent = data.total > 0 ? Math.round(totalProgress / data.total) : 0;
+                    document.getElementById('overall-clients-count').textContent = completedCount + ' of ' + data.total + ' clients';
+                    document.getElementById('overall-progress-fill').style.width = overallPercent + '%';
+                    if (overallPercent > 5) {
+                        document.getElementById('overall-progress-text').textContent = overallPercent + '%';
+                    }
+
+                    // Update client cards
+                    const grid = document.getElementById('clients-grid');
+                    if (data.clients.length === 0) {
+                        grid.innerHTML = `
+                            <div style="text-align: center; color: #8b949e; padding: 60px 20px; grid-column: 1 / -1;">
+                                <div style="font-size: 1.5rem; margin-bottom: 10px;">⏳ Waiting for processes...</div>
+                                <div style="font-size: 0.9rem; opacity: 0.7;">No client status files found yet</div>
+                            </div>
+                        `;
+                    } else {
+                        grid.innerHTML = data.clients.map(client => {
+                            // Prepare notebook ID display
+                            const nbShort = client.notebook_id ? (client.notebook_id.substring(0, 8) + '...') : 'Pending';
+
+                            // Prepare actions HTML
+                            let actionsHtml = '';
+                            if (client.notebook_id) {
+                                actionsHtml = `<a class="btn" href="https://notebooklm.google.com/notebook/${client.notebook_id}" target="_blank">📓 Open ${client.name} NotebookLM</a>`;
+                            }
+                            if (client.plan_link) {
+                                actionsHtml += `<a class="btn btn-secondary" href="${client.plan_link}" target="_blank">📄 View Plan</a>`;
+                            }
+                            if (actionsHtml) {
+                                actionsHtml = `<div class="actions">${actionsHtml}</div>`;
+                            }
+
+                            return `
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="client-name">${client.name}</div>
+                                    <div class="status-pill pill-${client.status}">${client.status}</div>
+                                </div>
+                                <div class="card-progress">
+                                    <div class="card-progress-label">
+                                        <span style="color: #8b949e;">Pipeline Progress</span>
+                                        <span class="progress-percentage">${client.progress}%</span>
+                                    </div>
+                                    <div class="card-progress-bar">
+                                        <div class="card-progress-fill" style="width: ${client.progress}%"></div>
+                                    </div>
+                                </div>
+                                <div class="step-info">
+                                    <div class="step-label">Current Phase</div>
+                                    <div class="step-text">${client.step}</div>
+                                </div>
+                                <div class="metrics">
+                                    <div class="metric">
+                                        <span class="metric-label">Notebook ID:</span>
+                                        <span class="metric-value">${nbShort}</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="metric-label">Quality Score:</span>
+                                        <span class="metric-value">${client.quality_score !== null && client.quality_score !== undefined ? (client.quality_score + '/10') : 'N/A'}</span>
+                                    </div>
+                                </div>
+                                ${actionsHtml}
+                                ${client.log_file ? `
+                                <div style="margin-top: 12px; padding: 8px; background: #0d1117; border-radius: 4px; border: 1px solid #21262d;">
+                                    <div style="font-size: 0.7rem; color: #8b949e; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Log File</div>
+                                    <div style="font-size: 0.75rem; color: #58a6ff; font-family: monospace; word-break: break-all;">${client.log_file}</div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        `;
+                        }).join('');
+                    }
+
+                    // Update timestamp
+                    const now = new Date();
+                    document.getElementById('lastUpdate').textContent =
+                        'Last updated: ' + now.toLocaleTimeString();
+                })
+                .catch(err => {
+                    console.error('Failed to fetch status:', err);
+
+                    // If all clients were complete on last successful fetch, use cached data
+                    if (allClientsComplete && lastSuccessfulData) {
+                        console.log('Pipeline complete - server stopped. Using cached data.');
+                        // Stop auto-refresh since pipeline is complete
+                        stopAutoRefresh();
+                        stopTimer();
+
+                        // Keep showing last successful state (tiles remain visible)
+                        // No need to update - the page already shows the final state
+                        document.getElementById('lastUpdate').textContent =
+                            'Pipeline complete - Server stopped';
+                    } else {
+                        // Pipeline still running but server unreachable - show error
+                        document.getElementById('clients-grid').innerHTML = `
+                            <div style="text-align: center; color: #f85149; padding: 60px 20px; grid-column: 1 / -1;">
+                                <div style="font-size: 1.5rem; margin-bottom: 10px;">❌ Connection Error</div>
+                                <div style="font-size: 0.9rem; opacity: 0.7;">Failed to fetch status from server</div>
+                                <div style="font-size: 0.8rem; opacity: 0.5; margin-top: 10px;">The pipeline may still be running. Check logs for status.</div>
+                            </div>
+                        `;
+                    }
+                });
+        }
+
+        // Initial load
+        updateDashboard();
+
+        // Auto-refresh control with 5-minute post-completion delay
+        let refreshInterval;
+        let completionTime = null;
+        const POST_COMPLETION_DELAY = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+        function startAutoRefresh() {
+            if (refreshInterval) return; // Already running
+            refreshInterval = setInterval(updateDashboard, 2000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+                console.log('Dashboard auto-refresh stopped');
+            }
+        }
+
+        // Start auto-refresh immediately
+        startAutoRefresh();
+
+        // Execution timer with localStorage persistence
+        const TIMER_KEY = 'ape_dashboard_timer_start';
+        const TIMER_STOPPED_KEY = 'ape_dashboard_timer_stopped';
+        const PIPELINE_RUN_ID_KEY = 'ape_dashboard_run_id';
+
+        // Generate unique run ID based on status files' last update
+        let currentRunId = localStorage.getItem(PIPELINE_RUN_ID_KEY);
+
+        // Get or initialize timer start time
+        let startTime = localStorage.getItem(TIMER_KEY);
+        let timerStopped = localStorage.getItem(TIMER_STOPPED_KEY) === 'true';
+
+        // Reset timer if this is a new pipeline run (detected by checking if clients are in PENDING/RUNNING state)
+        // This will be validated on first data fetch
+        let timerInitialized = false;
+
+        let timerInterval;
+
+        function initializeTimer(isNewRun) {
+            if (timerInitialized) return;
+
+            if (!startTime) {
+                // No saved time - fresh start
+                startTime = Date.now();
+                localStorage.setItem(TIMER_KEY, startTime);
+                localStorage.setItem(TIMER_STOPPED_KEY, 'false');
+                timerStopped = false;
+                console.log('Timer started for new pipeline run');
+            } else if (isNewRun) {
+                // Saved time exists but files are very fresh
+                // Check if saved time is recent (within 2 minutes) - if so, resume
+                const savedAge = (Date.now() - parseInt(startTime, 10)) / 1000;
+                if (savedAge < 120) {
+                    // Recent saved time - resume (page refresh during active run)
+                    startTime = parseInt(startTime, 10);
+                    console.log('Timer resumed from localStorage (page refresh)');
+                } else {
+                    // Old saved time but fresh files - new run, reset timer
+                    startTime = Date.now();
+                    localStorage.setItem(TIMER_KEY, startTime);
+                    localStorage.setItem(TIMER_STOPPED_KEY, 'false');
+                    timerStopped = false;
+                    console.log('Timer reset for new pipeline run (old timer cleared)');
+                }
+            } else {
+                // Resume from saved time
+                startTime = parseInt(startTime, 10);
+                console.log('Timer resumed from localStorage');
+            }
+
+            timerInitialized = true;
+        }
+
+        function updateTimer() {
+            if (timerStopped) return;
+
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('execution-time').textContent =
+                String(minutes).padStart(2, '0') + 'm ' + String(seconds).padStart(2, '0') + 's';
+        }
+
+        function stopTimer() {
+            if (timerStopped) return;
+
+            timerStopped = true;
+            localStorage.setItem(TIMER_STOPPED_KEY, 'true');
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            console.log('Timer stopped at completion');
+        }
+
+        function resetTimer() {
+            // Called when starting new pipeline run
+            localStorage.removeItem(TIMER_KEY);
+            localStorage.removeItem(TIMER_STOPPED_KEY);
+            localStorage.removeItem(PIPELINE_RUN_ID_KEY);
+            startTime = Date.now();
+            localStorage.setItem(TIMER_KEY, startTime);
+            timerStopped = false;
+            timerInitialized = false;
+            console.log('Timer reset for new run');
+        }
+
+        timerInterval = setInterval(updateTimer, 1000);
+    </script>
+</body>
+</html>

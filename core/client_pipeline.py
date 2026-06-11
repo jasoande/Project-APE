@@ -1,0 +1,530 @@
+#!/usr/bin/env python3
+"""
+Client Pipeline
+===============
+Complete pipeline execution for a single client
+"""
+
+import subprocess
+import logging
+import time
+import json
+import random
+from pathlib import Path
+from typing import Optional, Dict
+import sys
+
+# Add parent to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from core.auth_manager import AuthManager
+from core.notebook_manager import NotebookManager
+from core.source_manager import SourceManager
+from core.pdf_consolidator_fast import FastPDFConsolidator
+
+logger = logging.getLogger(__name__)
+
+
+class ClientPipeline:
+    """Executes complete pipeline for a single client."""
+
+    def __init__(self, client_id: str, config, status_file: Path, mode: str = "fast"):
+        """
+        Initialize client pipeline.
+
+        Args:
+            client_id: Client identifier (e.g., 'merck_test')
+            config: Configuration module
+            status_file: Path to status JSON file
+            mode: Execution mode (fast or deep)
+        """
+        self.client_id = client_id
+        self.config = config
+        self.status_file = status_file
+        self.mode = mode
+
+        # Get client details from config
+        self.client_name = getattr(config, f"{client_id}_name", client_id)
+        self.client_folder = Path(getattr(config, f"{client_id}_folder", ""))
+        self.client_industry = getattr(config, f"{client_id}_industry", "general")
+
+        # Initialize managers
+        self.auth_manager = AuthManager()
+        self.notebook_manager = NotebookManager(client_id)
+        self.source_manager = None  # Initialized after notebook creation
+
+        self.notebook_id = None
+        self.project_root = Path(__file__).parent.parent
+
+        # Select timing configuration based on mode
+        self.timings = config.DEEP_TIMINGS if mode == "deep" else config.TIMINGS
+
+    def update_status(self, step: str, progress: int, status: str = "RUNNING", **kwargs):
+        """Update status file for dashboard."""
+        try:
+            status_data = {
+                "name": self.client_name,
+                "token": self.client_id,
+                "step": step,
+                "progress": progress,
+                "status": status.upper(),
+                "notebook_id": self.notebook_id,
+                "mode": self.mode,
+                "last_update": time.time(),
+                **kwargs
+            }
+
+            with open(self.status_file, 'w') as f:
+                json.dump(status_data, f, indent=2)
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Failed to update status: {e}")
+
+    def execute(self) -> bool:
+        """
+        Execute complete pipeline.
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            logger.info(f"[{self.client_id}] ========================================")
+            logger.info(f"[{self.client_id}] Starting pipeline for {self.client_name}")
+            logger.info(f"[{self.client_id}] Mode: {self.mode.upper()}")
+            logger.info(f"[{self.client_id}] ========================================")
+
+            # Step 1: Check Authentication (force fresh check)
+            self.update_status("Checking authentication...", 5)
+            if not self.auth_manager.ensure_authenticated(self.client_id, force_check=True):
+                raise Exception("Authentication required - please run: notebooklm login")
+
+            # Step 2: Get or Create Notebook (with deduplication)
+            self.update_status("Checking for existing notebook...", 10)
+
+            # Generate notebook name in format: DEV_{folder_name}-TEST
+            if self.client_folder and self.client_folder.exists():
+                folder_name = self.client_folder.name
+                notebook_name = f"DEV_{folder_name}-TEST"
+            else:
+                # Fallback if no folder
+                notebook_name = f"DEV_{self.client_id}-TEST"
+
+            logger.info(f"[{self.client_id}] Generated notebook name: {notebook_name}")
+
+            # Check if notebook exists
+            existing_notebook = self.notebook_manager.find_notebook_by_name(notebook_name)
+            is_existing = existing_notebook is not None
+
+            self.notebook_id = self.notebook_manager.get_or_create_notebook(notebook_name)
+
+            if not self.notebook_id:
+                raise Exception("Failed to get/create notebook")
+
+            # Set notebook context
+            if not self.notebook_manager.set_context(self.notebook_id):
+                raise Exception("Failed to set notebook context")
+
+            self.update_status("Notebook ready", 15, notebook_id=self.notebook_id)
+
+            # Check if consolidated PDF already exists (from previous run)
+            # If it exists, skip PDF consolidation but ALWAYS run research for fresh web data
+            consolidated_pdf_path = self.client_folder / f"{self.client_name}-One.pdf"
+            pdf_exists = consolidated_pdf_path.exists()
+
+            if pdf_exists:
+                logger.info(f"[{self.client_id}] ✅ Found existing PDF: {consolidated_pdf_path.name}")
+                logger.info(f"[{self.client_id}] Skipping PDF consolidation, but will run fresh research")
+
+            # Initialize source manager now that we have notebook_id
+            self.source_manager = SourceManager(self.client_id, self.notebook_id)
+
+            # Step 3: PDF Consolidation (skip if exists)
+            if pdf_exists:
+                consolidated_pdf = consolidated_pdf_path
+                logger.info(f"[{self.client_id}] Using existing PDF: {consolidated_pdf.name}")
+            else:
+                consolidated_pdf = self._consolidate_pdfs()
+                self.update_status("PDF consolidation complete", 25)
+
+            # Step 4: Upload Consolidated PDF (only if new notebook or PDF was regenerated)
+            if consolidated_pdf and not is_existing:
+                self._upload_pdf(consolidated_pdf)
+                self.update_status("Sources uploaded", 30)
+            elif is_existing:
+                logger.info(f"[{self.client_id}] Notebook exists, skipping PDF upload")
+                self.update_status("PDF upload skipped", 30)
+
+            # Step 5: ALWAYS Run Ask Prompts (Research) for fresh web data
+            # Deep mode deduplicates after EACH prompt (inside _run_ask_prompts)
+            # Fast mode deduplicates once at the end (below)
+            self._run_ask_prompts()
+            self.update_status("Research complete", 60)
+
+            # Step 6: Deduplicate Sources (Fast mode only - deep mode already did it)
+            if self.mode == "fast":
+                # Fast mode: Wait for imports, then deduplicate once
+                logger.info(f"[{self.client_id}] Waiting for source imports to complete...")
+                time.sleep(self.timings['source_import_wait'])
+
+                self._deduplicate_sources()
+                self.update_status("Sources deduplicated", 65)
+            else:
+                # Deep mode: Already deduplicated after each prompt
+                logger.info(f"[{self.client_id}] Sources already deduplicated (deep mode)")
+                self.update_status("Sources deduplicated", 65)
+
+            # Step 7: Run Chat Prompts - Sequential with Notes
+            self._run_chat_prompts()
+            self.update_status("Chat prompts complete", 95)
+
+            # Step 8: Generate Mind Map
+            self._generate_mindmap()
+
+            # Step 9: Calculate Quality Score
+            quality_score = self._calculate_quality_score()
+
+            self.update_status("Mind map generated", 100, status="COMPLETE", quality_score=quality_score)
+
+            logger.info(f"[{self.client_id}] ✅ Pipeline completed successfully!")
+            logger.info(f"[{self.client_id}] 📊 Quality Score: {quality_score}/10")
+            return True
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] ❌ Pipeline failed: {e}")
+            self.update_status(f"Failed: {str(e)}", 0, status="FAILED", error=str(e))
+            return False
+
+    def _consolidate_pdfs(self) -> Optional[Path]:
+        """Consolidate all files into {Client}-One.pdf - converts everything to PDF first"""
+        if not self.client_folder.exists():
+            logger.warning(f"[{self.client_id}] Client folder not found: {self.client_folder}")
+            return None
+
+        try:
+            logger.info(f"[{self.client_id}] Consolidating all files to PDF...")
+            self.update_status("Converting files to PDF...", 20)
+
+            # Use FastPDFConsolidator which converts ALL file types to PDF
+            # Handles: PDFs, text files, images, office docs (xlsx, docx, pptx)
+            with FastPDFConsolidator(
+                self.client_id,
+                self.client_folder,
+                f"{self.client_name}-One.pdf"
+            ) as consolidator:
+                consolidated = consolidator.consolidate()
+
+                if consolidated:
+                    logger.info(f"[{self.client_id}] ✅ Consolidated PDF: {consolidated.name}")
+                    return consolidated
+                else:
+                    logger.warning(f"[{self.client_id}] No files to consolidate")
+                    return None
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] PDF consolidation failed: {e}")
+            return None
+
+    def _upload_pdf(self, pdf_path: Path):
+        """Upload consolidated PDF to notebook."""
+        try:
+            logger.info(f"[{self.client_id}] Uploading consolidated PDF...")
+            self.source_manager.add_file_source(pdf_path)
+        except Exception as e:
+            logger.error(f"[{self.client_id}] PDF upload failed: {e}")
+
+    def _run_ask_prompts(self):
+        """Run research (ask) prompts sequentially."""
+        ask_prompts = sorted(self.project_root.glob("ask_*.txt"))
+
+        if not ask_prompts:
+            logger.warning(f"[{self.client_id}] No ask prompts found")
+            return
+
+        logger.info(f"[{self.client_id}] Running {len(ask_prompts)} research prompts...")
+
+        for idx, prompt_file in enumerate(ask_prompts, 1):
+            try:
+                progress = 30 + (idx / len(ask_prompts)) * 30  # 30-60%
+                self.update_status(f"Research {idx}/{len(ask_prompts)}: {prompt_file.stem}", int(progress))
+
+                logger.info(f"[{self.client_id}] Research prompt: {prompt_file.name}")
+
+                # Run research with source import (with variable substitution)
+                result = self.source_manager.add_research_with_import(
+                    prompt_file,
+                    mode="deep" if self.mode == "deep" else "fast",
+                    client_name=self.client_name,
+                    client_industry=self.client_industry
+                )
+
+                if result["success"]:
+                    logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
+                else:
+                    logger.warning(f"[{self.client_id}] Research failed: {result.get('error')}")
+
+                # DEEP MODE ONLY: Deduplicate after EACH research prompt
+                # Deep research imports 100+ sources per prompt, many duplicates
+                # Deduplicating immediately keeps source count manageable
+                if self.mode == "deep":
+                    logger.info(f"[{self.client_id}] Waiting for source imports to complete...")
+                    time.sleep(15)  # Wait for async imports to finish
+
+                    logger.info(f"[{self.client_id}] Deduplicating sources (after prompt {idx})...")
+                    removed = self.source_manager.deduplicate_sources()
+                    logger.info(f"[{self.client_id}] ✅ Removed {removed} duplicates")
+
+                # Delay between prompts
+                delay_range = self.timings['ask_prompt_delay']
+                delay = random.uniform(delay_range[0], delay_range[1])
+                time.sleep(delay)
+
+            except Exception as e:
+                logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")
+
+    def _deduplicate_sources(self):
+        """Deduplicate sources after research."""
+        try:
+            logger.info(f"[{self.client_id}] Deduplicating sources...")
+            removed = self.source_manager.deduplicate_sources()
+            logger.info(f"[{self.client_id}] ✅ Removed {removed} duplicates")
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Deduplication failed: {e}")
+
+    def _run_chat_prompts(self):
+        """Run chat prompts sequentially with note creation."""
+        chat_prompts = sorted(self.project_root.glob("chat_*.txt"))
+
+        if not chat_prompts:
+            logger.warning(f"[{self.client_id}] No chat prompts found")
+            return
+
+        # Descriptive titles for each chat prompt
+        note_titles = {
+            'chat_prompt_01.txt': 'Industry Analysis Report',
+            'chat_prompt_02.txt': 'Business Objectives & IT Initiatives',
+            'chat_prompt_03.txt': 'Market & Competitive Analysis',
+            'chat_prompt_04.txt': 'Innovation Adoption Assessment',
+            'chat_prompt_05.txt': 'Executive Summary',
+            'chat_prompt_06.txt': 'Technology Partners Overview',
+            'chat_prompt_07.txt': 'Red Hat Value Propositions',
+            'chat_prompt_08.txt': 'Solution Ideas & Recommendations',
+            'chat_prompt_09.txt': 'Team Onboarding Guide',
+            'chat_prompt_10.txt': 'Partner Briefing - Automation',
+            'chat_prompt_11.txt': 'How Might We - Innovation Ideas',
+            'chat_prompt_12.txt': 'Red Hat Account Plan',
+        }
+
+        logger.info(f"[{self.client_id}] Running {len(chat_prompts)} chat prompts...")
+
+        for idx, prompt_file in enumerate(chat_prompts, 1):
+            try:
+                progress = 65 + (idx / len(chat_prompts)) * 30  # 65-95%
+                self.update_status(f"Chat {idx}/{len(chat_prompts)}: {prompt_file.stem}", int(progress))
+
+                logger.info(f"[{self.client_id}] Chat prompt: {prompt_file.name}")
+
+                # Read prompt and substitute variables
+                prompt_text = prompt_file.read_text()
+                prompt_text = prompt_text.replace('$name', self.client_name)
+                prompt_text = prompt_text.replace('$industry', self.client_industry)
+
+                # Create temporary file with substituted prompt
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as tmp:
+                    tmp.write(prompt_text)
+                    tmp_path = tmp.name
+
+                try:
+                    # Execute ask command with --save-as-note flag (with retry for rate limits)
+                    max_retries = 3
+                    retry_delay = 60  # Wait 60 seconds on rate limit
+
+                    for attempt in range(max_retries):
+                        # Get descriptive title or fallback to filename
+                        note_title = note_titles.get(prompt_file.name, prompt_file.stem.replace('_', ' ').title())
+
+                        result = subprocess.run(
+                            [
+                                "notebooklm", "ask",
+                                "--prompt-file", tmp_path,  # Use substituted prompt
+                                "-n", self.notebook_id,
+                                "--save-as-note",
+                                "-t", note_title
+                            ],
+                            capture_output=True,
+                            text=True,
+                            timeout=180
+                        )
+
+                        if result.returncode == 0:
+                            logger.info(f"[{self.client_id}] ✅ Created note: {prompt_file.stem}")
+                            break
+                        elif "rate limit" in result.stderr.lower() or "rpc_code=3" in result.stderr.lower() or "rpc_code=9" in result.stderr.lower():
+                            if attempt < max_retries - 1:
+                                logger.warning(f"[{self.client_id}] Transient error, waiting {retry_delay}s (attempt {attempt + 1}/{max_retries})")
+                                time.sleep(retry_delay)
+                                retry_delay *= 2  # Exponential backoff
+                            else:
+                                logger.error(f"[{self.client_id}] Chat failed after {max_retries} retries: {result.stderr}")
+                        else:
+                            logger.warning(f"[{self.client_id}] Chat failed: {result.stderr}")
+                            break
+                finally:
+                    # Clean up temp file
+                    Path(tmp_path).unlink(missing_ok=True)
+
+                # Delay between prompts
+                delay_range = self.timings['chat_prompt_delay']
+                delay = random.uniform(delay_range[0], delay_range[1])
+                time.sleep(delay)
+
+            except Exception as e:
+                logger.error(f"[{self.client_id}] Chat prompt failed {prompt_file.name}: {e}")
+
+    def _generate_mindmap(self):
+        """Generate mind map artifact."""
+        try:
+            logger.info(f"[{self.client_id}] Generating mind map...")
+
+            result = subprocess.run(
+                [
+                    "notebooklm", "generate", "mind-map",
+                    "-n", self.notebook_id
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+
+            if result.returncode == 0:
+                logger.info(f"[{self.client_id}] ✅ Mind map generated")
+            else:
+                logger.warning(f"[{self.client_id}] Mind map generation failed: {result.stderr}")
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Mind map error: {e}")
+
+    def _calculate_quality_score(self) -> float:
+        """
+        Calculate quality score (0-10) based on notebook completeness.
+
+        Scoring:
+        - Sources count: 0-3 points (need 15+ sources for full points)
+        - Notes created: 0-4 points (need 11 notes for full points)
+        - Has mindmap: 0-1 points
+        - Has PDF source: 0-1 points
+        - Research sources: 0-1 points (10+ web sources)
+
+        Returns:
+            float: Quality score from 0.0 to 10.0
+        """
+        try:
+            score = 0.0
+
+            # Get notebook sources
+            result = subprocess.run(
+                ["notebooklm", "source", "list", "-n", self.notebook_id, "--json"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode == 0:
+                import json
+                data = json.loads(result.stdout)
+                sources = data.get('sources', [])
+                source_count = len(sources)
+
+                # Count different types of sources
+                pdf_count = sum(1 for s in sources if s.get('type', '').lower() == 'pdf')
+                web_count = sum(1 for s in sources if s.get('type', '').lower() in ['web', 'url', 'webpage'])
+
+                # 1. Sources count (0-3 points)
+                # 15+ sources = 3 points, scales linearly
+                score += min(3.0, (source_count / 15.0) * 3.0)
+
+                # 2. Has PDF source (0-1 point)
+                if pdf_count > 0:
+                    score += 1.0
+
+                # 3. Research sources (0-1 point)
+                # 10+ web sources = 1 point
+                if web_count >= 10:
+                    score += 1.0
+                elif web_count > 0:
+                    score += (web_count / 10.0)
+
+            # Get notebook notes
+            result = subprocess.run(
+                ["notebooklm", "note", "list", "-n", self.notebook_id, "--json"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode == 0:
+                import json
+                data = json.loads(result.stdout)
+                notes = data.get('notes', [])
+                note_count = len(notes)
+
+                # 4. Notes created (0-4 points)
+                # 11 notes = 4 points (one per chat prompt)
+                score += min(4.0, (note_count / 11.0) * 4.0)
+
+            # 5. Has mindmap (0-1 point)
+            # Check if mindmap exists
+            result = subprocess.run(
+                ["notebooklm", "artifact", "list", "-n", self.notebook_id],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode == 0 and "mind-map" in result.stdout.lower():
+                score += 1.0
+
+            # Round to 1 decimal place
+            score = round(score, 1)
+
+            logger.info(f"[{self.client_id}] Quality score breakdown: {score}/10")
+            return score
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Quality score calculation failed: {e}")
+            return 0.0
+
+
+def main():
+    """Entry point for single client execution."""
+    import argparse
+    import importlib.util
+
+    parser = argparse.ArgumentParser(description="Project APE - Client Pipeline")
+    parser.add_argument("client_id", help="Client identifier")
+    parser.add_argument("--mode", choices=["fast", "deep"], default="fast")
+    parser.add_argument("--status-file", type=Path, required=True)
+    args = parser.parse_args()
+
+    # Setup logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s | %(levelname)s | %(message)s',
+        datefmt='%H:%M:%S'
+    )
+
+    # Load config
+    config_path = Path(__file__).parent.parent / "vars.py"
+    spec = importlib.util.spec_from_file_location("config", config_path)
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+
+    # Run pipeline
+    pipeline = ClientPipeline(args.client_id, config, args.status_file, args.mode)
+    success = pipeline.execute()
+
+    sys.exit(0 if success else 1)
+
+
+if __name__ == "__main__":
+    main()

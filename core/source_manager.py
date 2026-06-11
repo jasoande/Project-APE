@@ -1,0 +1,341 @@
+#!/usr/bin/env python3
+"""
+Source Manager
+==============
+Handles source import from research citations and deduplication
+"""
+
+import subprocess
+import logging
+import json
+import re
+from typing import List, Set, Dict, Optional
+from pathlib import Path
+import time
+
+logger = logging.getLogger(__name__)
+
+
+class SourceManager:
+    """Manages NotebookLM sources with import and deduplication."""
+
+    def __init__(self, client_id: str, notebook_id: str):
+        """
+        Initialize source manager.
+
+        Args:
+            client_id: Client identifier
+            notebook_id: Notebook ID to manage sources for
+        """
+        self.client_id = client_id
+        self.notebook_id = notebook_id
+
+    def add_file_source(self, file_path: Path) -> bool:
+        """
+        Add a file as a source.
+
+        Args:
+            file_path: Path to file to add
+
+        Returns:
+            True if successful
+        """
+        try:
+            logger.info(f"[{self.client_id}] Adding source: {file_path.name}")
+
+            result = subprocess.run(
+                ["notebooklm", "source", "add", str(file_path), "-n", self.notebook_id],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            if result.returncode == 0:
+                logger.info(f"[{self.client_id}] ✅ Added source: {file_path.name}")
+                return True
+            else:
+                logger.error(f"[{self.client_id}] Failed to add source: {result.stderr}")
+                return False
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Error adding source: {e}")
+            return False
+
+    def add_research_with_import(self, query_file: Path, mode: str = "deep",
+                                  client_name: str = None, client_industry: str = None) -> Dict:
+        """
+        Add research query and import all cited sources.
+
+        Args:
+            query_file: Path to research query file
+            mode: Research mode (fast or deep)
+            client_name: Client name to substitute for $name variable
+            client_industry: Client industry to substitute for $industry variable
+
+        Returns:
+            Dict with status and imported source count
+        """
+        # Retry configuration
+        max_attempts = 5
+        base_delay = 30.0  # Start with 30s delay
+
+        try:
+            logger.info(f"[{self.client_id}] Running research: {query_file.name} ({mode} mode)")
+
+            # Read prompt and substitute variables
+            prompt_text = query_file.read_text()
+
+            # Substitute variables
+            if client_name:
+                prompt_text = prompt_text.replace('$name', client_name)
+                logger.debug(f"[{self.client_id}] Substituted $name with: {client_name}")
+
+            if client_industry:
+                prompt_text = prompt_text.replace('$industry', client_industry)
+                logger.debug(f"[{self.client_id}] Substituted $industry with: {client_industry}")
+
+            # Create temporary file with substituted prompt
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as tmp:
+                tmp.write(prompt_text)
+                tmp_path = tmp.name
+
+            try:
+                # Retry loop for transient errors
+                for attempt in range(max_attempts):
+                    try:
+                        # Deep mode uses --mode deep with retry logic
+                        if mode == "deep":
+                            result = subprocess.run(
+                                [
+                                    "notebooklm", "source", "add-research",
+                                    "--mode", "deep",  # Use actual deep mode
+                                    "--prompt-file", tmp_path,
+                                    "-n", self.notebook_id,
+                                    "--import-all",
+                                    "--timeout", "600"
+                                ],
+                                capture_output=True,
+                                text=True,
+                                timeout=700
+                            )
+                        else:
+                            # Fast mode: standard fast research
+                            result = subprocess.run(
+                                [
+                                    "notebooklm", "source", "add-research",
+                                    "--mode", "fast",
+                                    "--prompt-file", tmp_path,
+                                    "-n", self.notebook_id,
+                                    "--import-all",
+                                    "--timeout", "600"
+                                ],
+                                capture_output=True,
+                                text=True,
+                                timeout=700
+                            )
+
+                        if result.returncode == 0:
+                            # Parse output to count imported sources
+                            imported = self._count_imported_sources(result.stdout)
+                            logger.info(f"[{self.client_id}] ✅ Research complete, imported {imported} sources")
+
+                            return {
+                                "success": True,
+                                "imported": imported,
+                                "output": result.stdout
+                            }
+
+                        # Check for retryable errors
+                        stderr_lower = result.stderr.lower()
+                        is_retryable = (
+                            "rate limit" in stderr_lower or
+                            "rpc_code=3" in stderr_lower or
+                            "rpc_code=9" in stderr_lower or
+                            "transportservererror" in stderr_lower or
+                            "failed precondition" in stderr_lower
+                        )
+
+                        if is_retryable and attempt < max_attempts - 1:
+                            retry_delay = base_delay * (2 ** attempt)  # Exponential backoff
+                            logger.warning(
+                                f"[{self.client_id}] Research transient error, retrying in {retry_delay}s "
+                                f"(attempt {attempt + 1}/{max_attempts})"
+                            )
+                            time.sleep(retry_delay)
+                            continue
+                        else:
+                            # Non-retryable error or max attempts reached
+                            logger.error(f"[{self.client_id}] Research failed: {result.stderr}")
+                            return {
+                                "success": False,
+                                "imported": 0,
+                                "error": result.stderr
+                            }
+
+                    except subprocess.TimeoutExpired:
+                        if attempt < max_attempts - 1:
+                            retry_delay = base_delay * (2 ** attempt)
+                            logger.warning(
+                                f"[{self.client_id}] Research timeout, retrying in {retry_delay}s "
+                                f"(attempt {attempt + 1}/{max_attempts})"
+                            )
+                            time.sleep(retry_delay)
+                            continue
+                        else:
+                            logger.error(f"[{self.client_id}] Research timeout after {max_attempts} attempts")
+                            return {"success": False, "imported": 0, "error": "Timeout"}
+
+                # Should not reach here, but just in case
+                return {"success": False, "imported": 0, "error": "Max retries exceeded"}
+
+            finally:
+                # Clean up temp file
+                Path(tmp_path).unlink(missing_ok=True)
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Research error: {e}")
+            return {"success": False, "imported": 0, "error": str(e)}
+
+    def _count_imported_sources(self, output: str) -> int:
+        """Count how many sources were imported from output."""
+        # Look for patterns like "Imported 5 sources" or "Added source:"
+        count = 0
+
+        # Try to find explicit count
+        match = re.search(r'Imported\s+(\d+)\s+source', output, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+
+        # Count individual "Added source" messages
+        count = len(re.findall(r'Added source:', output, re.IGNORECASE))
+
+        return count
+
+    def list_sources(self) -> List[Dict]:
+        """
+        List all sources in the notebook.
+
+        Returns:
+            List of source dicts with id, title, url
+        """
+        try:
+            result = subprocess.run(
+                ["notebooklm", "source", "list", "-n", self.notebook_id, "--json"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode != 0:
+                logger.error(f"[{self.client_id}] Failed to list sources")
+                return []
+
+            try:
+                data = json.loads(result.stdout)
+                # Handle both dict format {"sources": [...]} and list format [...]
+                if isinstance(data, dict):
+                    return data.get('sources', [])
+                elif isinstance(data, list):
+                    return data
+                else:
+                    return []
+            except json.JSONDecodeError:
+                # Fallback to text parsing
+                return self._parse_text_sources(result.stdout)
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Error listing sources: {e}")
+            return []
+
+    def _parse_text_sources(self, output: str) -> List[Dict]:
+        """Parse text-based source list as fallback."""
+        sources = []
+        # Format might be: "src_123 - Title - URL"
+        for line in output.split('\n'):
+            if line.strip():
+                parts = line.split(' - ')
+                if len(parts) >= 2:
+                    sources.append({
+                        "id": parts[0].strip(),
+                        "title": parts[1].strip() if len(parts) > 1 else "",
+                        "url": parts[2].strip() if len(parts) > 2 else ""
+                    })
+        return sources
+
+    def deduplicate_sources(self) -> int:
+        """
+        Remove duplicate sources from notebook.
+
+        Sources are considered duplicates if they have:
+        - Same URL (for web sources)
+        - Same title (for file sources)
+
+        Returns:
+            Number of duplicates removed
+        """
+        try:
+            logger.info(f"[{self.client_id}] Deduplicating sources...")
+
+            sources = self.list_sources()
+
+            if not sources:
+                logger.info(f"[{self.client_id}] No sources to deduplicate")
+                return 0
+
+            # Track seen URLs and titles
+            seen_urls: Set[str] = set()
+            seen_titles: Set[str] = set()
+            to_delete: List[str] = []
+
+            for source in sources:
+                source_id = source.get('id', '')
+                # Handle None values - some sources may have None for url/title
+                url = (source.get('url') or '').strip()
+                title = (source.get('title') or '').strip()
+
+                # Check URL duplicates
+                if url:
+                    if url in seen_urls:
+                        logger.debug(f"[{self.client_id}] Duplicate URL: {url}")
+                        to_delete.append(source_id)
+                        continue
+                    seen_urls.add(url)
+
+                # Check title duplicates (for files without URLs)
+                if not url and title:
+                    if title in seen_titles:
+                        logger.debug(f"[{self.client_id}] Duplicate title: {title}")
+                        to_delete.append(source_id)
+                        continue
+                    seen_titles.add(title)
+
+            # Delete duplicates
+            deleted = 0
+            for source_id in to_delete:
+                if self._delete_source(source_id):
+                    deleted += 1
+                    time.sleep(1)  # Rate limiting
+
+            logger.info(f"[{self.client_id}] ✅ Removed {deleted} duplicate sources")
+            return deleted
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Deduplication error: {e}")
+            return 0
+
+    def _delete_source(self, source_id: str) -> bool:
+        """Delete a single source."""
+        try:
+            result = subprocess.run(
+                ["notebooklm", "source", "delete", source_id, "-n", self.notebook_id, "-y"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            return result.returncode == 0
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Error deleting source {source_id}: {e}")
+            return False
