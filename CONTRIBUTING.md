@@ -32,28 +32,46 @@ This project is committed to providing a welcoming and inclusive environment for
 
 ### Prerequisites
 - Python 3.8 or higher
+- Node.js 18+ (for NotebookLM CLI)
 - LibreOffice (for document conversion)
 - Google account (for NotebookLM)
 
 ### Installation
 
-1. **Create virtual environment**:
+1. **Install Node.js** (if not already installed):
+   ```bash
+   # RHEL/Fedora
+   curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+   sudo dnf install -y nodejs
+   
+   # macOS
+   brew install node
+   ```
+
+2. **Install NotebookLM CLI globally**:
+   ```bash
+   npm install -g notebooklm
+   notebooklm --version
+   ```
+
+3. **Create virtual environment**:
    ```bash
    python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-2. **Install dependencies**:
+4. **Upgrade pip and install dependencies**:
    ```bash
+   python3 -m pip install --upgrade pip
    pip install -r requirements.txt
    ```
 
-3. **Authenticate with NotebookLM**:
+5. **Authenticate with NotebookLM**:
    ```bash
    notebooklm login
    ```
 
-4. **Configure test clients**:
+6. **Configure test clients**:
    - Copy `vars.py` to `vars_local.py` (gitignored)
    - Update with your test client data
    - Or use the example clients provided

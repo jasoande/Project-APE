@@ -154,13 +154,23 @@ cd Project-APE
 
 # System dependencies (macOS)
 brew install --cask libreoffice
-brew install python@3.11
+brew install node
 
-# Python packages
+# System dependencies (RHEL/Fedora)
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+sudo dnf install -y nodejs libreoffice python3-pip
+
+# Install NotebookLM CLI
+npm install -g notebooklm
+notebooklm --version
+
+# Upgrade pip and install Python packages
+python3 -m pip install --upgrade pip
 pip install -r requirements.txt
 
-# Authenticate
+# Authenticate with Google
 notebooklm login
+notebooklm status
 ```
 
 ### Quick Start

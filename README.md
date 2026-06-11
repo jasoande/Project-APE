@@ -163,15 +163,47 @@ git clone https://github.com/jasoande/Project-APE
 cd Project-APE
 ```
 
+### NotebookLM CLI Setup
+
+**Install Node.js (required for NotebookLM CLI):**
+
+```bash
+# RHEL/Fedora
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+sudo dnf install -y nodejs
+
+# macOS
+brew install node
+```
+
+**Install NotebookLM CLI globally:**
+
+```bash
+npm install -g notebooklm
+
+# Verify installation
+notebooklm --version
+```
+
 ### Python Dependencies
 
+**Upgrade pip first:**
+
+```bash
+python3 -m pip install --upgrade pip
+```
+
 **Install all packages:**
+
 ```bash
 pip install -r requirements.txt
 ```
 
 **Required packages (from requirements.txt):**
-- `notebooklm>=0.7.1` - NotebookLM CLI
+- `google-api-python-client==2.197.0` - Google API client
+- `google-api-core==2.31.0` - Google API core
+- `google-auth==2.53.0` - Google authentication
+- `requests-oauthlib==2.0.0` - OAuth for requests
 - `flask>=3.0.0` - Web framework
 - `werkzeug>=3.0.0` - WSGI utilities
 - `pypdf>=4.0.0` - PDF processing
@@ -184,18 +216,23 @@ pip install -r requirements.txt
 - `requests>=2.31.0` - HTTP library
 - `python-dateutil>=2.8.0` - Date utilities
 
-### NotebookLM CLI Setup
+### Authentication
+
+**Authenticate with Google:**
 
 ```bash
-# Install CLI
-pip install notebooklm-py
-
-# Authenticate
 notebooklm login
+```
 
-# Verify
+This opens your browser for Google OAuth. Sign in and authorize.
+
+**Verify authentication:**
+
+```bash
 notebooklm status
 ```
+
+You should see: `✅ Authenticated as: your-email@gmail.com`
 
 ---
 
@@ -370,12 +407,25 @@ DASHBOARD_REFRESH_INTERVAL = 2  # seconds
 
 ## 🔧 Troubleshooting
 
+### NotebookLM CLI Issues
+```bash
+# Command not found - reinstall globally
+npm install -g notebooklm
+notebooklm --version
+```
+
 ### Authentication
 ```bash
 # Fresh login
-notebooklm auth logout
 notebooklm login
 notebooklm status
+```
+
+### Google API Errors
+```bash
+# Upgrade pip and reinstall dependencies
+python3 -m pip install --upgrade pip
+pip install -r requirements.txt --force-reinstall
 ```
 
 ### Rate Limiting

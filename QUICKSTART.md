@@ -7,6 +7,7 @@ Get up and running with Project APE in 15 minutes.
 Before starting, verify you have:
 - [ ] Python 3.8 or higher: `python3 --version`
 - [ ] pip installed: `pip --version`
+- [ ] Node.js 18+ (will be installed in Step 1)
 - [ ] Google account for NotebookLM
 - [ ] 2GB free disk space
 - [ ] macOS or Linux (Windows may work but untested)
@@ -18,11 +19,14 @@ Before starting, verify you have:
 **macOS:**
 ```bash
 brew install --cask libreoffice
+brew install node
 ```
 
 **Linux (RHEL/Fedora):**
 ```bash
 sudo dnf install -y libreoffice python3-pip
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+sudo dnf install -y nodejs
 ```
 
 ### Step 2: Clone the Repository (1 minute)
@@ -32,13 +36,27 @@ git clone https://github.com/jasoande/Project-APE
 cd Project-APE
 ```
 
-### Step 3: Install Python Dependencies (2 minutes)
+### Step 3: Install NotebookLM CLI (1 minute)
 
 ```bash
+# Install globally
+npm install -g notebooklm
+
+# Verify installation
+notebooklm --version
+```
+
+### Step 4: Install Python Dependencies (2 minutes)
+
+```bash
+# Upgrade pip first
+python3 -m pip install --upgrade pip
+
+# Install all packages
 pip install -r requirements.txt
 ```
 
-### Step 4: Authenticate with Google (1 minute)
+### Step 5: Authenticate with Google (1 minute)
 
 ```bash
 notebooklm login
@@ -171,10 +189,23 @@ Your NotebookLM notebook includes:
 
 ## Troubleshooting
 
+### "notebooklm: command not found"
+```bash
+# Reinstall NotebookLM CLI
+npm install -g notebooklm
+notebooklm --version
+```
+
 ### "Authentication failed"
 ```bash
-notebooklm auth logout
 notebooklm login
+```
+
+### "Google API errors" or "Module not found"
+```bash
+# Upgrade pip and reinstall requirements
+python3 -m pip install --upgrade pip
+pip install -r requirements.txt --force-reinstall
 ```
 
 ### "Client folder not found"
