@@ -25,14 +25,20 @@ brew install --cask libreoffice
 sudo dnf install -y libreoffice python3-pip
 ```
 
-### Step 2: Install Python Dependencies (2 minutes)
+### Step 2: Clone the Repository (1 minute)
 
 ```bash
+git clone https://github.com/jasoande/Project-APE
 cd Project-APE
+```
+
+### Step 3: Install Python Dependencies (2 minutes)
+
+```bash
 pip install -r requirements.txt
 ```
 
-### Step 3: Authenticate with Google (1 minute)
+### Step 4: Authenticate with Google (1 minute)
 
 ```bash
 notebooklm login

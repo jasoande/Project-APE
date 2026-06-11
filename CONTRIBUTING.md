@@ -25,7 +25,7 @@ This project is committed to providing a welcoming and inclusive environment for
    ```
 3. **Add upstream remote**:
    ```bash
-   git remote add upstream https://github.com/ORIGINAL-OWNER/Project-APE.git
+   git remote add upstream https://github.com/jasoande/Project-APE.git
    ```
 
 ## Development Setup

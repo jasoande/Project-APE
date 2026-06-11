@@ -148,13 +148,16 @@ pandoc PRESENTATION_5_SLIDES.md -o PROJECT_APE.pdf
 
 ### Installation
 ```bash
+# Clone repository
+git clone https://github.com/jasoande/Project-APE
+cd Project-APE
+
 # System dependencies (macOS)
 brew install --cask libreoffice
 brew install python@3.11
 
 # Python packages
 pip install -r requirements.txt
-pip install notebooklm-py
 
 # Authenticate
 notebooklm login

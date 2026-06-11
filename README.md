@@ -8,6 +8,7 @@
 **Version:** 2.0.0  
 **Last Updated:** June 10, 2026
 
+[![GitHub](https://img.shields.io/badge/github-jasoande%2FProject--APE-blue.svg)](https://github.com/jasoande/Project-APE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/flask-3.0+-green.svg)](https://flask.palletsprojects.com/)
 [![NotebookLM](https://img.shields.io/badge/notebooklm-cli-orange.svg)](https://pypi.org/project/notebooklm/)
@@ -155,11 +156,17 @@ sudo dnf install libreoffice
 sudo dnf install libjpeg-devel zlib-devel
 ```
 
+### Clone the Repository
+
+```bash
+git clone https://github.com/jasoande/Project-APE
+cd Project-APE
+```
+
 ### Python Dependencies
 
 **Install all packages:**
 ```bash
-cd /path/to/Project-APE
 pip install -r requirements.txt
 ```
 
