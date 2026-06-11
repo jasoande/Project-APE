@@ -173,7 +173,7 @@ curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
 sudo dnf install -y nodejs
 
 # macOS
-brew install node
+brew install node git
 ```
 
 **Install NotebookLM CLI globally:**

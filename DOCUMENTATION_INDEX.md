@@ -154,7 +154,7 @@ cd Project-APE
 
 # System dependencies (macOS)
 brew install --cask libreoffice
-brew install node
+brew install node git
 
 # System dependencies (RHEL/Fedora)
 curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -

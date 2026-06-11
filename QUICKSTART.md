@@ -19,7 +19,7 @@ Before starting, verify you have:
 **macOS:**
 ```bash
 brew install --cask libreoffice
-brew install node
+brew install node git
 ```
 
 **Linux (RHEL/Fedora):**

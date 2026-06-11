@@ -45,7 +45,7 @@ This project is committed to providing a welcoming and inclusive environment for
    sudo dnf install -y nodejs
    
    # macOS
-   brew install node
+   brew install node git
    ```
 
 2. **Install NotebookLM CLI globally**:
