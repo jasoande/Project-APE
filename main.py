@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Project APE - Marriage Edition
-===============================
+Project APE - Account Planning Engine
+======================================
 Main multi-process orchestrator
 
-Combines best features from both versions:
-- Multi-process architecture (notebooklm version)
-- Async CLI execution (gemini version)
+Features:
+- Multi-process architecture for parallel execution
 - Flask dashboard with real-time updates
-- Complete pipeline with all requirements
+- Complete pipeline with PDF consolidation and research
+- Dual-mode execution (Fast/Deep)
 """
 
 import subprocess
@@ -216,10 +216,10 @@ class ProcessManager:
 def print_banner():
     """Print startup banner."""
     print("\n" + "="*70)
-    print("  PROJECT APE - MARRIAGE EDITION")
-    print("  Account Planning Engine - Unified Implementation")
+    print("  PROJECT APE - ACCOUNT PLANNING ENGINE")
+    print("  AI-Powered Enterprise Account Planning Automation")
     print("="*70)
-    print(f"  Version: 1.0.0")
+    print(f"  Version: 2.0.0")
     print(f"  Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*70 + "\n")
 
@@ -227,7 +227,7 @@ def print_banner():
 def main():
     """Main orchestrator entry point."""
     parser = argparse.ArgumentParser(
-        description="Project APE - Marriage Edition",
+        description="Project APE - Account Planning Engine",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(

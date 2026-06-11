@@ -8,8 +8,6 @@ Manages NotebookLM authentication with session persistence
 import subprocess
 import logging
 import time
-from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -104,27 +102,3 @@ class AuthManager:
 
         logger.error(f"{prefix}❌ Authentication timeout - no valid session found")
         return False
-
-    def verify_profile(self) -> bool:
-        """
-        Verify the specified profile exists.
-
-        Returns:
-            True if profile exists
-        """
-        try:
-            result = subprocess.run(
-                ["notebooklm", "profile", "list"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-
-            if result.returncode == 0:
-                return self.profile in result.stdout
-
-            return False
-
-        except Exception as e:
-            logger.error(f"Profile check failed: {e}")
-            return False

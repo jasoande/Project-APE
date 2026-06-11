@@ -1,4 +1,4 @@
-# Project APE - Marriage Edition
+# Project APE
 
 ![Project APE Logo](dashboard/static/kingkong.png)
 
@@ -162,7 +162,7 @@ sudo apt-get install libjpeg-dev zlib1g-dev
 
 **Install all packages:**
 ```bash
-cd /Users/jasona/test/marriage
+cd /path/to/Project-APE
 pip install -r requirements.txt
 ```
 
@@ -197,23 +197,34 @@ notebooklm status
 
 ## ⚡ Quick Start
 
-### 1. Configure Clients
+**New to Project APE?** See [QUICKSTART.md](QUICKSTART.md) for a detailed 15-minute setup guide.
+
+### 1. Validate Setup
+
+```bash
+python3 validate_setup.py
+```
+
+This checks Python version, dependencies, NotebookLM auth, and configuration.
+
+### 2. Configure Clients
 
 Edit `vars.py`:
 
 ```python
-clients = ["merck_test", "blue_yonder_test", ...]
+clients = ["example_client_1", "example_client_2"]
 
-merck_test_name = "Merck"
-merck_test_industry = "pharmaceuticals and healthcare"
-merck_test_folder = str(Path(__file__).parent / "Venella_2026" / "Merck")
+# Customize for your client
+example_client_1_name = "ACME Corporation"
+example_client_1_industry = "technology and software"
+example_client_1_folder = str(Path(__file__).parent / "client_data" / "ACME_Corp")
 ```
 
-### 2. Run Pipeline
+### 3. Run Pipeline
 
 **Single client test:**
 ```bash
-python3 main.py --mode fast --clients merck_test
+python3 main.py --mode fast --clients example_client_1
 ```
 
 **All clients:**
@@ -221,10 +232,10 @@ python3 main.py --mode fast --clients merck_test
 python3 main.py --mode fast
 ```
 
-### 3. Monitor
+### 4. Monitor
 
 **Dashboard:** http://localhost:8765  
-**Logs:** `tail -f logs/merck_test.log`
+**Logs:** `tail -f logs/example_client_1.log`
 
 ---
 
@@ -383,14 +394,25 @@ sudo apt-get install libreoffice  # Linux
 
 ## 📚 Documentation
 
-**Project Files:**
-- README.md (this file)
-- docs/ARCHITECTURE.md
+**Getting Started:**
+- [QUICKSTART.md](QUICKSTART.md) - 15-minute setup guide
+- [README.md](README.md) - Complete documentation (this file)
+- [validate_setup.py](validate_setup.py) - Validate your installation
 
 **Configuration:**
-- vars.py - Client and timing configuration
-- requirements.txt - Python dependencies
-- main.py - Entry point
+- [vars.py](vars.py) - Client and timing configuration template
+- [requirements.txt](requirements.txt) - Python dependencies
+
+**Technical Documentation:**
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and design
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Development and contribution guidelines
+- [CHANGELOG.md](CHANGELOG.md) - Version history and release notes
+
+**Project Management:**
+- [PROJECT_PLAN.md](PROJECT_PLAN.md) - Project plan and roadmap
+- [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) - Business case and ROI
+- [PRESENTATION_5_SLIDES.md](PRESENTATION_5_SLIDES.md) - Stakeholder presentation
+- [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) - Documentation guide
 
 ---
 
