@@ -423,6 +423,15 @@
                     document.getElementById('stat-complete').textContent = data.complete;
                     document.getElementById('stat-failed').textContent = data.failed;
 
+                    // Detect new run by checking run_id
+                    if (data.run_id && currentRunId !== data.run_id) {
+                        console.log(`New run detected! Old ID: ${currentRunId}, New ID: ${data.run_id}`);
+                        currentRunId = data.run_id;
+                        localStorage.setItem(PIPELINE_RUN_ID_KEY, currentRunId);
+                        resetTimer();
+                        timerInitialized = false;
+                    }
+
                     // Detect if this is a new pipeline run by checking status file timestamps
                     const hasRunningClients = data.clients.some(c => c.status === 'RUNNING' || c.status === 'PENDING' || c.status === 'QUEUED');
                     const allComplete = data.total > 0 && (data.complete + data.failed) === data.total;
@@ -430,12 +439,7 @@
 
                     // Initialize timer on first data load if we detect active pipeline
                     if (!timerInitialized && hasRunningClients) {
-                        // Check if status files are fresh (updated within last 60 seconds)
-                        const now = Date.now() / 1000; // Convert to seconds
-                        const mostRecentUpdate = Math.max(...data.clients.map(c => c.last_update || 0));
-                        const isNewRun = (now - mostRecentUpdate) < 60; // Files updated in last minute = new run
-
-                        initializeTimer(isNewRun);
+                        initializeTimer(true);  // Always treat as new when timer not initialized
                         updateTimer(); // Update display immediately
                     }
 

@@ -38,6 +38,7 @@ def status():
     complete = 0
     failed = 0
     mode = "fast"
+    run_id = None
 
     if STATUS_DIR.exists():
         for status_file in STATUS_DIR.glob("*.json"):
@@ -49,6 +50,10 @@ def status():
                     # Detect mode from first client
                     if 'mode' in client_data:
                         mode = client_data.get('mode', 'fast')
+
+                    # Get run_id from first client
+                    if run_id is None and 'run_id' in client_data:
+                        run_id = client_data.get('run_id')
 
                     status = client_data.get('status', 'UNKNOWN').upper()
                     if status in ['RUNNING', 'PENDING']:
@@ -69,6 +74,7 @@ def status():
         'complete': complete,
         'failed': failed,
         'mode': mode,
+        'run_id': run_id,  # Include run_id in response
         'clients': clients
     })
 

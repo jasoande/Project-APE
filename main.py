@@ -55,10 +55,11 @@ logger = logging.getLogger(__name__)
 class ProcessManager:
     """Manages client processes and dashboard server."""
 
-    def __init__(self):
+    def __init__(self, run_id: str = None):
         self.client_processes: List[subprocess.Popen] = []
         self.dashboard_process: subprocess.Popen = None
         self.start_time = None
+        self.run_id = run_id or str(int(time.time()))  # Unique ID for this run
 
     def initialize_status_file(self, client_id: str, mode: str):
         """Create initial status file for a client."""
@@ -78,7 +79,8 @@ class ProcessManager:
             "last_update": time.time(),
             "quality_score": None,
             "plan_link": None,
-            "log_file": str(LOGS_DIR / f"{client_id}.log")
+            "log_file": str(LOGS_DIR / f"{client_id}.log"),
+            "run_id": self.run_id  # Add unique run ID
         }
 
         with open(status_file, 'w') as f:
@@ -275,9 +277,12 @@ def main():
             old_status.unlink()
             logger.info(f"   Removed: {old_status.name}")
 
-    # Initialize process manager
-    manager = ProcessManager()
+    # Initialize process manager with unique run ID
+    run_id = str(int(time.time()))
+    manager = ProcessManager(run_id=run_id)
     manager.start_time = time.time()
+
+    logger.info(f"\n🆔 Run ID: {run_id}")
 
     try:
         # Initialize status files
