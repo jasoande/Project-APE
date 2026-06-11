@@ -89,7 +89,7 @@ Examples:
 ```
 feat(dashboard): add quality score visualization
 fix(pdf): handle corrupted image files gracefully
-docs(readme): update installation instructions for Ubuntu
+docs(readme): update installation instructions for RHEL/Fedora
 ```
 
 ## Testing

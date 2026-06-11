@@ -143,19 +143,16 @@ brew install --cask libreoffice
 brew install python@3.11
 ```
 
-**Linux (Ubuntu/Debian):**
+**Linux (RHEL/Fedora):**
 ```bash
-# Update packages
-sudo apt-get update
-
 # Install Python and pip
-sudo apt-get install python3 python3-pip
+sudo dnf install python3 python3-pip
 
 # Install LibreOffice
-sudo apt-get install libreoffice
+sudo dnf install libreoffice
 
 # Install image processing libraries
-sudo apt-get install libjpeg-dev zlib1g-dev
+sudo dnf install libjpeg-devel zlib-devel
 ```
 
 ### Python Dependencies
@@ -383,7 +380,7 @@ notebooklm status
 ```bash
 # Install LibreOffice
 brew install --cask libreoffice  # macOS
-sudo apt-get install libreoffice  # Linux
+sudo dnf install libreoffice  # Linux (RHEL/Fedora)
 ```
 
 ### Dashboard Issues

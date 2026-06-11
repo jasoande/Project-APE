@@ -20,10 +20,9 @@ Before starting, verify you have:
 brew install --cask libreoffice
 ```
 
-**Linux (Ubuntu/Debian):**
+**Linux (RHEL/Fedora):**
 ```bash
-sudo apt-get update
-sudo apt-get install -y libreoffice python3-pip
+sudo dnf install -y libreoffice python3-pip
 ```
 
 ### Step 2: Install Python Dependencies (2 minutes)
@@ -180,7 +179,7 @@ notebooklm login
 ### "LibreOffice not found"
 - Reinstall LibreOffice
 - macOS: `brew install --cask libreoffice`
-- Linux: `sudo apt-get install libreoffice`
+- Linux: `sudo dnf install libreoffice`
 
 ### "Port 8765 already in use"
 - Change port in vars.py: `DASHBOARD_PORT = 8766`
