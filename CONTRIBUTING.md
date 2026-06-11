@@ -31,7 +31,7 @@ This project is committed to providing a welcoming and inclusive environment for
 ## Development Setup
 
 ### Prerequisites
-- Python 3.8 or higher
+- Python 3.10 or higher
 - Node.js 18+ (for NotebookLM CLI)
 - LibreOffice (for document conversion)
 - Google account (for NotebookLM)

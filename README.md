@@ -9,7 +9,7 @@
 **Last Updated:** June 10, 2026
 
 [![GitHub](https://img.shields.io/badge/github-jasoande%2FProject--APE-blue.svg)](https://github.com/jasoande/Project-APE)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/flask-3.0+-green.svg)](https://flask.palletsprojects.com/)
 [![NotebookLM](https://img.shields.io/badge/notebooklm-cli-orange.svg)](https://pypi.org/project/notebooklm/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -126,7 +126,7 @@ Project APE (Account Planning Engine) automates the creation of comprehensive, A
 ### System Requirements
 
 - **Operating System:** macOS or Linux
-- **Python:** 3.8+
+- **Python:** 3.10+
 - **Disk Space:** 500MB+ for dependencies
 - **RAM:** 2GB minimum (4GB recommended)
 
@@ -140,8 +140,8 @@ Project APE (Account Planning Engine) automates the creation of comprehensive, A
 # Install LibreOffice (for Office document conversion)
 brew install --cask libreoffice
 
-# Install Python 3
-brew install python@3.11
+# Install Python 3 (3.10 or later)
+brew install python@3.13
 ```
 
 **Linux (RHEL/Fedora):**
@@ -200,10 +200,10 @@ pip install -r requirements.txt
 ```
 
 **Required packages (from requirements.txt):**
-- `google-api-python-client==2.197.0` - Google API client
-- `google-api-core==2.31.0` - Google API core
-- `google-auth==2.53.0` - Google authentication
-- `requests-oauthlib==2.0.0` - OAuth for requests
+- `google-api-python-client>=2.140.0` - Google API client
+- `google-api-core>=2.19.0` - Google API core
+- `google-auth>=2.30.0` - Google authentication
+- `requests-oauthlib>=2.0.0` - OAuth for requests
 - `flask>=3.0.0` - Web framework
 - `werkzeug>=3.0.0` - WSGI utilities
 - `pypdf>=4.0.0` - PDF processing

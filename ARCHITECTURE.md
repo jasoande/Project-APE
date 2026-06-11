@@ -336,7 +336,7 @@ else:
 
 | Component | Technology | Version | Purpose |
 |-----------|-----------|---------|---------|
-| Runtime | Python | 3.8+ | Main language |
+| Runtime | Python | 3.10+ | Main language |
 | Process Mgmt | subprocess | stdlib | Multi-process execution |
 | Web Framework | Flask | 3.0+ | Dashboard server |
 | PDF Generation | ReportLab | 4.0+ | Text-to-PDF |

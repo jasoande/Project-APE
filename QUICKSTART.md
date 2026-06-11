@@ -5,7 +5,7 @@ Get up and running with Project APE in 15 minutes.
 ## Prerequisites Check
 
 Before starting, verify you have:
-- [ ] Python 3.8 or higher: `python3 --version`
+- [ ] Python 3.10 or higher: `python3 --version`
 - [ ] pip installed: `pip --version`
 - [ ] Node.js 18+ (will be installed in Step 1)
 - [ ] Google account for NotebookLM

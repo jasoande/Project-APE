@@ -93,6 +93,13 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] Mode: {self.mode.upper()}")
             logger.info(f"[{self.client_id}] ========================================")
 
+            # Anti-thundering-herd: Initial random offset to prevent synchronized starts
+            # Hash client_id for deterministic but spread-out delays (0-10 seconds max)
+            client_hash = sum(ord(c) for c in self.client_id)
+            initial_offset = (client_hash % 8) + random.uniform(0, 2)
+            logger.info(f"[{self.client_id}] ⏱️  Anti-collision delay: {initial_offset:.1f}s")
+            time.sleep(initial_offset)
+
             # Step 1: Check Authentication (force fresh check)
             self.update_status("Checking authentication...", 5)
             if not self.auth_manager.ensure_authenticated(self.client_id, force_check=True):
@@ -244,6 +251,10 @@ class ClientPipeline:
 
         for idx, prompt_file in enumerate(ask_prompts, 1):
             try:
+                # Anti-thundering-herd: Add jitter before each research prompt
+                jitter = random.uniform(2, 5)
+                time.sleep(jitter)
+
                 progress = 30 + (idx / len(ask_prompts)) * 30  # 30-60%
                 self.update_status(f"Research {idx}/{len(ask_prompts)}: {prompt_file.stem}", int(progress))
 
@@ -318,6 +329,16 @@ class ClientPipeline:
 
         for idx, prompt_file in enumerate(chat_prompts, 1):
             try:
+                # Anti-thundering-herd: Add jitter before each chat prompt to prevent re-sync
+                # Larger jitter for chat_prompt_01 (the most expensive operation)
+                if prompt_file.name == "chat_prompt_01.txt":
+                    jitter = random.uniform(5, 15)
+                    logger.info(f"[{self.client_id}] ⏱️  Chat 01 anti-collision jitter: {jitter:.1f}s")
+                    time.sleep(jitter)
+                else:
+                    jitter = random.uniform(1, 3)
+                    time.sleep(jitter)
+
                 progress = 65 + (idx / len(chat_prompts)) * 30  # 65-95%
                 self.update_status(f"Chat {idx}/{len(chat_prompts)}: {prompt_file.stem}", int(progress))
 

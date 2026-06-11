@@ -1,10 +1,11 @@
 # Project APE - Python Dependencies
+# Requires Python 3.10+
 
 # Google API dependencies (required for NotebookLM authentication)
-google-api-python-client==2.197.0
-google-api-core==2.31.0
-google-auth==2.53.0
-requests-oauthlib==2.0.0
+google-api-python-client>=2.140.0
+google-api-core>=2.19.0
+google-auth>=2.30.0
+requests-oauthlib>=2.0.0
 google-auth-oauthlib>=1.1.0
 google-auth-httplib2>=0.1.1
 
