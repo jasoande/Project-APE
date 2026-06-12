@@ -1,6 +1,18 @@
 # Project APE - Podman Container Guide
 
-**Last Updated:** June 11, 2026  
+<p align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE Logo" width="120"/>
+</p>
+
+<h3 align="center">Container Operations Guide</h3>
+
+<p align="center">
+  Jason Anderson | Project Owner & Maintainer
+</p>
+
+---
+
+**Last Updated:** June 12, 2026  
 **Container Runtime:** Podman (Docker alternative)  
 **Base Image:** Python 3.13-slim
 
@@ -572,4 +584,5 @@ script:
 
 ---
 
-**Podman containerization complete!** 🎉
+**Project APE - Container Operations Guide**  
+Version 3.0.4 | Jason Anderson | 2026

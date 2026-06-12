@@ -181,7 +181,7 @@ Status: ✅ Successfully built and pushed
 
 ### 8. Configuration Validation ✅
 
-**vars-container.py Template:**
+**container-vars.py Template:**
 - ✅ Well-documented
 - ✅ Sensible defaults
 - ✅ Clear examples provided
@@ -242,7 +242,7 @@ Status: ✅ Successfully built and pushed
 
 - [x] Container image: quay.io/jasoande/project_ape/project-ape:3.0.1
 - [x] Runner script: ape-run.sh
-- [x] Configuration template: vars-container.py
+- [x] Configuration template: container-vars.py
 - [x] Documentation: README.md, QUICKSTART.md
 - [x] Examples: Prompt files included
 - [x] Logo: dashboard/static/kingkong.png

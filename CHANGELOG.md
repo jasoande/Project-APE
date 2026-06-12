@@ -210,7 +210,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Path Resolution**: Container-aware paths with fallback to host paths
 - **Dashboard Server**: Loads config dynamically, binds to all interfaces
 - **Volume Mounts**: All volumes use SELinux labels (:z flag)
-- **Configuration**: Separate vars-container.py template for containers
+- **Configuration**: Separate container-vars.py template for containers
 - **Dependencies**: Removed Node.js, Playwright, unused Python packages
 
 ### Removed - Optimization

@@ -79,7 +79,7 @@
 | File | Purpose | When to Use |
 |------|---------|-------------|
 | **vars.py** | Client configuration | Local installation |
-| **vars-container.py** | Container configuration | Container deployment |
+| **container-vars.py** | Container configuration | Container deployment |
 | **example-vars.py** | Configuration template | Reference |
 
 ### Configuration Guides
@@ -126,7 +126,7 @@ See **Configuration** section in:
 → [README-CONTAINER.md](README-CONTAINER.md) → [build-container.sh](build-container.sh)
 
 #### "How do I configure clients?"
-→ [vars-container.py](vars-container.py) (container) or [vars.py](vars.py) (local)
+→ [container-vars.py](container-vars.py) (container) or [vars.py](vars.py) (local)
 
 #### "Something's not working"
 → Troubleshooting in [QUICKSTART.md](QUICKSTART.md) or [README.md](README.md)
@@ -177,7 +177,7 @@ See **Configuration** section in:
 **Must Read:**
 1. [QUICKSTART.md](QUICKSTART.md)
 2. [GOOGLE_AUTH_GUIDE.md](GOOGLE_AUTH_GUIDE.md)
-3. [vars-container.py](vars-container.py) - Example config
+3. [container-vars.py](container-vars.py) - Example config
 
 **Optional:**
 - [README-CONTAINER.md](README-CONTAINER.md) - Deep dive
@@ -224,7 +224,7 @@ See **Configuration** section in:
 **Must Read:**
 1. [QUICKSTART.md](QUICKSTART.md) - Fast setup
 2. [README.md](README.md) - Features overview
-3. [vars-container.py](vars-container.py) - Configuration
+3. [container-vars.py](container-vars.py) - Configuration
 
 **Optional:**
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical design
@@ -273,7 +273,7 @@ See **Configuration** section in:
 
 ### Container Configuration
 
-**File:** [vars-container.py](vars-container.py)
+**File:** [container-vars.py](container-vars.py)
 
 **Example:**
 ```python
@@ -330,7 +330,7 @@ pip install -r requirements.txt --upgrade
 
 1. [GETTING-STARTED.md](GETTING-STARTED.md) - Decide container vs local
 2. [QUICKSTART.md](QUICKSTART.md) - Setup and run (container)
-3. [vars-container.py](vars-container.py) - Example config
+3. [container-vars.py](container-vars.py) - Example config
 4. **Run your first pipeline!**
 
 **Time:** 30 minutes
@@ -387,7 +387,7 @@ pip install -r requirements.txt --upgrade
 
 - **GitHub Issues** - Bug reports, feature requests
 - **Documentation** - You're reading it!
-- **Examples** - See `vars-container.py`, `example-vars.py`
+- **Examples** - See `container-vars.py`, `example-vars.py`
 
 ---
 
@@ -426,7 +426,7 @@ pip install -r requirements.txt --upgrade
 - [ ] Read [GETTING-STARTED.md](GETTING-STARTED.md)
 - [ ] Choose deployment (container or local)
 - [ ] Follow [QUICKSTART.md](QUICKSTART.md) or [README.md](README.md)
-- [ ] Configure `vars.py` or `vars-container.py`
+- [ ] Configure `vars.py` or `container-vars.py`
 - [ ] Read [GOOGLE_AUTH_GUIDE.md](GOOGLE_AUTH_GUIDE.md)
 - [ ] Test with one client first
 

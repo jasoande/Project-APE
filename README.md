@@ -7,7 +7,7 @@
 <h3 align="center">AI-Powered Enterprise Account Planning Automation</h3>
 
 <p align="center">
-  <strong>Version 3.0.1</strong> | <strong>Containerized Edition</strong><br>
+  <strong>Version 3.0.4</strong> | <strong>Containerized Edition</strong><br>
   Project Owner & Maintainer: <strong>Jason Anderson</strong>
 </p>
 
@@ -68,7 +68,7 @@ mkdir -p client_data/YourClient
 cp /path/to/client/files/* client_data/YourClient/
 
 # Create configuration
-cp vars-container.py vars.py
+cp container-vars.py vars.py
 # Edit vars.py with your client details
 ```
 
@@ -300,7 +300,7 @@ Project-APE/
 ├── 🔧 ape-run.sh                   # Container runner script
 ├── 📋 requirements.txt             # Python dependencies
 │
-├── 🔧 vars-container.py            # Configuration template
+├── 🔧 container-vars.py            # Configuration template
 ├── 📝 example-vars.py              # Example configuration
 │
 ├── 🐍 main.py                      # Application entry point

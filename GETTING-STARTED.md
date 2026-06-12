@@ -1,5 +1,17 @@
 # Getting Started with Project APE
 
+<p align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE Logo" width="120"/>
+</p>
+
+<h3 align="center">Deployment Guide</h3>
+
+<p align="center">
+  Jason Anderson | Project Owner & Maintainer
+</p>
+
+---
+
 **Choose your deployment method** - Container (recommended) or Local installation.
 
 ---
@@ -71,7 +83,7 @@ cd Project-APE
 
 ```bash
 # Copy template
-cp vars-container.py vars.py
+cp container-vars.py vars.py
 
 # Edit with your clients
 nano vars.py
@@ -282,7 +294,7 @@ npm install -g notebooklm
 notebooklm login
 
 # Day 1: First run
-cp vars-container.py vars.py
+cp container-vars.py vars.py
 nano vars.py  # Configure
 mkdir -p client_data/Client1
 cp ~/docs/*.pdf client_data/Client1/
@@ -427,7 +439,7 @@ open http://localhost:8765
 ```bash
 # 3 commands to get started
 podman pull quay.io/jasoande/project_ape/project-ape:latest
-cp vars-container.py vars.py && nano vars.py
+cp container-vars.py vars.py && nano vars.py
 ./ape-run.sh --mode fast
 ```
 
@@ -452,4 +464,5 @@ python3 main.py --mode fast
 
 ---
 
-**Ready to go?** Choose your path and start analyzing accounts! 🚀
+**Project APE - Getting Started Guide**  
+Version 3.0.4 | Jason Anderson | 2026
