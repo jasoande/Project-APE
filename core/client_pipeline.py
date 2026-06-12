@@ -49,6 +49,9 @@ class ClientPipeline:
         self.client_industry = getattr(config, f"{client_id}_industry", "general")
         self.client_subsegments = getattr(config, f"{client_id}_subsegments", None)
 
+        # Get global persona setting (role perspective for chat prompts)
+        self.persona = getattr(config, "persona", "Red Hat solutions architect")
+
         # Initialize managers
         self.auth_manager = AuthManager()
         self.notebook_manager = NotebookManager(client_id)
@@ -348,6 +351,7 @@ class ClientPipeline:
                 prompt_text = prompt_text.replace('$name', self.client_name)
                 prompt_text = prompt_text.replace('$industry', self.client_industry)
                 prompt_text = prompt_text.replace('$subsegments', self.client_subsegments or 'various segments')
+                prompt_text = prompt_text.replace('$persona', self.persona)
 
                 # Create temporary file with substituted prompt
                 import tempfile

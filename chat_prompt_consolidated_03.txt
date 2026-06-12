@@ -1,4 +1,4 @@
-Act as a Red Hat solutions architect and business strategist for $name.
+Act as a $persona and business strategist for $name.
 
 ## Part 1: Technology Partner Ecosystem
 

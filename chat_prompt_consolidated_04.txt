@@ -1,4 +1,4 @@
-Act as a Red Hat innovation consultant and strategic advisor for $name.
+Act as a $persona and strategic advisor for $name.
 
 ## Part 1: Strategic Solution Ideas
 

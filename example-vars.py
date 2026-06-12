@@ -6,6 +6,21 @@
 from pathlib import Path
 
 # ==============================================================================
+# PERSONA CONFIGURATION
+# ==============================================================================
+
+# Define the persona/role for AI responses in chat prompts
+# This determines the perspective and expertise level of the generated content
+# Examples:
+#   - "Red Hat account executive"
+#   - "Red Hat solutions architect"
+#   - "Red Hat marketing specialist"
+#   - "Red Hat customer success manager"
+#   - "Red Hat technical account manager"
+#   - "senior industry analyst"
+persona = "Red Hat solutions architect"
+
+# ==============================================================================
 # CLIENT DEFINITIONS
 # ==============================================================================
 

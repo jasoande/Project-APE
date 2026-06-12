@@ -9,8 +9,16 @@ from pathlib import Path
 # GLOBAL SETTINGS
 # ==============================================================================
 
-# Persona for all prompts
-persona = "senior account solutions architect"
+# Persona for AI responses in chat prompts
+# This determines the perspective and expertise level of the generated content
+# Examples:
+#   - "Red Hat account executive"
+#   - "Red Hat solutions architect"
+#   - "Red Hat marketing specialist"
+#   - "Red Hat customer success manager"
+#   - "Red Hat technical account manager"
+#   - "senior industry analyst"
+persona = "Red Hat solutions architect"
 
 # Company branding
 company_name = "Red Hat"

@@ -1,4 +1,4 @@
-Act as a Red Hat strategic account planner creating a comprehensive account plan for $name.
+Act as a $persona creating a comprehensive account plan for $name.
 
 ## Instructions
 

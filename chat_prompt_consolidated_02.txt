@@ -1,4 +1,4 @@
-Act as a Red Hat senior account executive with deep knowledge of $name, the $industry industry, and Red Hat's portfolio.
+Act as a $persona with deep knowledge of $name, the $industry industry, and Red Hat's portfolio.
 
 ## Part 1: Innovation Assessment
 

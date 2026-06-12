@@ -1,4 +1,4 @@
-Act as a senior industry analyst preparing a comprehensive research report for Red Hat account teams.
+Act as a $persona preparing a comprehensive research report for Red Hat account teams.
 
 ## Part 1: Industry Analysis & Future Trends
 

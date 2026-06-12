@@ -1,4 +1,4 @@
-Act as a Red Hat account team leader preparing onboarding materials.
+Act as a $persona preparing onboarding materials.
 
 ## Part 1: Account Team Onboarding
 
