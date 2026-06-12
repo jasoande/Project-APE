@@ -308,26 +308,20 @@ class ClientPipeline:
 
     def _run_chat_prompts(self):
         """Run chat prompts sequentially with note creation."""
-        chat_prompts = sorted(self.project_root.glob("chat_*.txt"))
+        chat_prompts = sorted(self.project_root.glob("chat_prompt_consolidated_*.txt"))
 
         if not chat_prompts:
             logger.warning(f"[{self.client_id}] No chat prompts found")
             return
 
-        # Descriptive titles for each chat prompt
+        # Descriptive titles for consolidated chat prompts (6 instead of 12)
         note_titles = {
-            'chat_prompt_01.txt': 'Industry Analysis Report',
-            'chat_prompt_02.txt': 'Business Objectives & IT Initiatives',
-            'chat_prompt_03.txt': 'Market & Competitive Analysis',
-            'chat_prompt_04.txt': 'Innovation Adoption Assessment',
-            'chat_prompt_05.txt': 'Executive Summary',
-            'chat_prompt_06.txt': 'Technology Partners Overview',
-            'chat_prompt_07.txt': 'Red Hat Value Propositions',
-            'chat_prompt_08.txt': 'Solution Ideas & Recommendations',
-            'chat_prompt_09.txt': 'Team Onboarding Guide',
-            'chat_prompt_10.txt': 'Partner Briefing - Automation',
-            'chat_prompt_11.txt': 'How Might We - Innovation Ideas',
-            'chat_prompt_12.txt': 'Red Hat Account Plan',
+            'chat_prompt_consolidated_01.txt': 'Industry Analysis & Customer Business Profile',
+            'chat_prompt_consolidated_02.txt': 'Innovation Assessment & Executive Summary',
+            'chat_prompt_consolidated_03.txt': 'Technology Partners & Red Hat Value Propositions',
+            'chat_prompt_consolidated_04.txt': 'Strategic Ideas & How Might We Statements',
+            'chat_prompt_consolidated_05.txt': 'Account Team & Partner Onboarding',
+            'chat_prompt_consolidated_06.txt': 'Comprehensive Red Hat Account Plan',
         }
 
         logger.info(f"[{self.client_id}] Running {len(chat_prompts)} chat prompts...")
@@ -335,8 +329,8 @@ class ClientPipeline:
         for idx, prompt_file in enumerate(chat_prompts, 1):
             try:
                 # Anti-thundering-herd: Add jitter before each chat prompt to prevent re-sync
-                # Larger jitter for chat_prompt_01 (the most expensive operation)
-                if prompt_file.name == "chat_prompt_01.txt":
+                # Larger jitter for chat_prompt_consolidated_01 (the most expensive operation)
+                if prompt_file.name == "chat_prompt_consolidated_01.txt":
                     jitter = random.uniform(5, 15)
                     logger.info(f"[{self.client_id}] ⏱️  Chat 01 anti-collision jitter: {jitter:.1f}s")
                     time.sleep(jitter)
@@ -400,9 +394,10 @@ class ClientPipeline:
                     # Clean up temp file
                     Path(tmp_path).unlink(missing_ok=True)
 
-                # Delay between prompts
-                delay_range = self.timings['chat_prompt_delay']
-                delay = random.uniform(delay_range[0], delay_range[1])
+                # Minimal delay between prompts (jitter already added spacing)
+                # Consolidated prompts are larger and take longer to process
+                # API processing time provides natural spacing
+                delay = random.uniform(2.0, 3.0)  # Reduced from config (5-8s)
                 time.sleep(delay)
 
             except Exception as e:

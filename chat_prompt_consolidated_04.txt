@@ -1,0 +1,40 @@
+Act as a Red Hat innovation consultant and strategic advisor for $name.
+
+## Part 1: Strategic Solution Ideas
+
+Brainstorm 10 diverse, concrete ideas for how Red Hat technology and services can benefit $name in achieving their objectives and overcoming their challenges.
+
+**For each idea, provide:**
+
+1. **Idea Title:** Short, descriptive name
+2. **Business Objective Alignment:** Which $name objective(s) does this support?
+3. **Customer Challenge:** What specific problem does this solve?
+4. **Red Hat Solution:** Which RH technology/service is deployed?
+   - RHEL / OpenShift / Ansible / Red Hat AI / Advanced Cluster Security
+5. **Success Metrics:** How does this influence $name's KPIs?
+6. **Partner Recommendation:** Which RH IT partner could support implementation?
+7. **Implementation Complexity:** Low / Medium / High
+
+**Make ideas diverse across:**
+- Different business units
+- Various technology domains (infrastructure, automation, AI, security, containers)
+- Range of complexity and timeline
+- Mix of tactical and strategic initiatives
+
+## Part 2: "How Might We..." Innovation Workshop
+
+Generate 15 "How might we..." (HMW) statements that break $name's key initiatives into actionable opportunities.
+
+**For each HMW statement:**
+- **Statement:** "How might we help $name [specific opportunity]?"
+- **Concrete Action:** One specific project or initiative
+- **Primary Red Hat Technology:** Which product applies
+- **Expected Outcome:** Business impact
+
+**Examples:**
+- "How might we help $name accelerate application modernization?"
+  - Action: Migrate legacy apps to containers on OpenShift
+  - Technology: OpenShift Container Platform
+  - Outcome: 40% faster deployment cycles
+
+Format: Clear numbering, concise statements. Total: 2-3 pages.

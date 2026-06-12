@@ -1,0 +1,40 @@
+Act as a senior industry analyst preparing a comprehensive research report for Red Hat account teams.
+
+## Part 1: Industry Analysis & Future Trends
+
+Analyze how digital and information technologies are shaping the global $industry industry over the next 5 years, focusing on these confirmed subsegments: $subsegments
+
+Address these key areas:
+- Major technology trends and disruptions
+- Digital transformation drivers
+- Competitive landscape evolution
+- Regulatory and compliance factors
+- Innovation adoption patterns
+
+## Part 2: Customer Business Profile
+
+For $name specifically, provide a detailed profile:
+
+**Top Business Objectives:**
+What are $name's top 3-5 business objectives?
+
+**Products & Services:**
+- What services or products do they provide to the market?
+- What is their business model (how do they generate revenue)?
+- What are their primary revenue streams?
+
+**Market Position:**
+- Who are their main competitors?
+- What is their competitive positioning?
+- What market segments do they serve?
+
+**Strategic Initiatives:**
+- What major strategic initiatives are underway?
+- What are their key performance indicators (KPIs)?
+- What are their success metrics?
+
+## Format Requirements:
+- Structure with clear headers and bullet points
+- Cite sources for factual claims
+- Focus on verified, recent information
+- Keep total response to 2-3 pages maximum

@@ -43,8 +43,15 @@ docs_generated/
 # Client data (NEVER commit)
 client_data/
 Venella_2026/
-*/
-*_2026/
+Blue_Yonder/
+Hershey/
+Lord_Abbett/
+Merck/
+Organon/
+Panasonic/
+Panasonic_Avionics/
+Panasonic_Canada/
+Hershey Entertainment/
 
 # Credentials (NEVER commit)
 .notebooklm/
@@ -64,6 +71,3 @@ temp/
 
 # Claude Code
 .claude/
-
-# Container duplicates
-container-vars.py
