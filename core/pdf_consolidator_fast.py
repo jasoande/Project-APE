@@ -138,10 +138,11 @@ class FastPDFConsolidator:
     OFFICE_EXTENSIONS = {'.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt', '.odt', '.ods', '.odp', '.rtf', '.csv'}
     PDF_EXTENSION = {'.pdf'}
 
-    def __init__(self, client_id: str, client_folder: Path, output_name: str = None):
+    def __init__(self, client_id: str, client_folder: Path, output_name: str = None, output_dir: Path = None):
         self.client_id = client_id
         self.client_folder = Path(client_folder)
         self.output_name = output_name or f"{client_id}-One.pdf"
+        self.output_dir = Path(output_dir) if output_dir else self.client_folder
         self.temp_dir = None
         self.max_workers = max(1, multiprocessing.cpu_count() - 1)
 
@@ -232,8 +233,8 @@ class FastPDFConsolidator:
 
         logger.info(f"[{self.client_id}] Converted {len(converted_pdfs)} files, merging...")
 
-        # Merge all PDFs
-        output_path = self.client_folder / self.output_name
+        # Merge all PDFs to output directory (writable)
+        output_path = self.output_dir / self.output_name
         return self._merge_pdfs(converted_pdfs, output_path)
 
     def _merge_pdfs(self, pdf_files: List[Path], output_path: Path) -> Optional[Path]:

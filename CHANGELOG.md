@@ -69,6 +69,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - EXECUTIVE_SUMMARY.md for business case
 - PRESENTATION_5_SLIDES.md for stakeholders
 
+## [3.0.4] - 2026-06-12
+
+### Critical Fixes - Container PDF Output & Subsegments Variable
+
+**Problem 1:** PDF consolidation failed in containers with "Read-only file system" error.
+
+**Root Cause:** Consolidated PDFs were being written to the client_data directory which is mounted read-only for security.
+
+**Solution:**
+- Modified `FastPDFConsolidator` to accept `output_dir` parameter
+- Consolidated PDFs now written to `/app/logs/` directory (writable, mounted from host)
+- PDFs accessible on host at `./logs/{Client}-One.pdf`
+
+**Problem 2:** `$subsegments` variable defined in vars.py but not used in prompts.
+
+**Root Cause:** Chat prompts only substituted `$name` and `$industry`, ignoring `$subsegments`.
+
+**Solution:**
+- Added `$subsegments` substitution to chat prompts (research prompts already supported it)
+- Updated `ask_prompt_02.txt` to include subsegments context
+- Clients with defined subsegments (e.g., Merck: "oncology, vaccines, rare diseases, women's health") now pass that info to NotebookLM
+
+**Problem 3:** Credential setup script failed to copy storage_state.json file.
+
+**Root Cause:** Copy command used wildcard `cp /source/* /dest/` which fails with hidden files.
+
+**Solution:**
+- Changed to `cp -a /source/. /dest/` to copy all files including hidden ones
+- Added verification that storage_state.json was copied successfully
+
+### Changed
+- **core/pdf_consolidator_fast.py**: Added `output_dir` parameter, defaults to client_folder for backward compatibility
+- **core/client_pipeline.py**: Pass `logs_dir` as output directory for PDF consolidation
+- **core/client_pipeline.py**: Added `$subsegments` to variable substitution
+- **ask_prompt_02.txt**: Now references `$subsegments` to provide context about company focus areas
+- **setup-credentials.sh**: Fixed copy command to properly handle all files
+
+### Fixed
+- ✅ **Container PDF output** - PDFs now written to writable logs directory
+- ✅ **Subsegments in prompts** - Chat prompts now use defined subsegments
+- ✅ **Credential setup** - storage_state.json properly copied to persistent volume
+
+---
+
 ## [3.0.3] - 2026-06-12
 
 ### Critical Fixes - Session Refresh & Deep Mode Quota Management

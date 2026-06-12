@@ -56,7 +56,7 @@ podman run --rm \
     -v "${HOST_CREDS}:/source:ro,z" \
     -v "${VOLUME_NAME}:/dest" \
     quay.io/jasoande/project_ape/project-ape:latest \
-    bash -c "cp -r /source/* /dest/ 2>/dev/null || cp -r /source/profiles /dest/ && chmod -R 700 /dest && echo 'Credentials copied successfully'"
+    bash -c "cp -a /source/. /dest/ && chmod -R 700 /dest && ls -la /dest/profiles/default/storage_state.json && echo 'Credentials copied successfully'"
 
 # Restore original permissions
 chmod 700 "${HOST_CREDS}" "${HOST_CREDS}/profiles" "${HOST_CREDS}/profiles/default" 2>/dev/null || true

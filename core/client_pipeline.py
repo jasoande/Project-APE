@@ -214,10 +214,13 @@ class ClientPipeline:
 
             # Use FastPDFConsolidator which converts ALL file types to PDF
             # Handles: PDFs, text files, images, office docs (xlsx, docx, pptx)
+            # Write consolidated PDF to logs directory (writable in containers)
+            logs_dir = Path(vars.LOGS_DIR if hasattr(vars, 'LOGS_DIR') else './logs')
             with FastPDFConsolidator(
                 self.client_id,
                 self.client_folder,
-                f"{self.client_name}-One.pdf"
+                f"{self.client_name}-One.pdf",
+                output_dir=logs_dir
             ) as consolidator:
                 consolidated = consolidator.consolidate()
 
@@ -350,6 +353,7 @@ class ClientPipeline:
                 prompt_text = prompt_file.read_text()
                 prompt_text = prompt_text.replace('$name', self.client_name)
                 prompt_text = prompt_text.replace('$industry', self.client_industry)
+                prompt_text = prompt_text.replace('$subsegments', self.client_subsegments or 'various segments')
 
                 # Create temporary file with substituted prompt
                 import tempfile

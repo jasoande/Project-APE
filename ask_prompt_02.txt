@@ -1,6 +1,9 @@
 Act as a senior industry analyst.
-Your task is to identify and briefly describe the key subsegments of the global $industry industry.  
-These subsegments should reflect major commercial and operational divisions in the industry as recognized by international market research firms, regulatory bodies, and industry associations. 
+Your task is to identify and briefly describe the key subsegments of the global $industry industry.
+These subsegments should reflect major commercial and operational divisions in the industry as recognized by international market research firms, regulatory bodies, and industry associations.
+
+The target company's known focus areas include: $subsegments
+
 Instructions:
 - Provide a list of the most relevant **subsegments** within the industry listed above.  
 - For each subsegment, include a **1–2 sentence description** explaining its scope, purpose, and role in the overall industry.  
