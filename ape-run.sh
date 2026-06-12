@@ -206,7 +206,7 @@ CONTAINER_ID=$(podman run \
     -v "$(realpath ${CLIENT_DATA_PATH}):/app/client_data:ro,z" \
     -v "$(realpath ${VARS_FILE}):/app/vars.py:ro,z" \
     -v "$(realpath ${LOGS_PATH}):/app/logs:z" \
-    -v "${CREDENTIALS_VOLUME}:/home/apeuser/.notebooklm" \
+    -v "${CREDENTIALS_VOLUME}:/opt/app-root/src/.notebooklm:z" \
     -e PYTHONUNBUFFERED=1 \
     ${FULL_IMAGE} \
     ${CMD_ARGS})
