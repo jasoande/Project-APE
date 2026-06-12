@@ -52,16 +52,17 @@ TIMINGS = {
     'source_import_wait': 10.0,
 }
 
-# DEEP MODE - Conservative delays for quota management (30-90 minutes per client)
+# DEEP MODE - Balanced delays for quality with improved performance
+# Optimized based on actual API timing analysis while maintaining safety margins
 DEEP_TIMINGS = {
-    'notebook_creation_delay': 5.0,
-    'source_add_delay': (3.0, 5.0),
-    'source_processing_delay': 90.0,
-    'ask_prompt_delay': (90.0, 120.0),
-    'chat_prompt_delay': (120.0, 180.0),
-    'deduplication_delay': 45.0,
-    'mindmap_delay': 30.0,
-    'source_import_wait': 45.0,
+    'notebook_creation_delay': 3.0,           # Reduced from 5.0 - no quota impact
+    'source_add_delay': (2.0, 4.0),           # Reduced from (3.0, 5.0) - safe range
+    'source_processing_delay': 45.0,          # Reduced from 90.0 - still conservative
+    'ask_prompt_delay': (15.0, 25.0),         # Reduced from (90.0, 120.0) - API handles spacing
+    'chat_prompt_delay': (10.0, 15.0),        # Reduced from (120.0, 180.0) - consolidated prompts longer
+    'deduplication_delay': 25.0,              # Reduced from 45.0 - operation is fast
+    'mindmap_delay': 20.0,                    # Reduced from 30.0 - operation is fast
+    'source_import_wait': 20.0,               # Reduced from 45.0 - imports complete faster
 }
 
 # Retry configuration for API errors
