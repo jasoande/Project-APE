@@ -34,7 +34,7 @@ TIMINGS = {
     'chat_prompt_delay': (5.0, 8.0),
     'deduplication_delay': 20.0,
     'mindmap_delay': 15.0,
-    'source_import_wait': 15.0,
+    'source_import_wait': 10.0,
 }
 
 # DEEP MODE - Conservative delays for quota management (30-90 minutes per client)
