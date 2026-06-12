@@ -432,7 +432,7 @@ class ClientPipeline:
 
         Scoring:
         - Sources count: 0-3 points (need 15+ sources for full points)
-        - Notes created: 0-4 points (need 11 notes for full points)
+        - Notes created: 0-4 points (need 6 notes for full points - v3.0.4 consolidated prompts)
         - Has mindmap: 0-1 points
         - Has PDF source: 0-1 points
         - Research sources: 0-1 points (10+ web sources)
@@ -491,8 +491,8 @@ class ClientPipeline:
                 note_count = len(notes)
 
                 # 4. Notes created (0-4 points)
-                # 11 notes = 4 points (one per chat prompt)
-                score += min(4.0, (note_count / 11.0) * 4.0)
+                # 6 notes = 4 points (consolidated prompts in v3.0.4)
+                score += min(4.0, (note_count / 6.0) * 4.0)
 
             # 5. Has mindmap (0-1 point)
             # Check if mindmap exists

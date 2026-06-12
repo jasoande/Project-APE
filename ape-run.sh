@@ -187,8 +187,8 @@ echo "Pulling latest image (if needed)..."
 podman pull ${FULL_IMAGE}
 echo
 
-# Build command
-CMD_ARGS="python3 main.py --mode ${MODE}"
+# Build command (use explicit venv path)
+CMD_ARGS="/opt/venv/bin/python3 main.py --mode ${MODE}"
 if [ -n "$CLIENTS" ]; then
     CMD_ARGS="${CMD_ARGS} --clients ${CLIENTS}"
 fi
