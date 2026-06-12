@@ -215,33 +215,42 @@ Execute 12 structured analysis prompts:
 
 ### Basic Configuration (vars.py)
 
+**Key Configuration Files:**
+- `example-container.py` - Single-client containerized example (recommended starting point)
+- `container-vars.py` - Multi-client containerized configuration
+- `example-vars.py` - Direct execution (non-containerized) example
+
 ```python
 # Project APE - Container Configuration
-# Project Owner: Jason Anderson
+# Use example-container.py as your starting template
 
 from pathlib import Path
 
 # ============================================================
-# PROJECT SETTINGS
+# PERSONA CONFIGURATION
 # ============================================================
 
-PROJECT_ROOT = Path("/app")  # Container path (do not change)
+# Define the role/perspective for AI-generated content
+# Customize based on your department and use case:
+persona = "Red Hat solutions architect"
+
+# Other persona examples:
+#   - "Red Hat account executive" (sales focus)
+#   - "Red Hat marketing specialist" (campaigns/messaging)
+#   - "Red Hat customer success manager" (post-sale)
+#   - "senior industry analyst" (research focus)
 
 # ============================================================
 # CLIENT CONFIGURATION
 # ============================================================
 
-# Example Client - Acme Corporation
-acme_client_name = "Acme Corporation"
-acme_client_industry = "technology and software"
-acme_client_subsegments = "cloud infrastructure, enterprise SaaS, DevOps tools"
-acme_client_folder = "/app/client_data/Acme"
+clients = ["example_client"]
 
-# Example Client - Global Manufacturing Inc
-globalmfg_client_name = "Global Manufacturing Inc"
-globalmfg_client_industry = "manufacturing and industrial"
-globalmfg_client_subsegments = "automotive, aerospace, supply chain automation"
-globalmfg_client_folder = "/app/client_data/GlobalMfg"
+# Example Client Configuration
+example_client_name = "Example Corporation"
+example_client_industry = "technology"
+example_client_subsegments = "cloud computing, enterprise software, cybersecurity"
+example_client_folder = "/app/client_data/Example_Corporation"
 
 # ============================================================
 # WORKFLOW SETTINGS

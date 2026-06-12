@@ -100,6 +100,7 @@ COPY --chown=apeuser:apeuser chat_prompt_consolidated_*.txt /app/
 COPY --chown=apeuser:apeuser ask_prompt_*.txt /app/
 COPY --chown=apeuser:apeuser main.py /app/
 COPY --chown=apeuser:apeuser example-vars.py /app/
+COPY --chown=apeuser:apeuser example-container.py /app/
 
 # Create placeholder for vars.py (will be mounted at runtime)
 RUN echo "# vars.py will be mounted at runtime" > /app/vars.py && \

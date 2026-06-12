@@ -96,8 +96,8 @@ cp /path/to/client/documents/* client_data/YourClient/
 ### Step 4: Configure (3 minutes)
 
 ```bash
-# Copy example configuration
-cp container-vars.py vars.py
+# Copy single-client example configuration
+cp example-container.py vars.py
 
 # Edit configuration
 nano vars.py  # or use your favorite editor
@@ -105,6 +105,10 @@ nano vars.py  # or use your favorite editor
 
 **Minimal configuration:**
 ```python
+# Set your role/perspective
+persona = "Red Hat solutions architect"  # or account executive, marketing specialist, etc.
+
+# Define your client
 clients = ["yourclient"]
 
 yourclient_name = "Your Client Name"
@@ -112,6 +116,12 @@ yourclient_industry = "their industry"
 yourclient_subsegments = "key business areas"
 yourclient_folder = "/app/client_data/YourClient"
 ```
+
+**Persona Options:**
+- `"Red Hat account executive"` - Sales-focused output
+- `"Red Hat solutions architect"` - Technical depth (default)
+- `"Red Hat marketing specialist"` - Campaign/messaging angles
+- `"Red Hat customer success manager"` - Post-sale focus
 
 ### Step 5: Run! (2 minutes to start, 12-16 min to complete)
 

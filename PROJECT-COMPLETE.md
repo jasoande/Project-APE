@@ -181,12 +181,14 @@ All requested work has been completed, tested, validated, and deployed to produc
 - `Containerfile` - CMD fix
 
 ### Configuration Files:
-- `example-vars.py` - Optimized timings
-- `container-vars.py` - Optimized timings
+- `example-vars.py` - Optimized timings + persona support
+- `container-vars.py` - Optimized timings + persona support
+- `example-container.py` - NEW single-client containerized example
 - `.gitignore` - Fixed wildcards
 
 ### Prompt Files:
-- Created 6 consolidated chat prompts
+- Created 6 consolidated chat prompts with persona variable support
+- All prompts use $persona for role-based customization
 - Moved 12 old prompts to ../old/
 
 ### Documentation Files (New):

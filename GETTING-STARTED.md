@@ -82,8 +82,11 @@ cd Project-APE
 #### 3. Configure Your Clients
 
 ```bash
-# Copy template
-cp container-vars.py vars.py
+# Copy single-client template (recommended for first time)
+cp example-container.py vars.py
+
+# Or use multi-client template
+# cp container-vars.py vars.py
 
 # Edit with your clients
 nano vars.py
@@ -91,12 +94,19 @@ nano vars.py
 
 **Example:**
 ```python
+# Set your role/perspective
+persona = "Red Hat solutions architect"
+
+# Define your client
 clients = ["acme_corp"]
 
 acme_corp_name = "ACME Corporation"
 acme_corp_industry = "technology"
+acme_corp_subsegments = "cloud computing, enterprise software"
 acme_corp_folder = "/app/client_data/ACME"
 ```
+
+**Persona options:** account executive, solutions architect, marketing specialist, customer success manager
 
 #### 4. Add Client Data
 
