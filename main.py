@@ -36,8 +36,9 @@ spec = importlib.util.spec_from_file_location("config", SCRIPT_DIR / "vars.py")
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
 
-STATUS_DIR = SCRIPT_DIR / ".multi_process_status"
-LOGS_DIR = SCRIPT_DIR / "logs"
+# Use paths from config (for container compatibility)
+STATUS_DIR = getattr(config, 'STATUS_DIR', SCRIPT_DIR / ".multi_process_status")
+LOGS_DIR = getattr(config, 'LOGS_DIR', SCRIPT_DIR / "logs")
 DASHBOARD_PORT = config.DASHBOARD_PORT
 
 # Setup logging

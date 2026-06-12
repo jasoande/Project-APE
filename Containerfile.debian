@@ -1,0 +1,96 @@
+# Project APE - Generic Container Image for Registry Distribution (Debian variant)
+# Multi-stage build for optimized container size
+#
+# NOTE: This is the Debian/Ubuntu variant. For RHEL, use Containerfile (default)
+
+# Stage 1: Build environment
+FROM python:3.13-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    libjpeg-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy and install Python dependencies
+COPY requirements.txt /tmp/
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Stage 2: Runtime environment
+FROM python:3.13-slim
+
+# Metadata
+LABEL maintainer="Jason Anderson"
+LABEL description="Project APE - Account Planning Engine (Debian variant)"
+LABEL version="2.0.0"
+LABEL registry-ready="true"
+LABEL base-image="Debian"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # LibreOffice for document conversion (headless - install core-nogui FIRST)
+    libreoffice-core-nogui \
+    libreoffice-writer-nogui \
+    libreoffice-calc-nogui \
+    libreoffice-impress-nogui \
+    # Image processing libraries
+    libjpeg62-turbo \
+    zlib1g \
+    # Utilities
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Create non-root user for security
+RUN useradd -m -u 1000 -s /bin/bash apeuser && \
+    mkdir -p /app /app/logs /app/.multi_process_status /app/client_data && \
+    chown -R apeuser:apeuser /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy ONLY the application code (NO client data, NO vars.py)
+COPY --chown=apeuser:apeuser core/ /app/core/
+COPY --chown=apeuser:apeuser dashboard/ /app/dashboard/
+COPY --chown=apeuser:apeuser *.txt /app/
+COPY --chown=apeuser:apeuser main.py /app/
+COPY --chown=apeuser:apeuser example-vars.py /app/
+
+# Copy entrypoint script
+COPY --chown=apeuser:apeuser container-entrypoint.sh /app/
+
+# Create placeholder for vars.py (will be mounted at runtime)
+RUN echo "# vars.py will be mounted at runtime" > /app/vars.py && \
+    chown apeuser:apeuser /app/vars.py
+
+# Switch to non-root user
+USER apeuser
+
+# Set entrypoint
+ENTRYPOINT ["/app/container-entrypoint.sh"]
+
+# Environment variables (can be overridden at runtime)
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=dashboard/server.py
+ENV DASHBOARD_PORT=8765
+ENV CLIENT_DATA_PATH=/app/client_data
+
+# Expose dashboard port
+EXPOSE 8765
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python3 -c "import requests; requests.get('http://localhost:8765', timeout=5)" || exit 1
+
+# Default command - will be overridden with runtime parameters
+CMD ["python3", "main.py", "--mode", "fast"]

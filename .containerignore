@@ -1,0 +1,84 @@
+# Project APE - Container Ignore File
+# Excludes unnecessary files from container image
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (exclude from runtime, include only what's needed)
+*.md
+!README.md
+!QUICKSTART.md
+docs/
+ARCHITECTURE.md
+CONTRIBUTING.md
+CHANGELOG.md
+PROJECT_PLAN.md
+EXECUTIVE_SUMMARY.md
+PRESENTATION_5_SLIDES.md
+DOCUMENTATION_INDEX.md
+FIXES_*.md
+DEPENDENCIES.md
+COMPLETE_ANALYSIS_SUMMARY.md
+
+# Test files
+test_*.py
+*_test.py
+tests/
+.pytest_cache/
+
+# Logs (will be generated in container)
+logs/*.log
+
+# Status files (will be generated in container)
+.multi_process_status/*.json
+
+# Client data (mount as volume instead)
+Venella_2026/
+client_data/
+
+# Consolidated PDFs (will be generated)
+*-One.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Local configuration
+vars.py
+!example-vars.py
+
+# Container files
+Containerfile
+.containerignore
+podman-compose.yml

@@ -62,7 +62,8 @@ class SourceManager:
             return False
 
     def add_research_with_import(self, query_file: Path, mode: str = "deep",
-                                  client_name: str = None, client_industry: str = None) -> Dict:
+                                  client_name: str = None, client_industry: str = None,
+                                  client_subsegments: str = None) -> Dict:
         """
         Add research query and import all cited sources.
 
@@ -71,6 +72,7 @@ class SourceManager:
             mode: Research mode (fast or deep)
             client_name: Client name to substitute for $name variable
             client_industry: Client industry to substitute for $industry variable
+            client_subsegments: Industry subsegments to substitute for $subsegments variable
 
         Returns:
             Dict with status and imported source count
@@ -93,6 +95,10 @@ class SourceManager:
             if client_industry:
                 prompt_text = prompt_text.replace('$industry', client_industry)
                 logger.debug(f"[{self.client_id}] Substituted $industry with: {client_industry}")
+
+            if client_subsegments:
+                prompt_text = prompt_text.replace('$subsegments', client_subsegments)
+                logger.debug(f"[{self.client_id}] Substituted $subsegments with: {client_subsegments}")
 
             # Create temporary file with substituted prompt
             import tempfile
@@ -150,8 +156,10 @@ class SourceManager:
                         stderr_lower = result.stderr.lower()
                         is_retryable = (
                             "rate limit" in stderr_lower or
+                            "quota" in stderr_lower or
                             "rpc_code=3" in stderr_lower or
                             "rpc_code=9" in stderr_lower or
+                            "rpc_code=8" in stderr_lower or  # RESOURCE_EXHAUSTED
                             "transportservererror" in stderr_lower or
                             "failed precondition" in stderr_lower
                         )

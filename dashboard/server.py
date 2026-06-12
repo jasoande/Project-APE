@@ -7,17 +7,30 @@ Flask server with real-time status updates and log streaming
 
 import json
 import time
+import sys
 from pathlib import Path
 from flask import Flask, render_template, jsonify, Response
 import logging
+import importlib.util
 
 # Disable Flask's default logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
-STATUS_DIR = SCRIPT_DIR.parent / ".multi_process_status"
-LOGS_DIR = SCRIPT_DIR.parent / "logs"
+
+# Load configuration to get proper paths (for container compatibility)
+try:
+    config_path = SCRIPT_DIR.parent / "vars.py"
+    spec = importlib.util.spec_from_file_location("config", config_path)
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+    STATUS_DIR = getattr(config, 'STATUS_DIR', SCRIPT_DIR.parent / ".multi_process_status")
+    LOGS_DIR = getattr(config, 'LOGS_DIR', SCRIPT_DIR.parent / "logs")
+except Exception:
+    # Fallback to default paths if config loading fails
+    STATUS_DIR = SCRIPT_DIR.parent / ".multi_process_status"
+    LOGS_DIR = SCRIPT_DIR.parent / "logs"
 
 app = Flask(__name__,
             template_folder=str(SCRIPT_DIR / 'templates'),
@@ -113,7 +126,8 @@ def run_server(port=8765, debug=False):
     print(f"   Logs: Real-time streaming")
     print(f"\n   Press Ctrl+C to stop\n")
 
-    app.run(host='localhost', port=port, debug=debug, threaded=True)
+    # Bind to 0.0.0.0 for container compatibility (allows external access)
+    app.run(host='0.0.0.0', port=port, debug=debug, threaded=True)
 
 
 if __name__ == "__main__":

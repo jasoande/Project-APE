@@ -16,18 +16,14 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# Virtual Environment
+# Virtual environments
 venv/
 ENV/
 env/
-.venv
 
 # IDE
 .vscode/
@@ -35,39 +31,39 @@ env/
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Project APE Specific
-logs/
-*.log
+# Project APE specific
+logs/*.log
 .multi_process_status/
-*.json
+docs_generated/
+*.pdf
+*.pptx
+*.docx
 
-# Client Data (users will have their own)
+# Client data (NEVER commit)
 client_data/
 Venella_2026/
+*/
+*_2026/
 
-# Temporary files
-*.tmp
-*.temp
-*.bak
+# Credentials (NEVER commit)
+.notebooklm/
+credentials.json
+token.json
+vars.py
 
 # OS
 .DS_Store
 Thumbs.db
+**/.DS_Store
 
-# Documentation builds
-docs/_build/
-site/
+# Temporary files
+tmp/
+temp/
+*.tmp
 
-# Test coverage
-.coverage
-htmlcov/
-.pytest_cache/
+# Claude Code
+.claude/
 
-# Jupyter
-.ipynb_checkpoints/
-
-# Environment variables (if used)
-.env
-.env.local
+# Container duplicates
+container-vars.py

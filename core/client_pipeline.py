@@ -47,6 +47,7 @@ class ClientPipeline:
         self.client_name = getattr(config, f"{client_id}_name", client_id)
         self.client_folder = Path(getattr(config, f"{client_id}_folder", ""))
         self.client_industry = getattr(config, f"{client_id}_industry", "general")
+        self.client_subsegments = getattr(config, f"{client_id}_subsegments", None)
 
         # Initialize managers
         self.auth_manager = AuthManager()
@@ -265,7 +266,8 @@ class ClientPipeline:
                     prompt_file,
                     mode="deep" if self.mode == "deep" else "fast",
                     client_name=self.client_name,
-                    client_industry=self.client_industry
+                    client_industry=self.client_industry,
+                    client_subsegments=self.client_subsegments
                 )
 
                 if result["success"]:
@@ -380,13 +382,13 @@ class ClientPipeline:
                         if result.returncode == 0:
                             logger.info(f"[{self.client_id}] ✅ Created note: {prompt_file.stem}")
                             break
-                        elif "rate limit" in result.stderr.lower() or "rpc_code=3" in result.stderr.lower() or "rpc_code=9" in result.stderr.lower():
+                        elif "rate limit" in result.stderr.lower() or "quota" in result.stderr.lower() or "rpc_code=3" in result.stderr.lower() or "rpc_code=9" in result.stderr.lower() or "rpc_code=8" in result.stderr.lower():
                             if attempt < max_retries - 1:
-                                logger.warning(f"[{self.client_id}] Transient error, waiting {retry_delay}s (attempt {attempt + 1}/{max_retries})")
+                                logger.warning(f"[{self.client_id}] Quota/rate limit hit, waiting {retry_delay}s (attempt {attempt + 1}/{max_retries})")
                                 time.sleep(retry_delay)
                                 retry_delay *= 2  # Exponential backoff
                             else:
-                                logger.error(f"[{self.client_id}] Chat failed after {max_retries} retries: {result.stderr}")
+                                logger.error(f"[{self.client_id}] Chat failed after {max_retries} retries (quota exhausted): {result.stderr}")
                         else:
                             logger.warning(f"[{self.client_id}] Chat failed: {result.stderr}")
                             break

@@ -24,7 +24,7 @@ class AuthManager:
         """
         self.profile = profile
         self.last_check = 0
-        self.check_interval = 300  # 5 minutes
+        self.check_interval = 60  # 1 minute - check frequently during long runs
 
     def is_authenticated(self) -> bool:
         """
@@ -34,18 +34,23 @@ class AuthManager:
             True if authenticated, False otherwise
         """
         try:
+            # Try to list notebooks - this will fail if not authenticated
+            # Using 'list' instead of 'status' as status command doesn't exist in all versions
             result = subprocess.run(
-                ["notebooklm", "status"],
+                ["notebooklm", "list"],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
 
-            # If status command succeeds and doesn't mention login, we're auth'd
+            # If list command succeeds (even with 0 notebooks), we're authenticated
             if result.returncode == 0:
-                output = result.stdout.lower()
-                if "not authenticated" not in output and "login" not in output:
-                    return True
+                return True
+
+            # Check if error message indicates auth issue
+            error_output = result.stderr.lower()
+            if "not authenticated" in error_output or "login" in error_output:
+                return False
 
             return False
 
