@@ -233,8 +233,13 @@ EOF
 
     pip3 install --upgrade pip setuptools wheel
 
-    # Install NotebookLM Python SDK
-    pip3 install notebooklm-py
+    # Install NotebookLM Python SDK with browser support
+    log_info "Installing NotebookLM SDK with browser automation..."
+    pip3 install "notebooklm-py[browser]"
+
+    # Install Playwright browser (as regular user to avoid permission issues)
+    log_info "Installing Playwright Chromium browser..."
+    sudo -u "$REGULAR_USER" python3 -m playwright install chromium
 
     # Install other Python dependencies
     pip3 install \
