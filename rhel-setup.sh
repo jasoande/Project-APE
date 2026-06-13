@@ -175,13 +175,38 @@ main() {
 
     # Step 6: Install LibreOffice for PDF conversion
     log_info "Step 6: Installing LibreOffice for document conversion..."
-    dnf install -y \
-        libreoffice-core \
-        libreoffice-writer \
-        libreoffice-calc \
-        libreoffice-impress \
-        libreoffice-headless
-    log_success "LibreOffice installed"
+
+    if [[ "$RHEL_VERSION" == "10" ]]; then
+        log_warning "LibreOffice packages not available in RHEL 10 repositories"
+        log_info "Installing via Flatpak..."
+
+        # Install Flatpak if not already installed
+        dnf install -y flatpak || true
+
+        # Add Flathub repository
+        flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
+
+        # Install LibreOffice via Flatpak
+        flatpak install -y flathub org.libreoffice.LibreOffice 2>/dev/null || {
+            log_warning "LibreOffice Flatpak installation failed or skipped"
+            log_warning "You may need to install LibreOffice manually for Office document conversion"
+            log_info "Project APE will work with PDF files only"
+        }
+
+        log_success "LibreOffice setup attempted (Flatpak)"
+    else
+        # RHEL 8/9 - use traditional packages
+        dnf install -y \
+            libreoffice-core \
+            libreoffice-writer \
+            libreoffice-calc \
+            libreoffice-impress \
+            libreoffice-headless || {
+            log_warning "LibreOffice installation failed"
+            log_info "Project APE will work with PDF files only"
+        }
+        log_success "LibreOffice installed"
+    fi
     echo ""
 
     # Step 7: Install Google Chrome for NotebookLM authentication
