@@ -59,10 +59,32 @@ main() {
     log_success "System updated"
     echo ""
 
-    # Step 2: Install EPEL repository
+    # Step 2: Install EPEL repository (if needed)
     log_info "Step 2: Installing EPEL repository..."
-    dnf install -y epel-release
-    log_success "EPEL repository installed"
+
+    # Detect RHEL version
+    RHEL_VERSION=$(rpm -E %{rhel} 2>/dev/null || echo "0")
+
+    if [[ "$RHEL_VERSION" == "10" ]]; then
+        log_info "RHEL 10 detected - installing EPEL from direct URL..."
+        dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm || {
+            log_warning "EPEL installation failed - continuing without it (RHEL 10 may not need it)"
+        }
+    elif [[ "$RHEL_VERSION" == "9" ]]; then
+        dnf install -y epel-release || {
+            log_info "Trying direct EPEL 9 installation..."
+            dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+        }
+    elif [[ "$RHEL_VERSION" == "8" ]]; then
+        dnf install -y epel-release || {
+            log_info "Trying direct EPEL 8 installation..."
+            dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+        }
+    else
+        log_warning "Unknown RHEL version - skipping EPEL installation"
+    fi
+
+    log_success "EPEL setup complete"
     echo ""
 
     # Step 3: Install core dependencies
@@ -110,11 +132,39 @@ main() {
         skopeo \
         containers-common
 
-    # Enable podman socket for rootless mode
-    systemctl --user enable podman.socket || true
+    # Determine the regular user (will be used throughout script)
+    if [ -n "$SUDO_USER" ]; then
+        REGULAR_USER=$SUDO_USER
+        USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    else
+        REGULAR_USER=$(whoami)
+        USER_HOME=$HOME
+    fi
 
+    # Start and enable Podman socket for rootless mode
+    log_info "Starting Podman for user ${REGULAR_USER}..."
+
+    # Enable lingering first (allows user services to run without login)
+    loginctl enable-linger "$REGULAR_USER" 2>/dev/null || true
+
+    # Start podman socket as the regular user
+    sudo -u "$REGULAR_USER" systemctl --user enable podman.socket 2>/dev/null || true
+    sudo -u "$REGULAR_USER" systemctl --user start podman.socket 2>/dev/null || true
+
+    # Verify Podman is working
     PODMAN_VERSION=$(podman --version | awk '{print $3}')
     log_success "Podman ${PODMAN_VERSION} installed"
+
+    # Test Podman functionality
+    log_info "Testing Podman functionality..."
+    if sudo -u "$REGULAR_USER" podman info >/dev/null 2>&1; then
+        log_success "Podman is ready and functional"
+    else
+        log_warning "Podman installed but initializing storage..."
+        # Initialize podman for user
+        sudo -u "$REGULAR_USER" podman system reset --force 2>/dev/null || true
+        sudo -u "$REGULAR_USER" podman info >/dev/null 2>&1 && log_success "Podman ready" || log_warning "Podman may need manual initialization"
+    fi
     echo ""
 
     # Step 6: Install LibreOffice for PDF conversion
@@ -170,15 +220,7 @@ EOF
     # Step 9: Create account_planning directory structure
     log_info "Step 9: Creating directory structure..."
 
-    # Determine the regular user (not root)
-    if [ -n "$SUDO_USER" ]; then
-        REGULAR_USER=$SUDO_USER
-        USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
-    else
-        REGULAR_USER=$(whoami)
-        USER_HOME=$HOME
-    fi
-
+    # User variables already set in Step 5
     ACCOUNT_PLANNING_DIR="${USER_HOME}/account_planning"
 
     # Create directory as the regular user
