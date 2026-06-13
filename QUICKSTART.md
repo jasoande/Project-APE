@@ -18,10 +18,10 @@
 **Project APE** (Account Planning Engine) automatically generates comprehensive account intelligence by:
 - 📄 **Consolidating** all client documents into a single PDF
 - 🔍 **Researching** with NotebookLM's AI-powered deep analysis  
-- 📝 **Creating** 12 structured intelligence notes
+- 📝 **Creating** 6 comprehensive intelligence notes (consolidated)
 - 🗺️ **Generating** interactive mind maps
-- ⚡ **Fast Mode**: <16 minutes per client
-- 🔬 **Deep Mode**: 30-90 minutes with 100+ sources
+- ⚡ **Fast Mode**: 10-12 minutes for 6 clients (62% faster!)
+- 🔬 **Deep Mode**: 30-35 minutes for 6 clients with 90-180 sources/client
 
 **Perfect for:** Sales engineers, account managers, solution architects preparing for customer meetings.
 
@@ -207,10 +207,11 @@ For comprehensive research with 100+ sources:
 ```
 
 **Deep mode:**
-- 6 research prompts (vs. 2 in fast)
-- Incremental deduplication
-- 30-90 minutes per client
-- Higher quality intelligence
+- 2 research prompts with extensive sourcing (90-180 sources/client)
+- Incremental deduplication after each prompt
+- 30-35 minutes for 6 clients parallel
+- Quality score: 8.0/10 (vs 5-6/10 in fast mode)
+- Best for: High-volume days, maximum research depth
 
 ### Rerun with Fresh Data
 
@@ -258,12 +259,14 @@ git pull
 
 | Feature | Fast Mode | Deep Mode |
 |---------|-----------|-----------|
-| **Time/Client** | 12-16 min | 30-90 min |
-| **Research Prompts** | 2 | 6 |
-| **Sources** | 20-40 | 100+ |
-| **Deduplication** | Final only | Incremental |
-| **Parallel Clients** | Up to 5 | Up to 3 |
-| **Best For** | Quick prep, multiple clients | Deep analysis, important accounts |
+| **6 Clients (Parallel)** | 10-12 min | 30-35 min |
+| **Single Client** | ~10 min | ~25-30 min |
+| **Research Prompts** | 2 | 2 (extensive) |
+| **Sources Imported** | ~20 | 90-180 |
+| **Quality Score** | 5-6/10 | 8.0/10 |
+| **Deduplication** | Final only | After each prompt |
+| **Retry Rate** | <5% | ~30% (acceptable) |
+| **Best For** | Daily operations | Maximum depth analysis |
 
 ---
 

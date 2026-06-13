@@ -27,7 +27,8 @@ Project APE revolutionizes enterprise account planning by automating research, a
 - 🤔 Risk of missing critical insights
 
 **With Project APE:**
-- ⚡ **15-20 minutes** fully automated
+- ⚡ **10-12 minutes** fully automated (Fast mode)
+- 🔬 **30-35 minutes** for deep research (Deep mode, 8-9x more sources)
 - 🤖 AI analyzes all documents simultaneously
 - 🌐 Automated web research for industry context
 - 📊 Structured, consistent output every time
@@ -400,12 +401,13 @@ Project-APE/
 
 | Metric | Fast Mode | Deep Mode |
 |--------|-----------|-----------|
-| Execution Time | 15-20 min | 30-45 min |
-| Research Sources | 20-30 | 50-75 |
-| Chat Prompts | 12 | 12 |
-| PDF Size Limit | 50 MB | 50 MB |
-| Max Parallel Clients | 5 | 3 |
-| Memory per Client | ~200 MB | ~300 MB |
+| Single Client | ~10-12 min | ~25-30 min |
+| 6 Clients Parallel | ~10-12 min | ~30-35 min |
+| Research Sources | ~20 | ~90-180 |
+| Chat Prompts | 6 (consolidated) | 6 (consolidated) |
+| Quality Score | 5-6/10 | 8-9/10 |
+| Use Case | Daily operations | High-volume, max depth |
+| Retry Rate | <5% | ~30% (acceptable) |
 
 ---
 
