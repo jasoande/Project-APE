@@ -116,8 +116,14 @@ main() {
         python3 \
         python3-pip \
         python3-devel \
-        python3-setuptools \
-        python3-wheel
+        python3-setuptools
+
+    # python3-wheel may not be available on RHEL 10, install via pip if needed
+    if [[ "$RHEL_VERSION" == "10" ]]; then
+        pip3 install --upgrade wheel || true
+    else
+        dnf install -y python3-wheel || pip3 install --upgrade wheel
+    fi
 
     PYTHON_VERSION=$(python3 --version | awk '{print $2}')
     log_success "Python ${PYTHON_VERSION} installed"
