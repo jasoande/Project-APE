@@ -503,9 +503,10 @@ print_instructions() {
     echo ""
     echo "3. Authenticate with NotebookLM:"
     if [[ "$OS" == "rhel" ]]; then
-        echo "   notebooklm login"
-        echo "   (If over SSH, use: ssh -X user@host)"
+        echo "   ./notebooklm-auth.sh"
+        echo "   (Requires X11 forwarding: ssh -X user@host)"
     else
+        echo "   source venv/bin/activate"
         echo "   notebooklm login"
     fi
     echo ""
