@@ -6,19 +6,13 @@
 
 ---
 
-## ⚠️ IMPORTANT: Which Setup Script to Use
+## Setup Script
 
-**USE THIS SCRIPT:**
-- ✅ **`setup.sh`** - Universal setup script (RHEL 8/9/10 and macOS)
-  - Creates isolated virtual environment
-  - Does NOT pollute system Python
-  - Recommended for all installations
-
-**DO NOT USE:**
-- ❌ **`rhel-setup.sh`** - OLD RHEL-only script (deprecated)
-  - Installs packages globally
-  - Can break system Python
-  - Kept for reference only
+**`setup.sh`** - Universal setup script for RHEL 8/9/10 and macOS
+- Creates isolated virtual environment
+- Does NOT pollute system Python
+- Handles OS-specific package installation
+- Safe and reversible installation
 
 ---
 
