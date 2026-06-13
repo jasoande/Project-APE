@@ -107,9 +107,14 @@ main() {
         zlib-devel \
         sqlite-devel \
         readline-devel \
-        xorg-x11-server-Xvfb \
-        xorg-x11-xauth \
         liberation-fonts
+
+    # Install Xvfb for headless browser automation (optional)
+    log_info "Attempting to install Xvfb for headless browser automation..."
+    dnf install -y xorg-x11-server-Xvfb 2>/dev/null || \
+    dnf install -y xvfb 2>/dev/null || \
+    log_warning "Xvfb not available in this RHEL version - browser auth will require X11 forwarding (ssh -X)"
+
     log_success "Core dependencies installed"
     echo ""
 
@@ -375,8 +380,8 @@ EOF
     echo "   cd ${ACCOUNT_PLANNING_DIR}/Project-APE"
     echo ""
     echo "3. Authenticate with NotebookLM:"
-    echo "   xvfb-run notebooklm login"
-    echo "   (Note: Use xvfb-run for headless/SSH sessions)"
+    echo "   notebooklm login"
+    echo "   (Note: If over SSH without X11, reconnect with: ssh -X user@host)"
     echo ""
     echo "4. Set up credentials for container:"
     echo "   ./setup-credentials.sh"
