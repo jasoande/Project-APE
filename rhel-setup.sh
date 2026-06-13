@@ -1,0 +1,326 @@
+#!/bin/bash
+################################################################################
+# Project APE - RHEL 10 Setup Script
+#
+# Prepares a fresh RHEL 10 system to run Project APE
+#
+# Project Owner & Maintainer: Jason Anderson
+# Version: 3.0.4
+################################################################################
+
+set -e  # Exit on any error
+
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Logging functions
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if running as root or with sudo
+check_sudo() {
+    if [[ $EUID -ne 0 ]]; then
+        log_error "This script must be run with sudo or as root"
+        exit 1
+    fi
+}
+
+# Main setup function
+main() {
+    echo "========================================================================"
+    echo "  PROJECT APE - RHEL 10 SETUP"
+    echo "  Account Planning Engine Installation"
+    echo "========================================================================"
+    echo ""
+
+    log_info "Starting RHEL 10 setup for Project APE..."
+    echo ""
+
+    # Step 1: Update system
+    log_info "Step 1: Updating system packages..."
+    dnf update -y
+    log_success "System updated"
+    echo ""
+
+    # Step 2: Install EPEL repository
+    log_info "Step 2: Installing EPEL repository..."
+    dnf install -y epel-release
+    log_success "EPEL repository installed"
+    echo ""
+
+    # Step 3: Install core dependencies
+    log_info "Step 3: Installing core dependencies..."
+    dnf install -y \
+        git \
+        curl \
+        wget \
+        vim \
+        nano \
+        jq \
+        unzip \
+        tar \
+        gcc \
+        gcc-c++ \
+        make \
+        openssl-devel \
+        bzip2-devel \
+        libffi-devel \
+        zlib-devel \
+        sqlite-devel \
+        readline-devel
+    log_success "Core dependencies installed"
+    echo ""
+
+    # Step 4: Install Python 3.11+ (RHEL 10 should have Python 3.11 or newer)
+    log_info "Step 4: Installing Python 3.11+..."
+    dnf install -y \
+        python3 \
+        python3-pip \
+        python3-devel \
+        python3-setuptools \
+        python3-wheel
+
+    PYTHON_VERSION=$(python3 --version | awk '{print $2}')
+    log_success "Python ${PYTHON_VERSION} installed"
+    echo ""
+
+    # Step 5: Install Podman and container tools
+    log_info "Step 5: Installing Podman and container tools..."
+    dnf install -y \
+        podman \
+        podman-compose \
+        buildah \
+        skopeo \
+        containers-common
+
+    # Enable podman socket for rootless mode
+    systemctl --user enable podman.socket || true
+
+    PODMAN_VERSION=$(podman --version | awk '{print $3}')
+    log_success "Podman ${PODMAN_VERSION} installed"
+    echo ""
+
+    # Step 6: Install LibreOffice for PDF conversion
+    log_info "Step 6: Installing LibreOffice for document conversion..."
+    dnf install -y \
+        libreoffice-core \
+        libreoffice-writer \
+        libreoffice-calc \
+        libreoffice-impress \
+        libreoffice-headless
+    log_success "LibreOffice installed"
+    echo ""
+
+    # Step 7: Install Google Chrome for NotebookLM authentication
+    log_info "Step 7: Installing Google Chrome..."
+
+    # Add Google Chrome repository
+    cat > /etc/yum.repos.d/google-chrome.repo <<'EOF'
+[google-chrome]
+name=google-chrome
+baseurl=http://dl.google.com/linux/chrome/rpm/stable/x86_64
+enabled=1
+gpgcheck=1
+gpgkey=https://dl.google.com/linux/linux_signing_key.pub
+EOF
+
+    dnf install -y google-chrome-stable
+
+    CHROME_VERSION=$(google-chrome --version | awk '{print $3}')
+    log_success "Google Chrome ${CHROME_VERSION} installed"
+    echo ""
+
+    # Step 8: Install Project APE Python dependencies
+    log_info "Step 8: Installing Python packages..."
+
+    pip3 install --upgrade pip setuptools wheel
+
+    # Install NotebookLM Python SDK
+    pip3 install notebooklm-py
+
+    # Install other Python dependencies
+    pip3 install \
+        flask \
+        requests \
+        pypdf \
+        reportlab \
+        Pillow \
+        python-magic
+
+    log_success "Python packages installed"
+    echo ""
+
+    # Step 9: Create account_planning directory structure
+    log_info "Step 9: Creating directory structure..."
+
+    # Determine the regular user (not root)
+    if [ -n "$SUDO_USER" ]; then
+        REGULAR_USER=$SUDO_USER
+        USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    else
+        REGULAR_USER=$(whoami)
+        USER_HOME=$HOME
+    fi
+
+    ACCOUNT_PLANNING_DIR="${USER_HOME}/account_planning"
+
+    # Create directory as the regular user
+    sudo -u "$REGULAR_USER" mkdir -p "$ACCOUNT_PLANNING_DIR"
+
+    log_success "Created directory: ${ACCOUNT_PLANNING_DIR}"
+    echo ""
+
+    # Step 10: Clone Project APE repository
+    log_info "Step 10: Cloning Project APE repository..."
+
+    cd "$ACCOUNT_PLANNING_DIR"
+
+    # Clone as the regular user
+    if [ -d "Project-APE" ]; then
+        log_warning "Project-APE directory already exists, pulling latest changes..."
+        cd Project-APE
+        sudo -u "$REGULAR_USER" git pull
+    else
+        sudo -u "$REGULAR_USER" git clone https://github.com/jasoande/Project-APE.git
+        cd Project-APE
+    fi
+
+    # Switch to QA branch (latest stable)
+    sudo -u "$REGULAR_USER" git checkout QA
+
+    log_success "Project APE cloned to: ${ACCOUNT_PLANNING_DIR}/Project-APE"
+    echo ""
+
+    # Step 11: Create client_data and logs directories
+    log_info "Step 11: Creating working directories..."
+
+    sudo -u "$REGULAR_USER" mkdir -p client_data
+    sudo -u "$REGULAR_USER" mkdir -p logs
+
+    log_success "Working directories created"
+    echo ""
+
+    # Step 12: Set up Podman for rootless mode
+    log_info "Step 12: Configuring Podman for rootless mode..."
+
+    # Enable lingering for the user (allows services to run when not logged in)
+    loginctl enable-linger "$REGULAR_USER" || true
+
+    # Set up subuid/subgid for rootless containers
+    if ! grep -q "^${REGULAR_USER}:" /etc/subuid; then
+        echo "${REGULAR_USER}:100000:65536" >> /etc/subuid
+    fi
+
+    if ! grep -q "^${REGULAR_USER}:" /etc/subgid; then
+        echo "${REGULAR_USER}:100000:65536" >> /etc/subgid
+    fi
+
+    log_success "Podman rootless mode configured"
+    echo ""
+
+    # Step 13: Pull Project APE container image
+    log_info "Step 13: Pulling Project APE container image..."
+
+    sudo -u "$REGULAR_USER" podman pull quay.io/jasoande/project_ape/project-ape:latest
+
+    log_success "Container image pulled"
+    echo ""
+
+    # Step 14: Configure firewall (if firewalld is running)
+    if systemctl is-active --quiet firewalld; then
+        log_info "Step 14: Configuring firewall for dashboard..."
+
+        firewall-cmd --permanent --add-port=8765/tcp || true
+        firewall-cmd --reload || true
+
+        log_success "Firewall configured (port 8765 opened for dashboard)"
+        echo ""
+    else
+        log_info "Step 14: Firewall not running, skipping configuration"
+        echo ""
+    fi
+
+    # Step 15: Create example configuration
+    log_info "Step 15: Creating example configuration..."
+
+    PROJECT_DIR="${ACCOUNT_PLANNING_DIR}/Project-APE"
+
+    sudo -u "$REGULAR_USER" cp "${PROJECT_DIR}/example-container.py" "${PROJECT_DIR}/vars.py.example"
+
+    log_success "Example configuration created: vars.py.example"
+    echo ""
+
+    # Final summary
+    echo "========================================================================"
+    echo -e "${GREEN}  ✅ PROJECT APE SETUP COMPLETE!${NC}"
+    echo "========================================================================"
+    echo ""
+    echo "Installation Summary:"
+    echo "  • Python ${PYTHON_VERSION}"
+    echo "  • Podman ${PODMAN_VERSION}"
+    echo "  • Google Chrome ${CHROME_VERSION}"
+    echo "  • LibreOffice installed"
+    echo "  • NotebookLM SDK installed"
+    echo "  • Project directory: ${ACCOUNT_PLANNING_DIR}/Project-APE"
+    echo ""
+    echo "Next Steps:"
+    echo ""
+    echo "1. Switch to your user account:"
+    echo "   sudo -i -u ${REGULAR_USER}"
+    echo ""
+    echo "2. Navigate to Project APE:"
+    echo "   cd ${ACCOUNT_PLANNING_DIR}/Project-APE"
+    echo ""
+    echo "3. Authenticate with NotebookLM:"
+    echo "   notebooklm login"
+    echo ""
+    echo "4. Set up credentials for container:"
+    echo "   ./setup-credentials.sh"
+    echo ""
+    echo "5. Create your configuration:"
+    echo "   cp example-container.py vars.py"
+    echo "   nano vars.py  # Edit with your client details"
+    echo ""
+    echo "6. Add client documents:"
+    echo "   mkdir -p client_data/YourClient"
+    echo "   cp /path/to/documents/* client_data/YourClient/"
+    echo ""
+    echo "7. Run Project APE:"
+    echo "   ./ape-run.sh --vars ./vars.py --clients yourclient --mode fast"
+    echo ""
+    echo "8. View dashboard:"
+    echo "   http://localhost:8765"
+    echo ""
+    echo "Documentation:"
+    echo "  • Quick Start: ${ACCOUNT_PLANNING_DIR}/Project-APE/QUICKSTART.md"
+    echo "  • Full README: ${ACCOUNT_PLANNING_DIR}/Project-APE/README.md"
+    echo "  • Testing Guide: ${ACCOUNT_PLANNING_DIR}/Project-APE/TESTING-GUIDE.md"
+    echo ""
+    echo "========================================================================"
+    echo -e "${BLUE}Project APE v3.0.4 - Ready to revolutionize account planning!${NC}"
+    echo "========================================================================"
+    echo ""
+}
+
+# Run main function
+check_sudo
+main
+
+exit 0
