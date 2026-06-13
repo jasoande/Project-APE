@@ -63,7 +63,7 @@ DEEP_TIMINGS = {
     'chat_prompt_delay': (10.0, 15.0),        # Reduced from (120.0, 180.0) - consolidated prompts longer
     'deduplication_delay': 25.0,              # Reduced from 45.0 - operation is fast
     'mindmap_delay': 20.0,                    # Reduced from 30.0 - operation is fast
-    'source_import_wait': 20.0,               # Reduced from 45.0 - imports complete faster
+    'source_import_wait': 30.0,               # Increased from 20.0 - deep mode imports 90-180 sources
 }
 
 # Retry configuration for API errors
