@@ -6,153 +6,58 @@
 
 ---
 
-## Setup Script
-
-**`setup.sh`** - Universal setup script for RHEL 8/9/10 and macOS
-- Creates isolated virtual environment
-- Does NOT pollute system Python
-- Handles OS-specific package installation
-- Safe and reversible installation
-
----
-
-## Quick Start
-
-### RHEL 8/9/10
-
-```bash
-# 1. Clone the repository
-cd ~
-mkdir -p account_planning
-cd account_planning
-git clone https://github.com/jasoande/Project-APE.git
-cd Project-APE
-git checkout QA
-
-# 2. Run setup (requires sudo)
-sudo ./setup.sh
-
-# 3. Activate virtual environment
-source activate-ape.sh
-
-# 4. Authenticate (requires X11 forwarding)
-./notebooklm-auth.sh
-```
-
-**SSH Connection for Authentication:**
-```bash
-# Connect with X11 forwarding enabled
-ssh -X user@rhel-host
-
-# Or with trusted X11 forwarding
-ssh -Y user@rhel-host
-```
-
-### macOS
-
-```bash
-# 1. Install Homebrew (if not already installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# 2. Clone the repository
-cd ~
-mkdir -p account_planning
-cd account_planning
-git clone https://github.com/jasoande/Project-APE.git
-cd Project-APE
-git checkout QA
-
-# 3. Run setup (NO sudo)
-./setup.sh
-
-# 4. Activate virtual environment
-source activate-ape.sh
-
-# 5. Authenticate
-notebooklm login
-```
-
----
-
-## Detailed Installation Steps
+## Installation Steps
 
 ### Prerequisites
 
-**RHEL 8/9/10:**
-- Active Red Hat subscription (for dnf package manager)
-- sudo access
-- SSH with X11 forwarding enabled (for authentication)
+**System Requirements:**
+- Podman installed and running
+- Python 3.11 or higher
+- Git
+- Google Chrome (for NotebookLM authentication)
 
-**macOS:**
-- macOS 11 (Big Sur) or newer
-- Homebrew installed
-- No sudo required
+### Step 1: Clone Repository
 
-### Step 1: System Preparation
-
-The `setup.sh` script will install:
-
-**RHEL Systems:**
-- EPEL repository
-- Python 3.11+ with development headers
-- Podman container runtime
-- Google Chrome
-- LibreOffice (RHEL 8/9 only)
-- Build tools and dependencies
-
-**macOS Systems:**
-- pyenv (Python version manager)
-- Python 3.11 (via pyenv)
-- Podman Desktop
-- Google Chrome
-- LibreOffice
-
-### Step 2: Virtual Environment
-
-The script creates an isolated Python environment at:
-```
-~/account_planning/Project-APE/venv/
-```
-
-**This ensures:**
-- System Python remains untouched
-- No package conflicts
-- Easy to remove/reinstall
-- Consistent environment across systems
-
-### Step 3: Authentication
-
-**RHEL (via SSH):**
 ```bash
-# Must connect with X11 forwarding
-ssh -X user@rhel-host
-cd ~/account_planning/Project-APE
-source activate-ape.sh
-./notebooklm-auth.sh
+git clone https://github.com/jasoande/Project-APE.git
+cd Project-APE
+git checkout QA
 ```
 
-**macOS (local):**
+### Step 2: Install NotebookLM SDK
+
 ```bash
-cd ~/account_planning/Project-APE
-source activate-ape.sh
+pip install notebooklm-py
+```
+
+### Step 3: Authenticate with NotebookLM
+
+```bash
 notebooklm login
 ```
 
-The authentication process will:
-1. Open Chrome browser
-2. Prompt for Google login
-3. Request NotebookLM API permissions
-4. Save credentials to `~/.notebooklm/credentials.json`
+This will open Chrome for Google authentication. Sign in and grant NotebookLM API access.
 
-### Step 4: Container Credentials
+### Step 4: Set Up Container Credentials
 
 ```bash
 ./setup-credentials.sh
 ```
 
-This copies your NotebookLM credentials into the container's expected location.
+This copies your NotebookLM credentials to the container's expected location.
 
-### Step 5: Configure Your First Client
+### Step 5: Pull Container Image
+
+```bash
+podman pull quay.io/jasoande/project_ape/project-ape:latest
+```
+
+Or build locally:
+```bash
+podman build -t project-ape:latest -f Containerfile .
+```
+
+### Step 6: Configure Your First Client
 
 ```bash
 # Copy example configuration
@@ -175,7 +80,7 @@ CLIENTS = {
 }
 ```
 
-### Step 6: Add Client Documents
+### Step 7: Add Client Documents
 
 ```bash
 mkdir -p client_data/YourClient
@@ -184,7 +89,7 @@ cp /path/to/documents/* client_data/YourClient/
 
 Supported formats: PDF, DOCX, PPTX, XLSX, TXT, PNG, JPG
 
-### Step 7: Run Project APE
+### Step 8: Run Project APE
 
 **Fast Mode** (10-12 minutes per client):
 ```bash
@@ -196,55 +101,9 @@ Supported formats: PDF, DOCX, PPTX, XLSX, TXT, PNG, JPG
 ./ape-run.sh --vars ./vars.py --clients yourclient --mode deep
 ```
 
-### Step 8: View Dashboard
+### Step 9: View Dashboard
 
 Open browser to: **http://localhost:8765**
-
----
-
-## Virtual Environment Management
-
-### Activating the Environment
-
-Every time you work with Project APE:
-```bash
-cd ~/account_planning/Project-APE
-source activate-ape.sh
-```
-
-Or manually:
-```bash
-source venv/bin/activate
-```
-
-### Deactivating the Environment
-
-```bash
-deactivate
-```
-
-### Checking Active Environment
-
-```bash
-which python
-# Should show: ~/account_planning/Project-APE/venv/bin/python
-
-python --version
-# Should show: Python 3.11.x or 3.12.x
-```
-
-### Reinstalling the Environment
-
-```bash
-cd ~/account_planning/Project-APE
-rm -rf venv/
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install 'notebooklm-py[browser]'
-pip install flask requests pypdf reportlab Pillow python-magic
-python -m playwright install chromium
-```
 
 ---
 
@@ -252,23 +111,16 @@ python -m playwright install chromium
 
 ### Authentication Issues
 
-**Problem:** `Missing X server or $DISPLAY`
+**Problem:** `notebooklm login` fails or requires display
 
-**Solution:**
-1. Disconnect from SSH
-2. Reconnect with X11 forwarding:
-   ```bash
-   ssh -X user@rhel-host
-   ```
-3. Verify DISPLAY is set:
-   ```bash
-   echo $DISPLAY
-   # Should show: localhost:10.0 (or similar)
-   ```
-4. Run authentication:
-   ```bash
-   ./notebooklm-auth.sh
-   ```
+**Solution:** Authenticate on a machine with a browser, then copy credentials:
+```bash
+# On machine with browser (local workstation):
+notebooklm login
+
+# Copy credentials to remote server:
+scp ~/.notebooklm/credentials.json user@remote-host:~/.notebooklm/
+```
 
 ### Container Image Pull Fails
 
@@ -280,41 +132,33 @@ cd ~/account_planning/Project-APE
 podman build -t project-ape:latest -f Containerfile .
 ```
 
-### Virtual Environment Not Found
+### Python Package Issues
 
-**Problem:** `ERROR: Virtual environment not found`
+**Problem:** `notebooklm` command not found
 
-**Solution:** Re-run setup:
+**Solution:** Ensure notebooklm-py is installed:
 ```bash
-sudo ./setup.sh  # RHEL
-./setup.sh       # macOS
+pip install notebooklm-py
+# Or reinstall:
+pip install --upgrade --force-reinstall notebooklm-py
 ```
 
-### Permission Errors
+### Podman Issues
 
-**Problem:** `Permission denied` or `cannot create directory`
+**Problem:** Podman not running or containers fail to start
 
-**RHEL Solution:**
-- Ensure you ran setup with `sudo`
-- Check directory ownership:
-  ```bash
-  ls -la ~/account_planning/
-  # Should be owned by your user, not root
-  ```
-
-**macOS Solution:**
-- Ensure you did NOT run setup with `sudo`
-- macOS setup should run as regular user
-
-### Python Package Conflicts
-
-**Problem:** Package version conflicts or import errors
-
-**Solution:** Recreate virtual environment:
+**Solution:**
 ```bash
-cd ~/account_planning/Project-APE
-rm -rf venv/
-source activate-ape.sh  # This will recreate it
+# Check Podman status
+podman info
+
+# Restart Podman (macOS)
+podman machine stop
+podman machine start
+
+# RHEL/Linux - check service
+systemctl --user status podman.socket
+systemctl --user start podman.socket
 ```
 
 ---
@@ -325,27 +169,13 @@ source activate-ape.sh  # This will recreate it
 
 ```bash
 # Remove Project APE directory
-rm -rf ~/account_planning/Project-APE
+rm -rf Project-APE
 
-# Remove NotebookLM credentials
+# Remove NotebookLM credentials (optional)
 rm -rf ~/.notebooklm
 
-# RHEL: Remove system packages (optional)
-sudo dnf remove podman buildah skopeo google-chrome-stable
-
-# macOS: Remove via Homebrew (optional)
-brew uninstall podman
-brew uninstall --cask google-chrome
-```
-
-### Keep Credentials (Reinstall Later)
-
-```bash
-# Only remove project directory
-rm -rf ~/account_planning/Project-APE
-
-# Credentials remain in ~/.notebooklm
-# Rerun setup.sh to reinstall
+# Remove NotebookLM SDK (optional)
+pip uninstall notebooklm-py
 ```
 
 ---
