@@ -220,6 +220,46 @@ class SourceManager:
 
         return count
 
+    def extract_company_metadata(self, research_output: str) -> dict:
+        """
+        Extract company industry and subsegments from research output.
+
+        Looks for COMPANY_METADATA block in the research results.
+
+        Args:
+            research_output: Raw output from research prompt
+
+        Returns:
+            dict with 'industry' and 'subsegments' keys, or empty dict if not found
+        """
+        metadata = {}
+
+        try:
+            # Look for COMPANY_METADATA block
+            # Pattern: COMPANY_METADATA:\nIndustry: ...\nSubsegments: ...
+            pattern = r'COMPANY_METADATA:\s*\n\s*Industry:\s*(.+?)\s*\n\s*Subsegments:\s*(.+?)(?:\n|```|\Z)'
+            match = re.search(pattern, research_output, re.MULTILINE | re.DOTALL)
+
+            if match:
+                industry = match.group(1).strip()
+                subsegments = match.group(2).strip()
+
+                # Clean up any markdown artifacts
+                industry = industry.replace('```', '').strip()
+                subsegments = subsegments.replace('```', '').strip()
+
+                metadata['industry'] = industry
+                metadata['subsegments'] = subsegments
+
+                logger.info(f"[{self.client_id}] Extracted metadata - Industry: {industry}, Subsegments: {subsegments}")
+            else:
+                logger.debug(f"[{self.client_id}] No COMPANY_METADATA block found in research output")
+
+        except Exception as e:
+            logger.warning(f"[{self.client_id}] Failed to extract company metadata: {e}")
+
+        return metadata
+
     def list_sources(self) -> List[Dict]:
         """
         List all sources in the notebook.

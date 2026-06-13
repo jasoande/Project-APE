@@ -278,6 +278,27 @@ class ClientPipeline:
 
                 if result["success"]:
                     logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
+
+                    # AUTO-DETECT FEATURE: Extract industry/subsegments from FIRST research prompt
+                    # If user didn't provide industry/subsegments (or provided defaults),
+                    # try to extract them from the research output
+                    if idx == 1 and result.get("output"):
+                        if (self.client_industry == "general" or
+                            not self.client_subsegments or
+                            self.client_subsegments == "various segments"):
+
+                            logger.info(f"[{self.client_id}] Attempting to auto-detect industry and subsegments...")
+                            metadata = self.source_manager.extract_company_metadata(result["output"])
+
+                            if metadata:
+                                # Update instance variables with extracted values
+                                if metadata.get('industry') and self.client_industry == "general":
+                                    self.client_industry = metadata['industry']
+                                    logger.info(f"[{self.client_id}] ✅ Auto-detected industry: {self.client_industry}")
+
+                                if metadata.get('subsegments') and (not self.client_subsegments or self.client_subsegments == "various segments"):
+                                    self.client_subsegments = metadata['subsegments']
+                                    logger.info(f"[{self.client_id}] ✅ Auto-detected subsegments: {self.client_subsegments}")
                 else:
                     logger.warning(f"[{self.client_id}] Research failed: {result.get('error')}")
 
