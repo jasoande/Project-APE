@@ -106,7 +106,10 @@ main() {
         libffi-devel \
         zlib-devel \
         sqlite-devel \
-        readline-devel
+        readline-devel \
+        xorg-x11-server-Xvfb \
+        xorg-x11-xauth \
+        liberation-fonts
     log_success "Core dependencies installed"
     echo ""
 
@@ -372,7 +375,8 @@ EOF
     echo "   cd ${ACCOUNT_PLANNING_DIR}/Project-APE"
     echo ""
     echo "3. Authenticate with NotebookLM:"
-    echo "   notebooklm login"
+    echo "   xvfb-run notebooklm login"
+    echo "   (Note: Use xvfb-run for headless/SSH sessions)"
     echo ""
     echo "4. Set up credentials for container:"
     echo "   ./setup-credentials.sh"
