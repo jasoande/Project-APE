@@ -311,9 +311,14 @@ EOF
     # Step 13: Pull Project APE container image
     log_info "Step 13: Pulling Project APE container image..."
 
-    sudo -u "$REGULAR_USER" podman pull quay.io/jasoande/project_ape/project-ape:latest
-
-    log_success "Container image pulled"
+    if sudo -u "$REGULAR_USER" podman pull quay.io/jasoande/project_ape/project-ape:latest 2>/dev/null; then
+        log_success "Container image pulled"
+    else
+        log_warning "Failed to pull container image (may require authentication or build locally)"
+        log_info "You can build the image locally after setup with:"
+        log_info "  cd ${ACCOUNT_PLANNING_DIR}/Project-APE"
+        log_info "  podman build -t project-ape:latest -f Containerfile ."
+    fi
     echo ""
 
     # Step 14: Configure firewall (if firewalld is running)
