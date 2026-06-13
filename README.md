@@ -38,55 +38,77 @@ Project APE revolutionizes enterprise account planning by automating research, a
 
 ## 🚀 Quick Start
 
-### Step 1: Prerequisites
+### Prerequisites
+
+- Podman installed and running
+- Python 3.11 or higher
+- Git
+- Google Chrome (for NotebookLM authentication)
+
+### Step 1: Clone Repository
 
 ```bash
-# Install Podman
-brew install podman           # macOS
-dnf install podman           # RHEL/Fedora
+git clone https://github.com/jasoande/Project-APE.git
+cd Project-APE
+git checkout QA
+```
 
-# Install NotebookLM Python SDK
+### Step 2: Install NotebookLM SDK
+
+```bash
 pip install notebooklm-py
+```
 
-# Authenticate with Google
+### Step 3: Authenticate
+
+```bash
 notebooklm login
 ```
 
-### Step 2: Get Project APE
+This opens Chrome for Google authentication.
+
+### Step 4: Set Up Container Credentials
 
 ```bash
-# Pull the container image
+./setup-credentials.sh
+```
+
+### Step 5: Pull Container Image
+
+```bash
 podman pull quay.io/jasoande/project_ape/project-ape:latest
 ```
 
-### Step 3: Prepare Your Data
+### Step 6: Configure Client
 
 ```bash
 # Create client data directory
 mkdir -p client_data/YourClient
-
-# Add client PDFs, documents
-cp /path/to/client/files/* client_data/YourClient/
+cp /path/to/documents/* client_data/YourClient/
 
 # Create configuration
-cp container-vars.py vars.py
-# Edit vars.py with your client details
+cp example-container.py vars.py
+nano vars.py  # Edit with your client details
 ```
 
-### Step 4: Run
+### Step 7: Run
 
 ```bash
-./ape-run.sh \
-    --vars ./vars.py \
-    --client-data ./client_data \
-    --clients yourclient \
-    --mode fast
+# Fast mode (10-12 minutes)
+./ape-run.sh --vars ./vars.py --clients yourclient --mode fast
+
+# Deep mode (30-35 minutes)
+./ape-run.sh --vars ./vars.py --clients yourclient --mode deep
 ```
 
-### Step 5: Monitor
+### Step 8: Monitor
 
 **Dashboard:** http://localhost:8765  
 **Logs:** `tail -f logs/yourclient.log`
+
+---
+
+**Detailed installation instructions:** See [INSTALLATION.md](INSTALLATION.md)
 
 ---
 
@@ -480,13 +502,16 @@ grep "ERROR" logs/*.log
 #### ❌ Authentication Failed
 
 ```bash
-# Solution 1: Re-authenticate
+# Re-authenticate
 notebooklm login
 
-# Solution 2: Verify credentials exist
-ls -la ~/.notebooklm/profiles/default/
+# Or copy credentials from another machine
+scp ~/.notebooklm/credentials.json user@remote-host:~/.notebooklm/
 
-# Solution 3: Check permissions
+# Verify credentials exist
+ls -la ~/.notebooklm/credentials.json
+
+# Check permissions
 chmod -R 700 ~/.notebooklm
 ```
 
@@ -547,8 +572,8 @@ See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for comprehensive trouble
 ## 📚 Documentation
 
 ### Getting Started
+- **[INSTALLATION.md](INSTALLATION.md)** - Complete installation guide (RHEL 8/9/10 & macOS)
 - **[QUICKSTART.md](QUICKSTART.md)** - 5-minute quick start guide
-- **[docs/INSTALLATION.md](docs/INSTALLATION.md)** - Detailed installation
 - **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** - Configuration reference
 
 ### Advanced Usage
