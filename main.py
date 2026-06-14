@@ -126,10 +126,7 @@ class ProcessManager:
 
         client_name = getattr(config, f"{client_id}_name", client_id)
 
-        logger.info(f"\n🚀 Starting: {client_name}")
-        logger.info(f"   Mode: {mode.upper()}")
-        logger.info(f"   Log: {log_file.name}")
-
+        # Logging handled by caller in wave launch code
         # Open log file
         log_handle = open(log_file, 'w')
 
@@ -302,17 +299,45 @@ def main():
         # Start client processes
         logger.info("\n🚀 Launching client processes...")
 
-        # Check if Gemini is enabled - if so, use longer stagger to avoid rate limits
+        # Check if Gemini is enabled - if so, launch in waves to avoid rate limits
         gemini_enabled = getattr(vars, 'GEMINI_CONFIG', {}).get('enabled', False)
-        stagger_delay = 10 if gemini_enabled else 2
 
-        if gemini_enabled:
-            logger.info(f"   ⏱️  Gemini enabled: using {stagger_delay}s stagger to avoid rate limits")
+        if gemini_enabled and len(clients) > 3:
+            # Launch in waves of 3 to stay within Gemini API rate limits (15 req/min)
+            wave_size = 3
+            wave_delay = 20  # Seconds between waves
 
-        for client_id in clients:
-            process = manager.start_client_process(client_id, args.mode)
-            manager.client_processes.append(process)
-            time.sleep(stagger_delay)  # Stagger starts
+            logger.info(f"   ⏱️  Gemini enabled: launching {len(clients)} clients in waves of {wave_size}")
+
+            for wave_num, i in enumerate(range(0, len(clients), wave_size), 1):
+                wave_clients = clients[i:i+wave_size]
+                logger.info(f"\n🌊 Wave {wave_num}: {len(wave_clients)} clients")
+
+                for client_id in wave_clients:
+                    logger.info(f"\n🚀 Starting: {getattr(vars, f'{client_id}_name', client_id)}")
+                    logger.info(f"   Mode: {args.mode.upper()}")
+                    logger.info(f"   Log: {client_id}.log")
+
+                    process = manager.start_client_process(client_id, args.mode)
+                    manager.client_processes.append(process)
+                    time.sleep(2)  # Small stagger within wave
+
+                # Wait between waves (except after last wave)
+                if i + wave_size < len(clients):
+                    logger.info(f"\n⏳ Waiting {wave_delay}s for wave {wave_num} to complete Gemini calls...")
+                    time.sleep(wave_delay)
+        else:
+            # Original behavior: simple stagger for non-Gemini or small client lists
+            stagger_delay = 2
+
+            for client_id in clients:
+                logger.info(f"\n🚀 Starting: {getattr(vars, f'{client_id}_name', client_id)}")
+                logger.info(f"   Mode: {args.mode.upper()}")
+                logger.info(f"   Log: {client_id}.log")
+
+                process = manager.start_client_process(client_id, args.mode)
+                manager.client_processes.append(process)
+                time.sleep(stagger_delay)
 
         # Monitor processes
         manager.monitor_processes()
