@@ -114,6 +114,13 @@ nano vars.py  # Edit with your client details
 
 ## ✨ Key Features
 
+### 🤖 **NEW: Gemini AI Integration**
+- **Automatic Industry Detection** - AI determines client industry from company name
+- **Intelligent Subsegment Generation** - AI identifies 3-4 relevant business segments
+- **Zero Manual Configuration** - Simply provide company name and folder path
+- **Session-Level Caching** - Minimizes API calls during multi-client runs
+- **See:** [GEMINI-INTEGRATION.md](GEMINI-INTEGRATION.md) for setup guide
+
 ### 🎯 **AI-Powered Analysis**
 - Automated industry research
 - Competitive intelligence gathering  

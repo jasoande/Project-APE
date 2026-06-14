@@ -35,6 +35,39 @@ product_ai = "Red Hat OpenShift AI"
 services_types = "consulting, implementation, training, and managed services"
 
 # ==============================================================================
+# GEMINI AI SETTINGS
+# ==============================================================================
+
+# Gemini AI for automatic industry detection and subsegment generation
+# When enabled, clients without manual industry/subsegments will use AI detection
+#
+# Configuration:
+#   - New clients: Omit industry/subsegments → Gemini auto-detects
+#   - Existing clients: Keep manual values → Gemini is skipped
+#   - Manual override: Always takes precedence over AI detection
+#
+# Example - New client with Gemini AI:
+#   tesla_test_name = "Tesla"
+#   tesla_test_folder = "/app/client_data/Tesla"
+#   # (No industry/subsegments - Gemini will auto-detect)
+#
+# Example - Existing client with manual config:
+#   merck_test_name = "Merck"
+#   merck_test_industry = "pharmaceuticals and healthcare"
+#   merck_test_subsegments = "oncology, vaccines, rare diseases"
+#   merck_test_folder = "/app/client_data/Merck"
+#   # (Manual config - Gemini is skipped)
+GEMINI_CONFIG = {
+    'enabled': True,
+    'model': 'gemini-2.5-flash',     # Fast and efficient for classification
+    'temperature': 0.3,              # Lower = more deterministic
+    'max_retries': 5,                # Retry attempts for rate limits
+    'retry_base_delay': 10.0,        # Base delay for exponential backoff (seconds)
+    'timeout': 60,                   # API call timeout (seconds)
+    'cache_per_session': True,       # Cache results during multi-client runs
+}
+
+# ==============================================================================
 # CLIENT DEFINITIONS
 # ==============================================================================
 
