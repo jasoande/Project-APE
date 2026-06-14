@@ -1,0 +1,18 @@
+Tesla, Inc.
+
+Tesla, Inc. is an American multinational automotive and clean energy company headquartered in Austin, Texas. Tesla designs, manufactures, and sells electric vehicles, battery energy storage systems, and related products and services.
+
+Products:
+- Model S, 3, X, Y electric vehicles
+- Cybertruck
+- Tesla Semi
+- Energy storage products (Powerwall, Powerpack, Megapack)
+- Solar panels and Solar Roof
+
+Technology:
+- Advanced autopilot and full self-driving capabilities
+- Over-the-air software updates
+- Supercharger network
+- Battery technology and manufacturing
+
+Mission: To accelerate the world's transition to sustainable energy.

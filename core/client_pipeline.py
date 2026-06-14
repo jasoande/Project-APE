@@ -10,8 +10,9 @@ import logging
 import time
 import json
 import random
+import os
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 import sys
 
 # Add parent to path
@@ -46,8 +47,11 @@ class ClientPipeline:
         # Get client details from config
         self.client_name = getattr(config, f"{client_id}_name", client_id)
         self.client_folder = Path(getattr(config, f"{client_id}_folder", ""))
-        self.client_industry = getattr(config, f"{client_id}_industry", "general")
-        self.client_subsegments = getattr(config, f"{client_id}_subsegments", None)
+
+        # Industry and subsegments will be determined in execute()
+        # Either from manual config or Gemini AI detection
+        self.industry = None
+        self.subsegments = None
 
         # Get global persona setting (role perspective for chat prompts)
         self.persona = getattr(config, "persona", "Red Hat solutions architect")
@@ -103,6 +107,12 @@ class ClientPipeline:
             initial_offset = (client_hash % 8) + random.uniform(0, 2)
             logger.info(f"[{self.client_id}] ⏱️  Anti-collision delay: {initial_offset:.1f}s")
             time.sleep(initial_offset)
+
+            # Step 0.5: Determine Industry and Subsegments (Gemini AI or manual config)
+            self.update_status("Determining industry and subsegments...", 3)
+            self.industry, self.subsegments = self._determine_industry_and_subsegments()
+            logger.info(f"[{self.client_id}] Industry: {self.industry}")
+            logger.info(f"[{self.client_id}] Subsegments: {self.subsegments}")
 
             # Step 1: Check Authentication (force fresh check)
             self.update_status("Checking authentication...", 5)
@@ -205,6 +215,66 @@ class ClientPipeline:
             self.update_status(f"Failed: {str(e)}", 0, status="FAILED", error=str(e))
             return False
 
+    def _determine_industry_and_subsegments(self) -> Tuple[str, str]:
+        """
+        Determine industry and subsegments using Gemini AI or manual config.
+
+        Priority:
+        1. Manual config in vars.py (if provided)
+        2. Gemini AI detection (if enabled and no manual config)
+        3. Error: require manual configuration
+
+        Returns:
+            Tuple of (industry, subsegments)
+
+        Raises:
+            ValueError: If configuration is missing and Gemini is disabled
+        """
+        config = self.config
+        client_id = self.client_id
+
+        # Check for manual overrides in config
+        manual_industry = getattr(config, f"{client_id}_industry", None)
+        manual_subsegments = getattr(config, f"{client_id}_subsegments", None)
+
+        if manual_industry and manual_subsegments:
+            logger.info(f"[{client_id}] Using manual industry configuration")
+            return manual_industry, manual_subsegments
+
+        # Check if Gemini is enabled
+        gemini_config = getattr(config, 'GEMINI_CONFIG', {'enabled': False})
+        if not gemini_config.get('enabled', False):
+            raise ValueError(
+                f"Client {client_id}: No industry/subsegments in vars.py "
+                "and Gemini is disabled. Enable Gemini or provide manual config."
+            )
+
+        # Use Gemini AI detection
+        logger.info(f"[{client_id}] Using Gemini AI for industry detection")
+
+        # Import here to avoid circular dependency
+        from core.gemini_manager import GeminiManager
+
+        # Initialize Gemini manager
+        api_key = os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            raise ValueError(
+                "GEMINI_API_KEY not found in environment. "
+                "Please add it to your .env file."
+            )
+
+        gemini = GeminiManager(api_key=api_key, config=gemini_config)
+
+        # Detect industry
+        self.update_status("Detecting industry with Gemini AI", 1, status="RUNNING")
+        industry = gemini.detect_industry(self.client_name)
+
+        # Generate subsegments
+        self.update_status("Generating subsegments with Gemini AI", 2, status="RUNNING")
+        subsegments = gemini.generate_subsegments(self.client_name, industry)
+
+        return industry, subsegments
+
     def _consolidate_pdfs(self) -> Optional[Path]:
         """Consolidate all files into {Client}-One.pdf - converts everything to PDF first"""
         if not self.client_folder.exists():
@@ -272,8 +342,8 @@ class ClientPipeline:
                     prompt_file,
                     mode="deep" if self.mode == "deep" else "fast",
                     client_name=self.client_name,
-                    client_industry=self.client_industry,
-                    client_subsegments=self.client_subsegments
+                    client_industry=self.industry,
+                    client_subsegments=self.subsegments
                 )
 
                 if result["success"]:
@@ -349,8 +419,8 @@ class ClientPipeline:
                 # Read prompt and substitute variables
                 prompt_text = prompt_file.read_text()
                 prompt_text = prompt_text.replace('$name', self.client_name)
-                prompt_text = prompt_text.replace('$industry', self.client_industry)
-                prompt_text = prompt_text.replace('$subsegments', self.client_subsegments or 'various segments')
+                prompt_text = prompt_text.replace('$industry', self.industry)
+                prompt_text = prompt_text.replace('$subsegments', self.subsegments or 'various segments')
                 prompt_text = prompt_text.replace('$persona', self.persona)
 
                 # Create temporary file with substituted prompt

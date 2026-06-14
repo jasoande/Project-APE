@@ -28,7 +28,7 @@ Expected output: `🎉 ALL DEPENDENCY CHECKS PASSED`
 
 All packages are available via PyPI and can be installed with pip.
 
-### Google API & Authentication (6 packages)
+### Google API & Authentication (7 packages)
 
 Required for NotebookLM CLI authentication and Google API integration.
 
@@ -39,9 +39,12 @@ google-auth>=2.30.0
 google-auth-oauthlib>=1.1.0
 google-auth-httplib2>=0.1.1
 requests-oauthlib>=2.0.0
+google-genai>=1.0.0
 ```
 
-**Purpose:** Authenticate with Google services for NotebookLM access
+**Purpose:** 
+- Authenticate with Google services for NotebookLM access
+- **NEW:** `google-genai` for Gemini AI industry detection and subsegment generation
 
 ### Web Framework (2 packages)
 

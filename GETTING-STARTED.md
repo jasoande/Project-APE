@@ -195,14 +195,35 @@ cp example-vars.py vars.py
 nano vars.py  # Edit with your clients
 ```
 
-**Example:**
+**Example (with Gemini AI auto-detection):**
+```python
+# Enable Gemini AI
+GEMINI_API_KEY="your-gemini-api-key"  # Add to .env file
+
+GEMINI_CONFIG = {
+    'enabled': True,
+    'model': 'gemini-2.5-flash',
+}
+
+clients = ["acme_corp"]
+
+acme_corp_name = "ACME Corporation"
+acme_corp_folder = str(Path(__file__).parent / "client_data" / "ACME")
+# Industry & subsegments auto-detected by Gemini AI
+```
+
+**Example (manual configuration):**
 ```python
 clients = ["acme_corp"]
 
 acme_corp_name = "ACME Corporation"
 acme_corp_industry = "technology"
+acme_corp_subsegments = "cloud infrastructure, enterprise software"
 acme_corp_folder = str(Path(__file__).parent / "client_data" / "ACME")
 ```
+
+> **NEW:** Gemini AI can automatically detect industry and subsegments!  
+> See [GEMINI-INTEGRATION.md](GEMINI-INTEGRATION.md) for setup guide.
 
 #### 6. Add Client Data
 

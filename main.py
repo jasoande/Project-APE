@@ -23,6 +23,10 @@ from pathlib import Path
 from typing import List, Dict
 from datetime import datetime
 import importlib.util
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ==============================================================================
 # CONFIGURATION
@@ -297,10 +301,18 @@ def main():
 
         # Start client processes
         logger.info("\n🚀 Launching client processes...")
+
+        # Check if Gemini is enabled - if so, use longer stagger to avoid rate limits
+        gemini_enabled = getattr(vars, 'GEMINI_CONFIG', {}).get('enabled', False)
+        stagger_delay = 10 if gemini_enabled else 2
+
+        if gemini_enabled:
+            logger.info(f"   ⏱️  Gemini enabled: using {stagger_delay}s stagger to avoid rate limits")
+
         for client_id in clients:
             process = manager.start_client_process(client_id, args.mode)
             manager.client_processes.append(process)
-            time.sleep(2)  # Stagger starts
+            time.sleep(stagger_delay)  # Stagger starts
 
         # Monitor processes
         manager.monitor_processes()
