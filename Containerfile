@@ -118,9 +118,9 @@ ENV CLIENT_DATA_PATH=/app/client_data
 # Expose dashboard port
 EXPOSE 8765
 
-# Health check
+# Health check - use curl instead of python requests (not in base image)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python3 -c "import requests; requests.get('http://localhost:8765', timeout=5)" || exit 1
+    CMD curl -f http://localhost:8765/ || exit 1
 
 # Default command - will be overridden with runtime parameters
 # Use explicit path to venv python to ensure dependencies are found

@@ -66,6 +66,16 @@ class ClientPipeline:
     def update_status(self, step: str, progress: int, status: str = "RUNNING", **kwargs):
         """Update status file for dashboard."""
         try:
+            # Read existing status to preserve run_id
+            existing_run_id = None
+            if self.status_file.exists():
+                try:
+                    with open(self.status_file, 'r') as f:
+                        existing_data = json.load(f)
+                        existing_run_id = existing_data.get('run_id')
+                except:
+                    pass
+
             status_data = {
                 "name": self.client_name,
                 "token": self.client_id,
@@ -75,6 +85,7 @@ class ClientPipeline:
                 "notebook_id": self.notebook_id,
                 "mode": self.mode,
                 "last_update": time.time(),
+                "run_id": existing_run_id,  # Preserve run_id from initial status file
                 **kwargs
             }
 
@@ -218,7 +229,7 @@ class ClientPipeline:
             # Use FastPDFConsolidator which converts ALL file types to PDF
             # Handles: PDFs, text files, images, office docs (xlsx, docx, pptx)
             # Write consolidated PDF to logs directory (writable in containers)
-            logs_dir = Path(vars.LOGS_DIR if hasattr(vars, 'LOGS_DIR') else './logs')
+            logs_dir = Path(getattr(self.config, 'LOGS_DIR', './logs'))
             with FastPDFConsolidator(
                 self.client_id,
                 self.client_folder,

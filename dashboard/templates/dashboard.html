@@ -430,6 +430,10 @@
                         localStorage.setItem(PIPELINE_RUN_ID_KEY, currentRunId);
                         resetTimer();
                         timerInitialized = false;
+                        // Clear cached data for new run
+                        lastSuccessfulData = null;
+                        allClientsComplete = false;
+                        completionTime = null;
                     }
 
                     // Detect if this is a new pipeline run by checking status file timestamps
