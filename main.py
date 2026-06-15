@@ -78,6 +78,7 @@ class ProcessManager:
             "notebook_id": None,
             "mode": mode,
             "last_update": time.time(),
+            "start_time": time.time(),  # Timestamp when pipeline started
             "quality_score": None,
             "plan_link": None,
             "log_file": str(LOGS_DIR / f"{client_id}.log"),
