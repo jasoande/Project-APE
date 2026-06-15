@@ -472,22 +472,28 @@
                     const allComplete = data.total > 0 && (data.complete + data.failed) === data.total;
                     allClientsComplete = allComplete;  // Store for use in error handler
 
-                    // Initialize timer on first data load if we detect active pipeline
-                    if (!timerInitialized && hasRunningClients) {
-                        // Use server-provided start_time from first client (all clients have same start_time)
-                        const serverStartTime = data.clients.length > 0 && data.clients[0].start_time
-                            ? data.clients[0].start_time * 1000  // Convert seconds to milliseconds
-                            : null;
+                    // ALWAYS sync with server start_time if available and different from current
+                    const serverStartTime = data.clients.length > 0 && data.clients[0].start_time
+                        ? data.clients[0].start_time * 1000  // Convert seconds to milliseconds
+                        : null;
 
-                        if (serverStartTime) {
+                    if (serverStartTime) {
+                        const currentStartTime = startTime ? parseInt(startTime, 10) : null;
+
+                        // If server start_time differs from localStorage, trust the server
+                        if (!currentStartTime || Math.abs(currentStartTime - serverStartTime) > 5000) {
+                            console.log('Syncing timer with server start_time. Old:', currentStartTime ? new Date(currentStartTime).toLocaleTimeString() : 'none', 'New:', new Date(serverStartTime).toLocaleTimeString());
                             startTime = serverStartTime;
                             localStorage.setItem(TIMER_KEY, startTime);
-                            console.log('Timer initialized from server start_time:', new Date(serverStartTime).toLocaleTimeString());
-                        } else {
-                            initializeTimer(true);  // Fallback to old logic if no server start_time
+                            timerInitialized = true;
+                            updateTimer(); // Update display immediately
+                        } else if (!timerInitialized && hasRunningClients) {
+                            // Timer matches server, just mark as initialized
+                            timerInitialized = true;
                         }
-                        timerInitialized = true;
-                        updateTimer(); // Update display immediately
+                    } else if (!timerInitialized && hasRunningClients) {
+                        // No server start_time available, use old fallback logic
+                        initializeTimer(true);
                     }
 
                     // Stop timer when all clients are complete or failed

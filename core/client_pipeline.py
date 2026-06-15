@@ -66,13 +66,15 @@ class ClientPipeline:
     def update_status(self, step: str, progress: int, status: str = "RUNNING", **kwargs):
         """Update status file for dashboard."""
         try:
-            # Read existing status to preserve run_id
+            # Read existing status to preserve run_id and start_time
             existing_run_id = None
+            existing_start_time = None
             if self.status_file.exists():
                 try:
                     with open(self.status_file, 'r') as f:
                         existing_data = json.load(f)
                         existing_run_id = existing_data.get('run_id')
+                        existing_start_time = existing_data.get('start_time')
                 except:
                     pass
 
@@ -85,6 +87,7 @@ class ClientPipeline:
                 "notebook_id": self.notebook_id,
                 "mode": self.mode,
                 "last_update": time.time(),
+                "start_time": existing_start_time,  # Preserve start_time from initial status file
                 "run_id": existing_run_id,  # Preserve run_id from initial status file
                 **kwargs
             }
