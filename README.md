@@ -63,7 +63,7 @@ This interactive script installs:
 - ✅ Podman (container runtime)
 - ✅ Node.js 20+ (required for NotebookLM CLI)
 - ✅ NotebookLM CLI (notebooklm)
-- ✅ Python dependencies (optional, for local execution)
+- ✅ Python dependencies (for container builds)
 - ✅ NotebookLM authentication
 
 ### Step 3: Set Up Container Credentials
@@ -104,10 +104,6 @@ nano vars.py  # Edit with your client details
 
 **Dashboard:** http://localhost:8765  
 **Logs:** `tail -f logs/yourclient.log`
-
----
-
-**Detailed installation instructions:** See [INSTALLATION.md](INSTALLATION.md)
 
 ---
 
