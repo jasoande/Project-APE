@@ -237,10 +237,9 @@ Execute 12 structured analysis prompts:
 
 ### Basic Configuration (vars.py)
 
-**Key Configuration Files:**
-- `example-container.py` - Single-client containerized example (recommended starting point)
-- `container-vars.py` - Multi-client containerized configuration
-- `example-vars.py` - Direct execution (non-containerized) example
+**Configuration Templates:**
+- `example-container.py` - Single client template (recommended starting point)
+- `example-multi-client-vars.py` - Multiple clients template (for batch processing)
 
 ```python
 # Project APE - Container Configuration

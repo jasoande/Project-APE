@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Running the Application
 
-**Container-based execution (recommended):**
+**Container execution (standard workflow):**
 ```bash
 # Fast mode (10-12 minutes)
 ./ape-run.sh --vars ./vars.py --clients yourclient --mode fast
@@ -25,13 +25,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Multiple clients in parallel
 ./ape-run.sh --vars ./vars.py --clients client1,client2,client3 --mode fast
-```
-
-**Direct execution (development/testing):**
-```bash
-python3 main.py --mode fast --clients yourclient
-python3 main.py --mode deep --clients client1 client2
-python3 main.py --no-dashboard --mode fast  # Disable web dashboard
 ```
 
 ### Container Operations
