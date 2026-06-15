@@ -46,7 +46,7 @@ TIMINGS = {
     'notebook_creation_delay': 3.0,
     'source_add_delay': (2.0, 4.0),
     'source_processing_delay': 30.0,
-    'ask_prompt_delay': (8.0, 12.0),
+    'ask_prompt_delay': (10.0, 15.0),  # Increased from 8-12s to reduce retry rate
     'chat_prompt_delay': (5.0, 8.0),
     'deduplication_delay': 20.0,
     'mindmap_delay': 15.0,
@@ -71,7 +71,7 @@ RETRY_CONFIG = {
     'max_attempts': 5,
     'base_delay': 10.0,
     'ask_max_attempts': 7,
-    'ask_base_delay': 30.0,
+    'ask_base_delay': 15.0,  # Reduced from 30s - faster recovery from transient errors
 }
 
 # ==============================================================================
