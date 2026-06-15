@@ -40,10 +40,10 @@ Project APE revolutionizes enterprise account planning by automating research, a
 
 ### Prerequisites
 
-- Podman installed and running
-- Python 3.11 or higher
 - Git
 - Google Chrome (for NotebookLM authentication)
+
+All other dependencies (Podman, Node.js, NotebookLM CLI) can be installed via the setup script.
 
 ### Step 1: Clone Repository
 
@@ -53,33 +53,32 @@ cd Project-APE
 git checkout QA
 ```
 
-### Step 2: Install NotebookLM SDK
+### Step 2: Run Environment Setup (One-Time)
 
 ```bash
-pip install notebooklm-py
+./setup-environment.sh
 ```
 
-### Step 3: Authenticate
+This interactive script installs:
+- ✅ Podman (container runtime)
+- ✅ Node.js 20+ (required for NotebookLM CLI)
+- ✅ NotebookLM CLI (notebooklm)
+- ✅ Python dependencies (optional, for local execution)
+- ✅ NotebookLM authentication
 
-```bash
-notebooklm login
-```
-
-This opens Chrome for Google authentication.
-
-### Step 4: Set Up Container Credentials
+### Step 3: Set Up Container Credentials
 
 ```bash
 ./setup-credentials.sh
 ```
 
-### Step 5: Pull Container Image
+### Step 4: Pull Container Image
 
 ```bash
 podman pull quay.io/jasoande/project_ape/project-ape:latest
 ```
 
-### Step 6: Configure Client
+### Step 5: Configure Client
 
 ```bash
 # Create client data directory
@@ -91,7 +90,7 @@ cp example-container.py vars.py
 nano vars.py  # Edit with your client details
 ```
 
-### Step 7: Run
+### Step 6: Run
 
 ```bash
 # Fast mode (10-12 minutes)
@@ -101,7 +100,7 @@ nano vars.py  # Edit with your client details
 ./ape-run.sh --vars ./vars.py --clients yourclient --mode deep
 ```
 
-### Step 8: Monitor
+### Step 7: Monitor
 
 **Dashboard:** http://localhost:8765  
 **Logs:** `tail -f logs/yourclient.log`

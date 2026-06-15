@@ -1,5 +1,23 @@
 #!/bin/bash
 # Project APE - Podman Installation Script
+# DEPRECATED: Use setup-environment.sh instead for complete environment setup
+
+echo "========================================================================"
+echo "⚠️  DEPRECATED SCRIPT"
+echo "========================================================================"
+echo
+echo "This script only installs Podman."
+echo
+echo "For complete environment setup (Podman + Node.js + NotebookLM), use:"
+echo "  ./setup-environment.sh"
+echo
+read -p "Continue with Podman-only installation? (y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Cancelled. Run ./setup-environment.sh for full setup."
+    exit 0
+fi
+echo
 
 set -e  # Exit on error
 

@@ -11,10 +11,11 @@
 ### Prerequisites
 
 **System Requirements:**
-- Podman installed and running
-- Python 3.11 or higher
 - Git
 - Google Chrome (for NotebookLM authentication)
+- Internet connection
+
+All other dependencies will be installed by the setup script.
 
 ### Step 1: Clone Repository
 
@@ -24,21 +25,24 @@ cd Project-APE
 git checkout QA
 ```
 
-### Step 2: Install NotebookLM SDK
+### Step 2: Run Automated Environment Setup
 
 ```bash
-pip install notebooklm-py
+./setup-environment.sh
 ```
 
-### Step 3: Authenticate with NotebookLM
+This interactive script will:
+1. **Install Podman** (container runtime)
+2. **Install Node.js 20+** (required for NotebookLM CLI)
+3. **Install NotebookLM CLI** (npm package)
+4. **Install Python dependencies** (optional, for local execution)
+5. **Authenticate with NotebookLM** (opens browser for Google login)
 
-```bash
-notebooklm login
-```
+The script detects your operating system (macOS, RHEL/Fedora, Debian/Ubuntu) and uses the appropriate package manager.
 
-This will open Chrome for Google authentication. Sign in and grant NotebookLM API access.
+**Note:** You may be prompted for your password (sudo) during installation.
 
-### Step 4: Set Up Container Credentials
+### Step 3: Set Up Container Credentials
 
 ```bash
 ./setup-credentials.sh
@@ -46,7 +50,7 @@ This will open Chrome for Google authentication. Sign in and grant NotebookLM AP
 
 This copies your NotebookLM credentials to the container's expected location.
 
-### Step 5: Pull Container Image
+### Step 4: Pull Container Image
 
 ```bash
 podman pull quay.io/jasoande/project_ape/project-ape:latest
@@ -57,7 +61,7 @@ Or build locally:
 podman build -t project-ape:latest -f Containerfile .
 ```
 
-### Step 6: Configure Your First Client
+### Step 5: Configure Your First Client
 
 ```bash
 # Copy example configuration
@@ -80,7 +84,7 @@ CLIENTS = {
 }
 ```
 
-### Step 7: Add Client Documents
+### Step 6: Add Client Documents
 
 ```bash
 mkdir -p client_data/YourClient
@@ -89,7 +93,7 @@ cp /path/to/documents/* client_data/YourClient/
 
 Supported formats: PDF, DOCX, PPTX, XLSX, TXT, PNG, JPG
 
-### Step 8: Run Project APE
+### Step 7: Run Project APE
 
 **Fast Mode** (10-12 minutes per client):
 ```bash
@@ -101,7 +105,7 @@ Supported formats: PDF, DOCX, PPTX, XLSX, TXT, PNG, JPG
 ./ape-run.sh --vars ./vars.py --clients yourclient --mode deep
 ```
 
-### Step 9: View Dashboard
+### Step 8: View Dashboard
 
 Open browser to: **http://localhost:8765**
 
