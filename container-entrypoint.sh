@@ -29,8 +29,9 @@ fi
 export $(grep -v '^#' /app/.env | xargs)
 
 # Ensure log directory exists and is writable
-mkdir -p /app/logs /app/.multi_process_status
-chmod 755 /app/logs /app/.multi_process_status
+# Note: chmod may fail on mounted volumes (operation not permitted) - this is OK
+mkdir -p /app/logs /app/.multi_process_status 2>/dev/null || true
+chmod 755 /app/logs /app/.multi_process_status 2>/dev/null || true
 
 # Execute the provided command
 exec "$@"

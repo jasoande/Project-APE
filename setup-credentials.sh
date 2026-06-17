@@ -86,10 +86,11 @@ chmod -R a+rX "${HOST_CREDS}" 2>/dev/null || true
 echo "Copying credentials to persistent volume..."
 echo "Using image: ${IMAGE}"
 podman run --rm \
+    --entrypoint bash \
     -v "${HOST_CREDS}:/source:ro,z" \
     -v "${VOLUME_NAME}:/dest" \
     "${IMAGE}" \
-    bash -c "cp -a /source/. /dest/ && chmod -R 700 /dest && ls -la /dest/profiles/default/storage_state.json && echo 'Credentials copied successfully'"
+    -c "cp -a /source/. /dest/ && chmod -R 700 /dest && ls -la /dest/profiles/default/storage_state.json && echo 'Credentials copied successfully'"
 
 # Restore original permissions
 chmod 700 "${HOST_CREDS}" "${HOST_CREDS}/profiles" "${HOST_CREDS}/profiles/default" 2>/dev/null || true
