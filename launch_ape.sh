@@ -142,6 +142,28 @@ run_container() {
     # Option 2: If you want tighter permissions, use --userns=keep-id
     # This maps the container user to your host user
 
+    # Check if credentials volume exists (REQUIRED)
+    local creds_volume="project-ape-credentials"
+    local creds_mount=""
+    if $runtime volume exists ${creds_volume} 2>/dev/null; then
+        log_info "Using credentials volume: ${creds_volume}"
+        creds_mount="-v ${creds_volume}:/home/apeuser/.notebooklm"
+    else
+        echo ""
+        echo "⚠️  WARNING: NotebookLM credentials volume not found"
+        echo "   The pipeline will fail without authentication"
+        echo "   Run: ./setup-credentials.sh"
+        echo ""
+    fi
+
+    # Check for cache volume (OPTIONAL - improves performance)
+    local cache_volume="project-ape-cache"
+    local cache_mount=""
+    if $runtime volume exists ${cache_volume} 2>/dev/null; then
+        log_info "Using cache volume: ${cache_volume}"
+        cache_mount="-v ${cache_volume}:/home/apeuser/.project-ape"
+    fi
+
     # Run container with SELinux-compatible volume flags
     $runtime run -it --rm \
         --name project-ape \
@@ -151,6 +173,8 @@ run_container() {
         -v $(pwd)/jasoande-3aec1043e544.json:/app/service-account.json:ro,z \
         -v $(pwd)/logs:/app/logs:z \
         -v $(pwd)/.multi_process_status:/app/.multi_process_status:z \
+        ${creds_mount} \
+        ${cache_mount} \
         "${image}" \
         ${cmd}
 }
