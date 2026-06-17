@@ -132,6 +132,9 @@ run_container() {
     log_info "Dashboard: http://localhost:${DASHBOARD_PORT}"
     echo ""
 
+    # Create directories if they don't exist
+    mkdir -p logs .multi_process_status
+
     # Run container
     $runtime run -it --rm \
         --name project-ape \
@@ -139,8 +142,8 @@ run_container() {
         -v $(pwd)/.env:/app/.env:ro \
         -v $(pwd)/vars.py:/app/vars.py:ro \
         -v $(pwd)/jasoande-3aec1043e544.json:/app/service-account.json:ro \
-        -v $(pwd)/logs:/app/logs:rw \
-        -v $(pwd)/.multi_process_status:/app/.multi_process_status:rw \
+        -v $(pwd)/logs:/app/logs \
+        -v $(pwd)/.multi_process_status:/app/.multi_process_status \
         "${image}" \
         ${cmd}
 }
@@ -157,8 +160,14 @@ main() {
     echo ""
 
     # Parse arguments
-    local mode="${1:-fast}"
-    shift || true
+    if [ $# -eq 0 ]; then
+        echo "ERROR: Mode is required (fast or deep)" >&2
+        echo "Usage: $0 {fast|deep} [client1 client2 ...]" >&2
+        exit 1
+    fi
+
+    local mode="$1"
+    shift
     local clients="$@"
 
     # Detect system
