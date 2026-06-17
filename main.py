@@ -19,6 +19,7 @@ import json
 import argparse
 import signal
 import logging
+# import random  # No longer needed - removed wave launching
 from pathlib import Path
 from typing import List, Dict
 from datetime import datetime
@@ -82,6 +83,7 @@ class ProcessManager:
             "notebook_id": None,
             "mode": mode,
             "last_update": time.time(),
+            "start_time": time.time(),  # Persist start time for accurate elapsed calculation
             "quality_score": None,
             "plan_link": None,
             "log_file": str(LOGS_DIR / f"{client_id}.log"),
@@ -236,9 +238,9 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["fast", "deep"],
+        choices=["fast", "deep", "update"],
         default="fast",
-        help="Execution mode (default: fast)"
+        help="Execution mode: fast (10-15min), deep (35-40min), update (refresh existing, 5-10min)"
     )
     parser.add_argument(
         "--clients",
@@ -299,45 +301,19 @@ def main():
         # Start client processes
         logger.info("\n🚀 Launching client processes...")
 
-        # Check if Gemini is enabled - if so, launch in waves to avoid rate limits
-        gemini_enabled = getattr(vars, 'GEMINI_CONFIG', {}).get('enabled', False)
+        # Launch clients with 5-second stagger to avoid Gemini API rate limits
+        for i, client_id in enumerate(clients):
+            logger.info(f"\n🚀 Starting: {getattr(config, f'{client_id}_name', client_id)}")
+            logger.info(f"   Mode: {args.mode.upper()}")
+            logger.info(f"   Log: {client_id}.log")
 
-        if gemini_enabled and len(clients) > 3:
-            # Launch in waves of 3 to stay within Gemini API rate limits (15 req/min)
-            wave_size = 3
-            wave_delay = 20  # Seconds between waves
+            process = manager.start_client_process(client_id, args.mode)
+            manager.client_processes.append(process)
 
-            logger.info(f"   ⏱️  Gemini enabled: launching {len(clients)} clients in waves of {wave_size}")
-
-            for wave_num, i in enumerate(range(0, len(clients), wave_size), 1):
-                wave_clients = clients[i:i+wave_size]
-                logger.info(f"\n🌊 Wave {wave_num}: {len(wave_clients)} clients")
-
-                for client_id in wave_clients:
-                    logger.info(f"\n🚀 Starting: {getattr(vars, f'{client_id}_name', client_id)}")
-                    logger.info(f"   Mode: {args.mode.upper()}")
-                    logger.info(f"   Log: {client_id}.log")
-
-                    process = manager.start_client_process(client_id, args.mode)
-                    manager.client_processes.append(process)
-                    time.sleep(2)  # Small stagger within wave
-
-                # Wait between waves (except after last wave)
-                if i + wave_size < len(clients):
-                    logger.info(f"\n⏳ Waiting {wave_delay}s for wave {wave_num} to complete Gemini calls...")
-                    time.sleep(wave_delay)
-        else:
-            # Original behavior: simple stagger for non-Gemini or small client lists
-            stagger_delay = 2
-
-            for client_id in clients:
-                logger.info(f"\n🚀 Starting: {getattr(vars, f'{client_id}_name', client_id)}")
-                logger.info(f"   Mode: {args.mode.upper()}")
-                logger.info(f"   Log: {client_id}.log")
-
-                process = manager.start_client_process(client_id, args.mode)
-                manager.client_processes.append(process)
-                time.sleep(stagger_delay)
+            # Stagger launches to prevent simultaneous Gemini API calls
+            if i < len(clients) - 1:  # Don't wait after the last client
+                logger.info(f"   ⏳ Waiting 5s before next client (avoiding API rate limits)...")
+                time.sleep(5)
 
         # Monitor processes
         manager.monitor_processes()

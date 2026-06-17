@@ -57,7 +57,21 @@ Or build locally:
 podman build -t project-ape:latest -f Containerfile .
 ```
 
-### Step 6: Configure Your First Client
+### Step 6: Google Drive Setup (Optional - Recommended)
+
+**For Google Drive folder integration:**
+
+```bash
+# Create service account in Google Cloud Console
+# Download service account key JSON
+# Set environment variable
+echo "GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY=/path/to/key.json" >> .env
+
+# Share your Drive folder with the service account email
+# (found in the JSON key file, e.g., project-ape@yourproject.iam.gserviceaccount.com)
+```
+
+### Step 7: Configure Your First Client
 
 ```bash
 # Copy example configuration
@@ -67,29 +81,48 @@ cp example-container.py vars.py
 nano vars.py
 ```
 
-**Minimum configuration:**
+**Option A: Google Drive Folder (Recommended)**
 ```python
-CLIENTS = {
-    "yourclient": {
-        "name": "Your Client Name",
-        "folder": "YourClient",
-        # Optional: auto-detect will fill these in
-        # "industry": "Technology",
-        # "subsegments": "Cloud, AI, Enterprise Software"
-    }
+clients = ["yourclient"]
+
+yourclient_name = "Your Client Name"
+yourclient_industry = "Technology"
+yourclient_subsegments = "Cloud, AI, Enterprise Software"
+yourclient_folder = "https://drive.google.com/drive/folders/YOUR_FOLDER_ID"
+
+DRIVE_CONFIG = {
+    'enabled': True,
+    'cache_enabled': True,
+    'cache_ttl_hours': 24,
+    'auth_method': 'service_account',
+    'export_google_docs': True,
+    'max_file_size_mb': 50,
 }
 ```
 
-### Step 7: Add Client Documents
+**Option B: Local Files**
+```python
+clients = ["yourclient"]
+
+yourclient_name = "Your Client Name"
+yourclient_industry = "Technology"
+yourclient_subsegments = "Cloud, AI, Enterprise Software"
+yourclient_folder = "/app/client_data/YourClient"
+```
+
+### Step 8: Add Client Documents (Local Files Only)
+
+**Skip this step if using Google Drive folders**
 
 ```bash
 mkdir -p client_data/YourClient
 cp /path/to/documents/* client_data/YourClient/
 ```
 
-Supported formats: PDF, DOCX, PPTX, XLSX, TXT, PNG, JPG
+Supported formats: PDF, DOCX, PPTX, XLSX, TXT, PNG, JPG  
+Google Workspace files (Docs, Sheets, Slides) automatically exported when using Drive
 
-### Step 8: Run Project APE
+### Step 9: Run Project APE
 
 **Fast Mode** (10-12 minutes per client):
 ```bash

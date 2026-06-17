@@ -22,6 +22,14 @@ from core.auth_manager import AuthManager
 from core.notebook_manager import NotebookManager
 from core.source_manager import SourceManager
 from core.pdf_consolidator_fast import FastPDFConsolidator
+from core.drive_manager import DriveManager
+
+# Gemini Agent (optional - enabled via config)
+try:
+    from core.gemini_agent import GeminiOrchestrationAgent
+    GEMINI_AGENT_AVAILABLE = True
+except ImportError:
+    GEMINI_AGENT_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +54,10 @@ class ClientPipeline:
 
         # Get client details from config
         self.client_name = getattr(config, f"{client_id}_name", client_id)
-        self.client_folder = Path(getattr(config, f"{client_id}_folder", ""))
+        client_folder_spec = getattr(config, f"{client_id}_folder", "")
+
+        # Handle Google Drive folders - download before pipeline starts
+        self.client_folder = self._setup_client_folder(client_folder_spec)
 
         # Industry and subsegments will be determined in execute()
         # Either from manual config or Gemini AI detection
@@ -67,9 +78,46 @@ class ClientPipeline:
         # Select timing configuration based on mode
         self.timings = config.DEEP_TIMINGS if mode == "deep" else config.TIMINGS
 
+    def _setup_client_folder(self, folder_spec: str) -> Path:
+        """
+        Setup client folder - download from Drive if needed, or use local path.
+
+        Args:
+            folder_spec: Local path or Google Drive URL/ID
+
+        Returns:
+            Path to local folder (downloaded or original)
+        """
+        # Check if Drive folder
+        if isinstance(folder_spec, str) and ('drive.google.com' in folder_spec or folder_spec.startswith('drive://')):
+            # Download from Drive
+            drive_config = getattr(self.config, 'DRIVE_CONFIG', {})
+
+            with DriveManager(
+                client_id=self.client_id,
+                folder_spec=folder_spec,
+                cache_enabled=drive_config.get('cache_enabled', True),
+                config=drive_config
+            ) as temp_dir:
+                # DriveManager returns temp/cache directory - use it directly
+                return Path(temp_dir)
+        else:
+            # Local folder
+            return Path(folder_spec) if folder_spec else Path.cwd()
+
     def update_status(self, step: str, progress: int, status: str = "RUNNING", **kwargs):
         """Update status file for dashboard."""
         try:
+            # Read existing status to preserve start_time
+            existing_start_time = None
+            if self.status_file.exists():
+                try:
+                    with open(self.status_file, 'r') as f:
+                        existing_data = json.load(f)
+                        existing_start_time = existing_data.get('start_time')
+                except:
+                    pass  # If file doesn't exist or is corrupted, proceed without start_time
+
             status_data = {
                 "name": self.client_name,
                 "token": self.client_id,
@@ -82,6 +130,10 @@ class ClientPipeline:
                 **kwargs
             }
 
+            # Preserve start_time from initial status file creation
+            if existing_start_time is not None:
+                status_data["start_time"] = existing_start_time
+
             with open(self.status_file, 'w') as f:
                 json.dump(status_data, f, indent=2)
 
@@ -90,7 +142,31 @@ class ClientPipeline:
 
     def execute(self) -> bool:
         """
-        Execute complete pipeline.
+        Execute complete pipeline with optional Gemini agent orchestration.
+
+        Returns:
+            True if successful, False otherwise
+        """
+        # Check if Gemini Agent is enabled
+        agent_config = getattr(self.config, 'GEMINI_AGENT_CONFIG', {})
+        use_agent = agent_config.get('enabled', False) and GEMINI_AGENT_AVAILABLE
+
+        gemini_api_key = os.getenv('GEMINI_API_KEY')
+        if use_agent and not gemini_api_key:
+            logger.warning(f"[{self.client_id}] Gemini agent enabled but API key missing - falling back to standard execution")
+            use_agent = False
+
+        # Check for update mode
+        if self.mode == "update":
+            return self._execute_update_mode()
+        elif use_agent:
+            return self._execute_with_agent(gemini_api_key)
+        else:
+            return self._execute_standard()
+
+    def _execute_standard(self) -> bool:
+        """
+        Execute pipeline without Gemini agent (standard mode).
 
         Returns:
             True if successful, False otherwise
@@ -101,12 +177,7 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] Mode: {self.mode.upper()}")
             logger.info(f"[{self.client_id}] ========================================")
 
-            # Anti-thundering-herd: Initial random offset to prevent synchronized starts
-            # Hash client_id for deterministic but spread-out delays (0-10 seconds max)
-            client_hash = sum(ord(c) for c in self.client_id)
-            initial_offset = (client_hash % 8) + random.uniform(0, 2)
-            logger.info(f"[{self.client_id}] ⏱️  Anti-collision delay: {initial_offset:.1f}s")
-            time.sleep(initial_offset)
+            # No initial delay - removed to maximize speed
 
             # Step 0.5: Determine Industry and Subsegments (Gemini AI or manual config)
             self.update_status("Determining industry and subsegments...", 3)
@@ -122,13 +193,9 @@ class ClientPipeline:
             # Step 2: Get or Create Notebook (with deduplication)
             self.update_status("Checking for existing notebook...", 10)
 
-            # Generate notebook name in format: DEV_{folder_name}-TEST
-            if self.client_folder and self.client_folder.exists():
-                folder_name = self.client_folder.name
-                notebook_name = f"DEV_{folder_name}-TEST"
-            else:
-                # Fallback if no folder
-                notebook_name = f"DEV_{self.client_id}-TEST"
+            # Generate notebook name in format: DEV_{client_id}-TEST
+            # Always use client_id to ensure readable, consistent names
+            notebook_name = f"DEV_{self.client_id}-TEST"
 
             logger.info(f"[{self.client_id}] Generated notebook name: {notebook_name}")
 
@@ -183,9 +250,8 @@ class ClientPipeline:
 
             # Step 6: Deduplicate Sources (Fast mode only - deep mode already did it)
             if self.mode == "fast":
-                # Fast mode: Wait for imports, then deduplicate once
-                logger.info(f"[{self.client_id}] Waiting for source imports to complete...")
-                time.sleep(self.timings['source_import_wait'])
+                # Fast mode: Deduplicate once (no wait - NotebookLM processes async)
+                logger.info(f"[{self.client_id}] Deduplicating sources...")
 
                 self._deduplicate_sources()
                 self.update_status("Sources deduplicated", 65)
@@ -215,20 +281,163 @@ class ClientPipeline:
             self.update_status(f"Failed: {str(e)}", 0, status="FAILED", error=str(e))
             return False
 
+    def _execute_with_agent(self, gemini_api_key: str) -> bool:
+        """
+        Execute pipeline with Gemini agent orchestration.
+
+        Args:
+            gemini_api_key: Gemini API key
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            logger.info(f"[{self.client_id}] ========================================")
+            logger.info(f"[{self.client_id}] Starting AGENT-ORCHESTRATED pipeline for {self.client_name}")
+            logger.info(f"[{self.client_id}] Mode: {self.mode.upper()}")
+            logger.info(f"[{self.client_id}] ========================================")
+
+            # Initialize Gemini agent
+            agent = GeminiOrchestrationAgent(
+                client_id=self.client_id,
+                config=self.config,
+                gemini_api_key=gemini_api_key,
+                status_updater=lambda step, progress: self.update_status(step, progress)
+            )
+
+            # Define pipeline steps
+            pipeline_steps = [
+                ('determine_industry', lambda: self._determine_industry_step()),
+                ('check_auth', lambda: self.auth_manager.ensure_authenticated(self.client_id, force_check=True)),
+                ('create_notebook', lambda: self._create_notebook_step()),
+                ('prepare_pdf', lambda: self._prepare_pdf_step()),
+                ('upload_pdf', lambda: self._upload_pdf_step()),
+                ('run_research', lambda: self._run_ask_prompts_step()),
+                ('deduplicate', lambda: self._deduplicate_step()),
+                ('run_chat', lambda: self._run_chat_prompts_step()),
+                ('generate_mindmap', lambda: self._generate_mindmap_step()),
+            ]
+
+            # Execute with agent monitoring
+            quality_target = self.config.GEMINI_AGENT_CONFIG.get('quality_target', 8.5)
+            result = agent.execute_pipeline(
+                pipeline_steps=pipeline_steps,
+                quality_target=quality_target,
+                ensure_all_artifacts=True
+            )
+
+            # Update final status
+            if result.success:
+                self.update_status(
+                    "Pipeline complete",
+                    100,
+                    status="COMPLETE",
+                    quality_score=result.quality_score
+                )
+                logger.info(f"[{self.client_id}] ✅ Agent-orchestrated pipeline completed successfully!")
+                logger.info(f"[{self.client_id}] 📊 Quality Score: {result.quality_score:.1f}/10")
+            else:
+                self.update_status(
+                    f"Failed: {result.error_summary}",
+                    0,
+                    status="FAILED",
+                    error=result.error_summary
+                )
+                logger.error(f"[{self.client_id}] ❌ Agent-orchestrated pipeline failed")
+
+            return result.success
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] ❌ Agent-orchestrated pipeline failed: {e}")
+            self.update_status(f"Failed: {str(e)}", 0, status="FAILED", error=str(e))
+            return False
+
+    # Pipeline step wrappers for agent execution
+
+    def _determine_industry_step(self) -> bool:
+        """Determine industry and subsegments."""
+        self.industry, self.subsegments = self._determine_industry_and_subsegments()
+        logger.info(f"[{self.client_id}] Industry: {self.industry}")
+        logger.info(f"[{self.client_id}] Subsegments: {self.subsegments}")
+        return True
+
+    def _create_notebook_step(self) -> Tuple[bool, str]:
+        """Create or get notebook - returns (success, notebook_id)."""
+        notebook_name = f"DEV_{self.client_id}-TEST"
+        existing_notebook = self.notebook_manager.find_notebook_by_name(notebook_name)
+
+        # Track if this is a new notebook
+        self._notebook_just_created = (existing_notebook is None)
+
+        self.notebook_id = self.notebook_manager.get_or_create_notebook(notebook_name)
+
+        if not self.notebook_id:
+            raise Exception("Failed to get/create notebook")
+
+        if not self.notebook_manager.set_context(self.notebook_id):
+            raise Exception("Failed to set notebook context")
+
+        # Initialize source manager
+        self.source_manager = SourceManager(self.client_id, self.notebook_id)
+
+        return (True, self.notebook_id)
+
+    def _prepare_pdf_step(self) -> bool:
+        """Prepare PDF - consolidate if needed."""
+        consolidated_pdf_path = self.client_folder / f"{self.client_name}-One.pdf"
+        pdf_exists = consolidated_pdf_path.exists()
+
+        if pdf_exists:
+            logger.info(f"[{self.client_id}] ✅ Found existing PDF: {consolidated_pdf_path.name}")
+            self.consolidated_pdf = consolidated_pdf_path
+        else:
+            self.consolidated_pdf = self._consolidate_pdfs()
+
+        return True
+
+    def _upload_pdf_step(self) -> bool:
+        """Upload PDF to NotebookLM - always upload to catch new files from Drive."""
+        if hasattr(self, 'consolidated_pdf') and self.consolidated_pdf:
+            # Always upload PDF to ensure latest Drive files are included
+            self._upload_pdf(self.consolidated_pdf)
+            logger.info(f"[{self.client_id}] ✅ PDF uploaded to NotebookLM")
+        return True
+
+    def _run_ask_prompts_step(self) -> bool:
+        """Run research prompts."""
+        self._run_ask_prompts()
+        return True
+
+    def _deduplicate_step(self) -> bool:
+        """Deduplicate sources."""
+        if self.mode == "fast":
+            self._deduplicate_sources()
+        return True
+
+    def _run_chat_prompts_step(self) -> bool:
+        """Run chat prompts."""
+        self._run_chat_prompts()
+        return True
+
+    def _generate_mindmap_step(self) -> bool:
+        """Generate mind map."""
+        self._generate_mindmap()
+        return True
+
     def _determine_industry_and_subsegments(self) -> Tuple[str, str]:
         """
-        Determine industry and subsegments using Gemini AI or manual config.
+        Determine industry and subsegments using Claude AI auto-detection or manual config.
 
         Priority:
-        1. Manual config in vars.py (if provided)
-        2. Gemini AI detection (if enabled and no manual config)
-        3. Error: require manual configuration
+        1. Manual config in vars.py (if provided - for override)
+        2. Claude AI auto-detection (default - uses Anthropic or Gemini)
+        3. Error: require at least one AI API key
 
         Returns:
             Tuple of (industry, subsegments)
 
         Raises:
-            ValueError: If configuration is missing and Gemini is disabled
+            ValueError: If no manual config and no AI API keys available
         """
         config = self.config
         client_id = self.client_id
@@ -239,39 +448,41 @@ class ClientPipeline:
 
         if manual_industry and manual_subsegments:
             logger.info(f"[{client_id}] Using manual industry configuration")
+            logger.info(f"[{client_id}] Industry: {manual_industry}")
+            logger.info(f"[{client_id}] Subsegments: {manual_subsegments}")
             return manual_industry, manual_subsegments
 
-        # Check if Gemini is enabled
-        gemini_config = getattr(config, 'GEMINI_CONFIG', {'enabled': False})
-        if not gemini_config.get('enabled', False):
+        # Use Claude AI auto-detection
+        logger.info(f"[{client_id}] Using Claude AI for automatic industry detection")
+
+        # Import Claude industry detector
+        from core.claude_industry_detector import ClaudeIndustryDetector
+
+        # Check for API keys
+        if not os.getenv('ANTHROPIC_API_KEY') and not os.getenv('GEMINI_API_KEY'):
             raise ValueError(
                 f"Client {client_id}: No industry/subsegments in vars.py "
-                "and Gemini is disabled. Enable Gemini or provide manual config."
+                "and no AI API keys (ANTHROPIC_API_KEY or GEMINI_API_KEY) found. "
+                "Please add an API key to your .env file or provide manual config in vars.py."
             )
 
-        # Use Gemini AI detection
-        logger.info(f"[{client_id}] Using Gemini AI for industry detection")
+        # Initialize Claude detector (falls back to Gemini if Anthropic unavailable)
+        detector = ClaudeIndustryDetector(config)
 
-        # Import here to avoid circular dependency
-        from core.gemini_manager import GeminiManager
+        # Get Drive files list for better detection
+        drive_files = None
+        if self.client_folder and self.client_folder.exists():
+            drive_files = [f.name for f in self.client_folder.iterdir() if f.is_file()]
 
-        # Initialize Gemini manager
-        api_key = os.getenv('GEMINI_API_KEY')
-        if not api_key:
-            raise ValueError(
-                "GEMINI_API_KEY not found in environment. "
-                "Please add it to your .env file."
-            )
+        # Detect industry and subsegments
+        self.update_status("Auto-detecting industry with Claude AI", 1, status="RUNNING")
+        industry, subsegments = detector.detect_industry(
+            client_name=self.client_name,
+            drive_files=drive_files
+        )
 
-        gemini = GeminiManager(api_key=api_key, config=gemini_config)
-
-        # Detect industry
-        self.update_status("Detecting industry with Gemini AI", 1, status="RUNNING")
-        industry = gemini.detect_industry(self.client_name)
-
-        # Generate subsegments
-        self.update_status("Generating subsegments with Gemini AI", 2, status="RUNNING")
-        subsegments = gemini.generate_subsegments(self.client_name, industry)
+        logger.info(f"[{client_id}] Industry: {industry}")
+        logger.info(f"[{client_id}] Subsegments: {subsegments}")
 
         return industry, subsegments
 
@@ -328,10 +539,7 @@ class ClientPipeline:
 
         for idx, prompt_file in enumerate(ask_prompts, 1):
             try:
-                # Anti-thundering-herd: Add jitter before each research prompt
-                jitter = random.uniform(2, 5)
-                time.sleep(jitter)
-
+                # No jitter delay - removed to maximize speed
                 progress = 30 + (idx / len(ask_prompts)) * 30  # 30-60%
                 self.update_status(f"Research {idx}/{len(ask_prompts)}: {prompt_file.stem}", int(progress))
 
@@ -355,17 +563,11 @@ class ClientPipeline:
                 # Deep research imports 100+ sources per prompt, many duplicates
                 # Deduplicating immediately keeps source count manageable
                 if self.mode == "deep":
-                    logger.info(f"[{self.client_id}] Waiting for source imports to complete...")
-                    time.sleep(15)  # Wait for async imports to finish
-
                     logger.info(f"[{self.client_id}] Deduplicating sources (after prompt {idx})...")
                     removed = self.source_manager.deduplicate_sources()
                     logger.info(f"[{self.client_id}] ✅ Removed {removed} duplicates")
 
-                # Delay between prompts
-                delay_range = self.timings['ask_prompt_delay']
-                delay = random.uniform(delay_range[0], delay_range[1])
-                time.sleep(delay)
+                # No delay between prompts - removed to maximize speed
 
             except Exception as e:
                 logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")
@@ -401,16 +603,7 @@ class ClientPipeline:
 
         for idx, prompt_file in enumerate(chat_prompts, 1):
             try:
-                # Anti-thundering-herd: Add jitter before each chat prompt to prevent re-sync
-                # Larger jitter for chat_prompt_consolidated_01 (the most expensive operation)
-                if prompt_file.name == "chat_prompt_consolidated_01.txt":
-                    jitter = random.uniform(5, 15)
-                    logger.info(f"[{self.client_id}] ⏱️  Chat 01 anti-collision jitter: {jitter:.1f}s")
-                    time.sleep(jitter)
-                else:
-                    jitter = random.uniform(1, 3)
-                    time.sleep(jitter)
-
+                # No jitter delay - removed to maximize speed
                 progress = 65 + (idx / len(chat_prompts)) * 30  # 65-95%
                 self.update_status(f"Chat {idx}/{len(chat_prompts)}: {prompt_file.stem}", int(progress))
 
@@ -468,11 +661,8 @@ class ClientPipeline:
                     # Clean up temp file
                     Path(tmp_path).unlink(missing_ok=True)
 
-                # Minimal delay between prompts (jitter already added spacing)
-                # Consolidated prompts are larger and take longer to process
-                # API processing time provides natural spacing
-                delay = random.uniform(2.0, 3.0)  # Reduced from config (5-8s)
-                time.sleep(delay)
+                # No delay between prompts - removed to maximize speed
+                pass
 
             except Exception as e:
                 logger.error(f"[{self.client_id}] Chat prompt failed {prompt_file.name}: {e}")
@@ -590,6 +780,87 @@ class ClientPipeline:
             logger.error(f"[{self.client_id}] Quality score calculation failed: {e}")
             return 0.0
 
+    def _execute_update_mode(self) -> bool:
+        """
+        Execute pipeline in UPDATE mode - refresh existing notebook with new data.
+
+        Workflow:
+        1. Find existing notebook (error if not found)
+        2. Run fresh research (latest web data)
+        3. Add new sources if available
+        4. Update all 6 notes with latest information
+        5. Regenerate mind map
+        6. Calculate new quality score
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            logger.info(f"[{self.client_id}] ========================================")
+            logger.info(f"[{self.client_id}] UPDATE MODE - Refreshing {self.client_name}")
+            logger.info(f"[{self.client_id}] ========================================")
+
+            # Step 1: Determine Industry (for research context)
+            self.update_status("Loading industry configuration...", 5)
+            self.industry, self.subsegments = self._determine_industry_and_subsegments()
+
+            # Step 2: Check Authentication
+            self.update_status("Checking authentication...", 10)
+            if not self.auth_manager.ensure_authenticated(self.client_id, force_check=True):
+                raise Exception("Authentication required - please run: notebooklm login")
+
+            # Step 3: Find Existing Notebook
+            self.update_status("Finding existing notebook...", 15)
+            notebook_name = f"DEV_{self.client_id}-TEST"
+
+            existing_notebook = self.notebook_manager.find_notebook_by_name(notebook_name)
+            if not existing_notebook:
+                raise Exception(
+                    f"No existing notebook found with name: {notebook_name}. "
+                    f"Run in 'fast' or 'deep' mode first to create it."
+                )
+
+            self.notebook_id = existing_notebook
+            logger.info(f"[{self.client_id}] ✅ Found notebook: {self.notebook_id}")
+
+            # Set notebook context
+            self.notebook_manager.set_notebook_context(self.notebook_id)
+            self.source_manager = SourceManager(self.client_id, self.notebook_id)
+
+            # Step 4: Run Fresh Research (always get latest web data)
+            self.update_status("Running fresh research...", 20)
+            logger.info(f"[{self.client_id}] Running research with latest data...")
+            self._run_ask_prompts()
+            self.update_status("Research updated", 50)
+
+            # Step 5: Deduplicate Sources
+            self.update_status("Deduplicating sources...", 55)
+            self._deduplicate_sources()
+
+            # Step 6: Update All Notes
+            self.update_status("Updating notes...", 60)
+            logger.info(f"[{self.client_id}] Refreshing all 6 notes...")
+            self._run_chat_prompts()
+            self.update_status("Notes updated", 90)
+
+            # Step 7: Regenerate Mind Map
+            self.update_status("Regenerating mind map...", 95)
+            self._generate_mindmap()
+
+            # Step 8: Calculate Quality Score
+            quality_score = self._calculate_quality_score()
+
+            self.update_status("Update complete", 100, status="COMPLETE", quality_score=quality_score)
+
+            logger.info(f"[{self.client_id}] ✅ UPDATE completed successfully!")
+            logger.info(f"[{self.client_id}] 📊 Quality Score: {quality_score}/10")
+            return True
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] ❌ Update failed: {e}")
+            self.update_status(f"Update failed: {str(e)}", 0, status="FAILED", error=str(e))
+            return False
+
 
 def main():
     """Entry point for single client execution."""
@@ -598,7 +869,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Project APE - Client Pipeline")
     parser.add_argument("client_id", help="Client identifier")
-    parser.add_argument("--mode", choices=["fast", "deep"], default="fast")
+    parser.add_argument("--mode", choices=["fast", "deep", "update"], default="fast")
     parser.add_argument("--status-file", type=Path, required=True)
     args = parser.parse_args()
 

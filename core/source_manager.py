@@ -119,11 +119,11 @@ class SourceManager:
                                     "--prompt-file", tmp_path,
                                     "-n", self.notebook_id,
                                     "--import-all",
-                                    "--timeout", "600"
+                                    "--timeout", "900"  # Increased from 600 to 900 (15 min)
                                 ],
                                 capture_output=True,
                                 text=True,
-                                timeout=700
+                                timeout=1200  # Increased from 700 to 1200 (20 min)
                             )
                         else:
                             # Fast mode: standard fast research

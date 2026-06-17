@@ -1,696 +1,375 @@
 # Project APE - Account Planning Engine
 
 <p align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE Logo" width="200"/>
+  <img src="dashboard/static/kingkong.png" alt="Project APE Logo" width="400"/>
 </p>
-
-<h3 align="center">AI-Powered Enterprise Account Planning Automation</h3>
 
 <p align="center">
-  <strong>Version 3.0.4</strong> | <strong>Containerized Edition</strong><br>
-  Project Owner & Maintainer: <strong>Jason Anderson</strong>
+  <strong>AI-Powered Enterprise Account Planning Automation</strong><br>
+  Created, Developed, and Maintained by <strong>Jason Anderson</strong>
+</p>
+
+<p align="center">
+  <strong>Version 3.0.4</strong> | Powered by Claude AI & NotebookLM
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#documentation">Documentation</a> •
+  <a href="#support">Support</a>
 </p>
 
 ---
 
-## 🎯 Overview
+## Overview
 
-Project APE revolutionizes enterprise account planning by automating research, analysis, and intelligence generation. Leveraging Google's NotebookLM AI platform, Project APE transforms hours of manual research into 15-20 minutes of automated analysis.
+Project APE (Account Planning Engine) is an enterprise-grade automation system that leverages **Google NotebookLM** and **Claude AI** to generate comprehensive account planning research and analysis for enterprise clients.
 
-### What Problem Does It Solve?
+### What It Does
 
-**Traditional Account Planning:**
-- ⏱️ **4-6 hours** of manual research per account
-- 📚 Reviewing dozens of documents manually
-- 🔍 Searching for industry trends and competitive intelligence
-- 📝 Compiling findings into coherent reports
-- 🤔 Risk of missing critical insights
+- **Automates Company Research:** Uses NotebookLM's deep research capabilities to gather intelligence
+- **Generates Comprehensive Plans:** Creates industry analysis, technical assessments, and strategic recommendations
+- **Parallel Processing:** Handles multiple clients simultaneously with real-time monitoring
+- **Complete NotebookLM Notebooks:** Produces 40+ sources, 6 detailed notes, and interactive mind maps per client
 
-**With Project APE:**
-- ⚡ **10-12 minutes** fully automated (Fast mode)
-- 🔬 **30-35 minutes** for deep research (Deep mode, 8-9x more sources)
-- 🤖 AI analyzes all documents simultaneously
-- 🌐 Automated web research for industry context
-- 📊 Structured, consistent output every time
-- 🎯 Comprehensive coverage with zero oversight
+### Built For
+
+Sales engineers, solutions architects, account managers, and business development professionals who need deep, accurate account intelligence quickly.
 
 ---
 
-## 🚀 Quick Start
+## Features
+
+###  🤖 Claude AI Orchestration
+
+- Intelligent pipeline monitoring and error recovery
+- Self-healing capabilities for common failures
+- Quality validation ensuring >8.5/10 output scores
+- Automated artifact verification
+
+### 📚 NotebookLM Integration
+
+- Deep research with automatic source discovery
+- PDF consolidation of company materials
+- Google Drive integration for document retrieval
+- Intelligent deduplication of sources
+
+### 🚀 Multi-Client Parallel Processing
+
+- Process up to 6 clients simultaneously
+- Independent execution with isolated error handling
+- Real-time dashboard monitoring
+- Fast mode: 15-20 minutes | Deep mode: 35-40 minutes
+
+### 📊 Real-Time Dashboard
+
+- Live progress tracking for all clients
+- Step-by-step execution visibility
+- Direct NotebookLM notebook links
+- Quality scoring and artifact verification
+
+---
+
+## Quick Start
 
 ### Prerequisites
 
-- Podman installed and running
-- Python 3.11 or higher
-- Git
-- Google Chrome (for NotebookLM authentication)
+- Python 3.9+
+- NotebookLM CLI authenticated
+- Google Gemini API key
+- Google Drive API credentials (service account)
 
-### Step 1: Clone Repository
+### Installation
 
 ```bash
-git clone https://github.com/jasoande/Project-APE.git
+# Clone repository
+git clone <repository-url>
 cd Project-APE
-git checkout QA
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env and add your API keys
+
+# Authenticate NotebookLM
+notebooklm auth
 ```
 
-### Step 2: Install NotebookLM SDK
+### Run Your First Pipeline
 
 ```bash
-pip install notebooklm-py
+# Fast mode (all clients)
+./launch_ape.sh fast
+
+# Deep mode (all clients)
+./launch_ape.sh deep
+
+# Specific client
+./launch_ape.sh fast merck_test
 ```
 
-### Step 3: Authenticate
-
-```bash
-notebooklm login
-```
-
-This opens Chrome for Google authentication.
-
-### Step 4: Set Up Container Credentials
-
-```bash
-./setup-credentials.sh
-```
-
-### Step 5: Pull Container Image
-
-```bash
-podman pull quay.io/jasoande/project_ape/project-ape:latest
-```
-
-### Step 6: Configure Client
-
-```bash
-# Create client data directory
-mkdir -p client_data/YourClient
-cp /path/to/documents/* client_data/YourClient/
-
-# Create configuration
-cp example-container.py vars.py
-nano vars.py  # Edit with your client details
-```
-
-### Step 7: Run
-
-```bash
-# Fast mode (10-12 minutes)
-./ape-run.sh --vars ./vars.py --clients yourclient --mode fast
-
-# Deep mode (30-35 minutes)
-./ape-run.sh --vars ./vars.py --clients yourclient --mode deep
-```
-
-### Step 8: Monitor
-
-**Dashboard:** http://localhost:8765  
-**Logs:** `tail -f logs/yourclient.log`
+Dashboard opens automatically at **http://localhost:8765**
 
 ---
 
-**Detailed installation instructions:** See [INSTALLATION.md](INSTALLATION.md)
+## Architecture
+
+```
+┌──────────────────────────────────────────┐
+│  Claude AI Orchestration Layer           │
+│  • Pipeline monitoring                   │
+│  • Error analysis & recovery             │
+│  • Quality validation (>8.5 target)      │
+│  • Artifact verification                 │
+└──────────────────────────────────────────┘
+                    ↓
+┌──────────────────────────────────────────┐
+│  Multi-Process Orchestrator              │
+│  • Parallel client execution             │
+│  • Status tracking                       │
+│  • Dashboard server                      │
+└──────────────────────────────────────────┘
+                    ↓
+┌──────────────────────────────────────────┐
+│  NotebookLM Pipeline                     │
+│  • Industry detection (Gemini AI)        │
+│  • Google Drive source retrieval         │
+│  • PDF consolidation                     │
+│  • Deep research (2 prompts)             │
+│  • Note generation (6 notes)             │
+│  • Mind map creation                     │
+└──────────────────────────────────────────┘
+                    ↓
+┌──────────────────────────────────────────┐
+│  NotebookLM Outputs                      │
+│  • Notebooks with 40+ sources            │
+│  • 6 comprehensive notes                 │
+│  • Interactive mind maps                 │
+│  • Quality scores >8.5/10                │
+└──────────────────────────────────────────┘
+```
+
+### Core Components
+
+| Component | Purpose |
+|-----------|---------|
+| `main.py` | Multi-process orchestrator and dashboard launcher |
+| `vars.py` | Configuration hub for clients and settings |
+| `core/client_pipeline.py` | Main pipeline with Claude agent integration |
+| `core/gemini_agent.py` | Intelligent orchestration with self-healing |
+| `core/error_analyzer.py` | AI-powered error analysis |
+| `core/quality_scorer.py` | Enhanced quality scoring |
+| `dashboard/server.py` | Real-time monitoring dashboard |
 
 ---
 
-## ✨ Key Features
+## Output Structure
 
-### 🤖 **NEW: Gemini AI Integration**
-- **Automatic Industry Detection** - AI determines client industry from company name
-- **Intelligent Subsegment Generation** - AI identifies 3-4 relevant business segments
-- **Zero Manual Configuration** - Simply provide company name and folder path
-- **Session-Level Caching** - Minimizes API calls during multi-client runs
-- **See:** [GEMINI-INTEGRATION.md](GEMINI-INTEGRATION.md) for setup guide
+Each client produces a complete NotebookLM notebook:
 
-### 🎯 **AI-Powered Analysis**
-- Automated industry research
-- Competitive intelligence gathering  
-- Pain point identification
-- Opportunity mapping
-- Stakeholder analysis
+### 📄 Sources (40+ per client)
 
-### ⚡ **Two Execution Modes**
+- **Consolidated PDF:** Company materials from Google Drive
+- **Research Sources:** Web sources from deep research
+  - Industry reports
+  - News articles
+  - Company websites
+  - Technical documentation
 
-| Feature | Fast Mode | Deep Mode |
-|---------|-----------|-----------|
-| Duration | 15-20 min | 30-45 min |
-| Research Depth | ~20 sources | ~50+ sources |
-| Best For | Quick prep | Strategic planning |
+### 📝 Notes (6 per client)
 
-### 📊 **Real-Time Dashboard**
-- Live progress tracking
-- Multi-client monitoring
-- Log streaming
-- Status indicators
-- Execution metrics
+1. **Industry Analysis & Future Trends**
+2. **Customer Business Profile**
+3. **Technical Landscape Assessment**
+4. **Opportunity Assessment**
+5. **Strategic Recommendations**
+6. **Executive Summary**
 
-### 📦 **Containerized Deployment**
-- ✅ Zero dependency installation
-- ✅ Consistent execution environment
-- ✅ Cross-platform (macOS, Linux, Windows WSL)
-- ✅ Registry distribution ready
-- ✅ 808 MB optimized image
+### 🧠 Mind Map
 
-### 🔄 **Parallel Processing**
-- Run multiple clients simultaneously
-- Independent workflows
-- Efficient resource utilization
-- Up to 5 clients in parallel
+- Visual representation of findings
+- Interactive exploration of relationships
+- Key insights highlighted
 
 ---
 
-## 🏗️ How It Works
+## Configuration
 
-### Architecture
+### Adding New Clients
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                       PROJECT APE                             │
-│                   Container (808 MB)                          │
-├──────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌──────────────┐  ┌───────────────┐  ┌──────────────┐     │
-│  │    Flask     │  │    Client     │  │  NotebookLM  │     │
-│  │  Dashboard   │  │   Pipeline    │  │  Python SDK  │     │
-│  │   :8765      │  │   Manager     │  │   (0.7.1)    │     │
-│  └──────────────┘  └───────────────┘  └──────────────┘     │
-│                                                               │
-│  ┌──────────────┐  ┌───────────────┐  ┌──────────────┐     │
-│  │     PDF      │  │    Source     │  │     Auth     │     │
-│  │ Consolidator │  │   Manager     │  │   Manager    │     │
-│  └──────────────┘  └───────────────┘  └──────────────┘     │
-│                                                               │
-└──────────────────────────────────────────────────────────────┘
-           │                    │                    │
-           ▼                    ▼                    ▼
-    Host Volumes         NotebookLM API       Google OAuth
-  (read-only mounts)   (AI Research Engine)  (Authentication)
-```
-
-### Workflow Phases
-
-#### Phase 1: PDF Consolidation (30 seconds)
-```
-1. Scan client data directory
-2. Merge all PDFs into single document
-3. Add metadata and table of contents
-4. Optimize for upload
-```
-
-#### Phase 2: Notebook Creation (10 seconds)
-```
-1. Create NotebookLM notebook
-2. Upload consolidated PDF
-3. Initialize AI context
-4. Verify source processing
-```
-
-#### Phase 3: Research (3-5 minutes)
-```
-1. Execute 2 research prompts:
-   - Industry analysis
-   - Competitive landscape
-2. AI conducts web research
-3. Import 10-25 external sources per prompt
-4. Build comprehensive knowledge base
-```
-
-#### Phase 4: Chat Analysis (8-12 minutes)
-```
-Execute 12 structured analysis prompts:
-1. Industry overview
-2. Key challenges
-3. Technology trends
-4. Competitive positioning
-5. Pain points
-6. Opportunity areas
-7. Decision makers
-8. Buying process
-9. Value proposition
-10. Success metrics
-11. Risk factors
-12. Strategic recommendations
-```
-
-#### Phase 5: Mind Map Generation (1-2 minutes)
-```
-1. Request visual mind map
-2. Download generated content
-3. Save to docs_generated/
-4. Create summary document
-```
-
----
-
-## 📋 Configuration
-
-### Basic Configuration (vars.py)
-
-**Key Configuration Files:**
-- `example-container.py` - Single-client containerized example (recommended starting point)
-- `container-vars.py` - Multi-client containerized configuration
-- `example-vars.py` - Direct execution (non-containerized) example
+Edit `vars.py`:
 
 ```python
-# Project APE - Container Configuration
-# Use example-container.py as your starting template
+clients = [
+    "new_client_test",
+    # ... existing clients
+]
 
-from pathlib import Path
-
-# ============================================================
-# PERSONA CONFIGURATION
-# ============================================================
-
-# Define the role/perspective for AI-generated content
-# Customize based on your department and use case:
-persona = "Red Hat solutions architect"
-
-# Other persona examples:
-#   - "Red Hat account executive" (sales focus)
-#   - "Red Hat marketing specialist" (campaigns/messaging)
-#   - "Red Hat customer success manager" (post-sale)
-#   - "senior industry analyst" (research focus)
-
-# ============================================================
-# CLIENT CONFIGURATION
-# ============================================================
-
-clients = ["example_client"]
-
-# Example Client Configuration
-example_client_name = "Example Corporation"
-example_client_industry = "technology"
-example_client_subsegments = "cloud computing, enterprise software, cybersecurity"
-example_client_folder = "/app/client_data/Example_Corporation"
-
-# ============================================================
-# WORKFLOW SETTINGS
-# ============================================================
-
-MODE = "fast"  # "fast" or "deep"
-ENABLE_DASHBOARD = True
-DASHBOARD_PORT = 8765
-
-# ============================================================
-# PATHS (Auto-configured for containers)
-# ============================================================
-
-STATUS_DIR = PROJECT_ROOT / ".multi_process_status"
-LOGS_DIR = PROJECT_ROOT / "logs"
-DOCS_DIR = PROJECT_ROOT / "docs_generated"
+# Client configuration
+new_client_test_name = "New Client Name"
+new_client_test_folder = "https://drive.google.com/drive/folders/FOLDER_ID"
+new_client_test_industry = "industry category"
+new_client_test_subsegments = "subsegment 1, subsegment 2, subsegment 3"
 ```
 
-### Industry Subsegments
+### Execution Modes
 
-Subsegments help AI provide more targeted research:
+**Fast Mode:**
+- Research timeout: 600s (10 min)
+- Optimized for speed
+- Target: 15-20 min per client
+
+**Deep Mode:**
+- Research timeout: 1200s (20 min)
+- Enhanced research depth
+- Target: 35-40 min per client
+
+### Quality Thresholds
 
 ```python
-# Technology & Software
-"cloud services, SaaS platforms, cybersecurity, AI/ML, DevOps"
-
-# Financial Services
-"banking, insurance, wealth management, fintech, payments"
-
-# Healthcare
-"hospitals, pharmaceuticals, medical devices, health IT, telehealth"
-
-# Manufacturing
-"automotive, aerospace, electronics, supply chain, IoT"
-
-# Retail
-"e-commerce, omnichannel, supply chain, customer experience"
-
-# Energy
-"oil and gas, renewables, utilities, smart grid, energy storage"
+QUALITY_THRESHOLDS = {
+    'min_sources': 15,
+    'required_notes': 6,
+    'min_quality_score': 8.5,
+}
 ```
 
 ---
 
-## 📁 Directory Structure
+## Documentation
 
-```
-Project-APE/
-├── 📄 README.md                    # This file
-├── 📄 QUICKSTART.md                # Quick start guide
-├── 📄 CHANGELOG.md                 # Version history
-├── 📄 CONTRIBUTING.md              # Contribution guidelines
-│
-├── 🐳 Containerfile.debian         # Container build definition
-├── 📜 container-entrypoint.sh      # Container startup script
-├── 🔧 ape-run.sh                   # Container runner script
-├── 📋 requirements.txt             # Python dependencies
-│
-├── 🔧 container-vars.py            # Configuration template
-├── 📝 example-vars.py              # Example configuration
-│
-├── 🐍 main.py                      # Application entry point
-│
-├── 📦 core/                        # Core application modules
-│   ├── auth_manager.py             # NotebookLM authentication
-│   ├── client_pipeline.py          # Workflow orchestration
-│   ├── notebook_manager.py         # NotebookLM API wrapper
-│   ├── source_manager.py           # Document & research management
-│   ├── pdf_consolidator_fast.py   # PDF processing (fast mode)
-│   └── pdf_consolidator_deep.py   # PDF processing (deep mode)
-│
-├── 🌐 dashboard/                   # Web dashboard
-│   ├── server.py                   # Flask application
-│   ├── templates/                  # HTML templates
-│   │   └── dashboard.html
-│   └── static/                     # Static assets
-│       ├── kingkong.png            # Project APE logo
-│       ├── style.css
-│       └── script.js
-│
-├── 📝 Prompts/                     # AI prompts
-│   ├── ask_prompt_01.txt           # Industry research
-│   ├── ask_prompt_02.txt           # Competitive analysis
-│   ├── chat_prompt_01.txt          # Industry overview
-│   ├── chat_prompt_02.txt          # Key challenges
-│   └── ... (12 total chat prompts)
-│
-└── 📚 docs/                        # Documentation
-    ├── ARCHITECTURE.md             # Technical architecture
-    ├── API.md                      # API reference
-    ├── TROUBLESHOOTING.md          # Common issues
-    ├── CONTAINER_GUIDE.md          # Container guide
-    └── DEPLOYMENT.md               # Deployment guide
-```
+- **[INSTALLATION.md](INSTALLATION.md)** - Detailed setup instructions
+- **[GETTING-STARTED.md](GETTING-STARTED.md)** - Comprehensive guide
+- **[LAUNCHER-GUIDE.md](LAUNCHER-GUIDE.md)** - Launcher script usage
+- **[QUICKSTART.md](QUICKSTART.md)** - Fast track guide
+- **[SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md)** - Google Drive setup
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
 
 ---
 
-## 🎯 Use Cases
+## Troubleshooting
 
-### 1. Pre-Call Research
-**Scenario:** Meeting with Fortune 500 CIO tomorrow  
-**Action:** Run Project APE on available documents  
-**Result:** Comprehensive brief on their technology stack, challenges, and strategic initiatives
-
-### 2. Territory Planning
-**Scenario:** New accounts assigned, need quick assessment  
-**Action:** Batch process all accounts overnight  
-**Result:** Complete account profiles for strategic prioritization
-
-### 3. Competitive Analysis
-**Scenario:** Competitor making moves in your accounts  
-**Action:** Deep mode analysis on market dynamics  
-**Result:** Competitive positioning and differentiation strategies
-
-### 4. Quarterly Business Reviews
-**Scenario:** Preparing QBR presentations  
-**Action:** Refresh account intelligence with latest data  
-**Result:** Data-driven insights and recommendations
-
----
-
-## 🔧 Technical Specifications
-
-### Container Details
-
-| Specification | Value |
-|--------------|-------|
-| Base Image | python:3.13-slim (Debian) |
-| Image Size | 808 MB |
-| Build Time | ~4 minutes |
-| Platforms | linux/arm64, linux/amd64 |
-| User | apeuser (UID 1000, non-root) |
-| Exposed Ports | 8765 (dashboard) |
-
-### Dependencies
-
-| Component | Version | Purpose |
-|-----------|---------|---------|
-| Python | 3.13 | Runtime |
-| notebooklm-py | 0.7.1 | NotebookLM SDK |
-| Flask | 3.1.3 | Web dashboard |
-| pypdf | 6.13.2 | PDF reading |
-| reportlab | 4.5.1 | PDF generation |
-| Pillow | 12.2.0 | Image processing |
-
-### Performance Metrics
-
-| Metric | Fast Mode | Deep Mode |
-|--------|-----------|-----------|
-| Single Client | ~10-12 min | ~25-30 min |
-| 6 Clients Parallel | ~10-12 min | ~30-35 min |
-| Research Sources | ~20 | ~90-180 |
-| Chat Prompts | 6 (consolidated) | 6 (consolidated) |
-| Quality Score | 5-6/10 | 8-9/10 |
-| Use Case | Daily operations | High-volume, max depth |
-| Retry Rate | <5% | ~30% (acceptable) |
-
----
-
-## 🔒 Security & Privacy
-
-### Security Features
-
-✅ **Non-root Execution** - Container runs as unprivileged user (apeuser, UID 1000)  
-✅ **Read-Only Mounts** - Configuration and client data mounted read-only  
-✅ **Credential Isolation** - NotebookLM credentials copied, never shared  
-✅ **No Data Persistence** - Container ephemeral, dies after execution  
-✅ **SELinux Compatible** - Full support for RHEL/Fedora/CentOS  
-✅ **Network Isolation** - Only dashboard port exposed  
-
-### Privacy Considerations
-
-- Client data stays in your environment
-- NotebookLM processes data in Google Cloud (per Google's privacy policy)
-- No data retention after workflow completion
-- Container logs contain client names but no sensitive content
-- Generated documents stored locally only
-
----
-
-## 📊 Monitoring & Observability
-
-### Dashboard
-
-Access: **http://localhost:8765**
-
-Features:
-- Real-time progress tracking
-- Client status indicators
-- Live log streaming
-- Execution metrics
-- Multi-client overview
-
-### Logs
+### Dashboard doesn't open
 
 ```bash
-# Follow logs for specific client
-tail -f logs/clientname.log
-
-# Monitor all logs
-tail -f logs/*.log
-
-# Container logs
-podman logs -f <container-name>
-
-# Search logs
-grep "ERROR" logs/*.log
-```
-
-### Status Indicators
-
-| Status | Meaning | Action |
-|--------|---------|--------|
-| 🟢 RUNNING | Workflow in progress | Monitor dashboard |
-| 🟢 COMPLETE | Successfully finished | Review output |
-| 🟡 PENDING | Queued for execution | Wait for start |
-| 🔴 FAILED | Error occurred | Check logs |
-| 🟠 DEGRADED | Partial completion | Review logs |
-
----
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-#### ❌ Authentication Failed
-
-```bash
-# Re-authenticate
-notebooklm login
-
-# Or copy credentials from another machine
-scp ~/.notebooklm/credentials.json user@remote-host:~/.notebooklm/
-
-# Verify credentials exist
-ls -la ~/.notebooklm/credentials.json
-
-# Check permissions
-chmod -R 700 ~/.notebooklm
-```
-
-#### ❌ Container Won't Start
-
-```bash
-# Stop all Project APE containers
-podman stop $(podman ps -aq --filter ancestor=project-ape)
-
-# Clean up resources
-podman system prune -f
-
-# Retry
-./ape-run.sh --mode fast --clients yourclient
-```
-
-#### ❌ Dashboard Not Accessible
-
-```bash
-# Verify container running
-podman ps | grep project-ape
-
-# Check port mapping
-podman port <container-name>
-
-# Test connectivity
-curl http://localhost:8765/status
-
-# Access from browser
 open http://localhost:8765
 ```
 
-#### ❌ PDF Consolidation Fails
+### Pipeline fails
 
 ```bash
-# Check file permissions
-ls -la client_data/YourClient/
+# Check NotebookLM auth
+notebooklm list
 
-# Verify PDF files
-file client_data/YourClient/*.pdf
-
-# Check size (max 50MB total)
-du -sh client_data/YourClient/
+# Verify environment variables
+cat .env
 ```
 
-#### ❌ Research Timeout
+### Quality scores show 5.0
 
-```bash
-# Normal for large accounts - wait longer
-# Or switch to deep mode for better handling
-./ape-run.sh --mode deep --clients largeclient
+Known display bug - actual notebooks are fully populated. Verify in NotebookLM web interface.
+
+---
+
+## Performance
+
+### Fast Mode Benchmarks
+
+- **Single client:** 15-20 minutes
+- **6 clients parallel:** 20-25 minutes total
+- **Sources per client:** 40-68 sources
+- **Success rate:** 100% (with Claude orchestration)
+
+### Deep Mode Benchmarks
+
+- **Single client:** 35-40 minutes
+- **6 clients parallel:** 40-45 minutes total
+- **Sources per client:** 40-70 sources
+- **Enhanced research depth**
+
+---
+
+## Technology Stack
+
+- **Python 3.9+** - Core runtime
+- **NotebookLM CLI** - Research and notebook management
+- **Google Gemini API** - AI-powered analysis
+- **Claude AI** - Intelligent orchestration
+- **Google Drive API** - Source document retrieval
+- **Flask** - Real-time dashboard
+- **Multiprocessing** - Parallel execution
+
+---
+
+## Project Structure
+
+```
+Project-APE/
+├── main.py                 # Multi-process orchestrator
+├── vars.py                 # Configuration hub
+├── launch_ape.sh          # Launch script
+├── requirements.txt       # Dependencies
+├── .env                   # Environment variables
+│
+├── core/                  # Core pipeline modules
+│   ├── client_pipeline.py
+│   ├── gemini_agent.py
+│   ├── error_analyzer.py
+│   ├── quality_scorer.py
+│   ├── artifact_verifier.py
+│   └── ...
+│
+├── dashboard/             # Real-time monitoring
+│   ├── server.py
+│   └── static/
+│       └── kingkong.png   # Project logo
+│
+└── *.txt                  # Research and chat prompts
 ```
 
-See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for comprehensive troubleshooting.
+---
+
+## Version History
+
+**Current Version:** 3.0.4
+
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ---
 
-## 📚 Documentation
+## Creator
 
-### Getting Started
-- **[INSTALLATION.md](INSTALLATION.md)** - Complete installation guide (RHEL 8/9/10 & macOS)
-- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute quick start guide
-- **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** - Configuration reference
+**Jason Anderson**
 
-### Advanced Usage
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Technical architecture
-- **[docs/API.md](docs/API.md)** - API reference
-- **[docs/WORKFLOWS.md](docs/WORKFLOWS.md)** - Workflow deep dive
-- **[docs/PROMPTS.md](docs/PROMPTS.md)** - Prompt engineering guide
-
-### Operations
-- **[docs/CONTAINER_GUIDE.md](docs/CONTAINER_GUIDE.md)** - Container operations
-- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Deployment strategies
-- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Problem resolution
-- **[docs/FAQ.md](docs/FAQ.md)** - Frequently asked questions
-
-### Development
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history
-- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development guide
+- Created Project APE
+- Developed all core components
+- Maintains and evolves the system
 
 ---
 
-## 🤝 Support
+## License
 
-**Project Owner & Maintainer:** Jason Anderson
+Created, developed, and maintained by Jason Anderson.
 
-### Getting Help
-
-1. **Check Documentation** - See docs/ directory
-2. **Review Logs** - Check logs/*.log files
-3. **Search Issues** - Review common troubleshooting
-4. **Contact Maintainer** - Reach out to Jason Anderson
-
-### Reporting Issues
-
-When reporting issues, include:
-- Project APE version
-- Container image tag
-- Operating system
-- Error messages from logs
-- Steps to reproduce
-- vars.py configuration (sanitized)
+All rights reserved.
 
 ---
 
-## 📜 License
+## Support
 
-**Internal Red Hat Use Only**
-
-This software is proprietary to Red Hat, Inc. and is intended for internal use by Red Hat account teams only. Unauthorized distribution, modification, or use outside of Red Hat is prohibited.
-
----
-
-## 🙏 Acknowledgments
-
-- **NotebookLM Team** - Google's AI research platform
-- **Red Hat Account Teams** - Valuable feedback and testing
-- **Python Community** - Excellent open source ecosystem
-- **Container Community** - Podman and container technologies
-
----
-
-## 📈 Roadmap
-
-### Version 3.1 (Planned)
-- Multi-language support
-- Enhanced mind map customization
-- Slack integration for notifications
-- Batch export to PowerPoint
-
-### Version 3.2 (Planned)
-- CRM integration (Salesforce)
-- Custom prompt templates
-- Advanced analytics dashboard
-- Historical trend analysis
-
----
-
-## 🎓 Best Practices
-
-### Preparation
-1. **Organize client data** - Use consistent folder structure
-2. **Quality over quantity** - Relevant documents yield better results
-3. **Update regularly** - Fresh data produces fresh insights
-4. **Name consistently** - Use standard client naming conventions
-
-### Execution
-1. **Start with fast mode** - Quick initial assessment
-2. **Use deep mode strategically** - For strategic accounts
-3. **Batch similar clients** - Process accounts in parallel
-4. **Monitor progress** - Watch dashboard for issues
-
-### Post-Processing
-1. **Review generated content** - Validate AI insights
-2. **Customize for audience** - Adapt output for stakeholders
-3. **Archive results** - Save for future reference
-4. **Share learnings** - Distribute to team members
+For issues, questions, or feature requests, contact Jason Anderson.
 
 ---
 
 <p align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE" width="100"/>
+  <img src="dashboard/static/kingkong.png" alt="Project APE" width="200"/>
 </p>
-
-<h3 align="center">Project APE - Automating Account Planning Excellence</h3>
 
 <p align="center">
-  <strong>Version 3.0.1 (Containerized Edition)</strong><br>
-  Maintained by Jason Anderson | 2026
+  <strong>Project APE - Account Planning Engine</strong><br>
+  Powered by Claude AI and NotebookLM
 </p>
-
----
-
-**Questions?** Check the [documentation](docs/) or contact Jason Anderson.

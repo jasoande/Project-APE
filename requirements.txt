@@ -12,6 +12,9 @@ google-auth-httplib2>=0.1.1
 # Gemini AI SDK (for industry detection and subsegment generation)
 google-genai>=1.0.0
 
+# Anthropic Claude SDK (optional - for industry auto-detection via Vertex AI)
+anthropic[vertex]>=0.109.0
+
 # Web Framework
 flask>=3.0.0
 werkzeug>=3.0.0

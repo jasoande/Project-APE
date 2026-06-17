@@ -31,12 +31,16 @@ FROM registry.redhat.io/ubi9/python-314:9.8-1781023605
 USER root
 
 # Metadata
+LABEL name="project-ape-rhel9"
 LABEL maintainer="Jason Anderson"
 LABEL description="Project APE - Account Planning Engine (RHEL UBI 9 with Python 3.14)"
-LABEL version="3.0.4"
+LABEL version="3.0.5"
 LABEL registry-ready="true"
 LABEL base-image="RHEL UBI 9"
 LABEL python-version="3.14"
+LABEL io.k8s.description="Automated account planning using NotebookLM and Claude AI"
+LABEL io.k8s.display-name="Project APE RHEL9"
+LABEL io.openshift.tags="ai,automation,sales,notebooklm,claude,rhel9"
 
 # Enable EPEL for LibreOffice
 # Note: CRB (CodeReady Builder) not available in UBI Python image, using EPEL only

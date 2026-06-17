@@ -423,29 +423,16 @@
                     document.getElementById('stat-complete').textContent = data.complete;
                     document.getElementById('stat-failed').textContent = data.failed;
 
-                    // Detect new run by checking run_id
-                    if (data.run_id && currentRunId !== data.run_id) {
-                        console.log(`New run detected! Old ID: ${currentRunId}, New ID: ${data.run_id}`);
-                        currentRunId = data.run_id;
-                        localStorage.setItem(PIPELINE_RUN_ID_KEY, currentRunId);
-                        resetTimer();
-                        timerInitialized = false;
-                    }
+                    // Always synchronize timer from status files (handles page refresh)
+                    initializeTimer(data);
+                    updateTimer(); // Update display immediately
 
-                    // Detect if this is a new pipeline run by checking status file timestamps
-                    const hasRunningClients = data.clients.some(c => c.status === 'RUNNING' || c.status === 'PENDING' || c.status === 'QUEUED');
+                    // Detect if pipeline is complete
                     const allComplete = data.total > 0 && (data.complete + data.failed) === data.total;
                     allClientsComplete = allComplete;  // Store for use in error handler
 
-                    // Initialize timer on first data load if we detect active pipeline
-                    if (!timerInitialized && hasRunningClients) {
-                        initializeTimer(true);  // Always treat as new when timer not initialized
-                        updateTimer(); // Update display immediately
-                    }
-
-                    // Stop timer when all clients are complete or failed
-                    if (allComplete && !timerStopped) {
-                        stopTimer();
+                    // Stop auto-refresh 5 minutes after completion
+                    if (allComplete) {
 
                         // Record completion time for auto-refresh delay
                         if (!completionTime) {
@@ -595,61 +582,37 @@
         // Start auto-refresh immediately
         startAutoRefresh();
 
-        // Execution timer with localStorage persistence
-        const TIMER_KEY = 'ape_dashboard_timer_start';
-        const TIMER_STOPPED_KEY = 'ape_dashboard_timer_stopped';
-        const PIPELINE_RUN_ID_KEY = 'ape_dashboard_run_id';
-
-        // Generate unique run ID based on status files' last update
-        let currentRunId = localStorage.getItem(PIPELINE_RUN_ID_KEY);
-
-        // Get or initialize timer start time
-        let startTime = localStorage.getItem(TIMER_KEY);
-        let timerStopped = localStorage.getItem(TIMER_STOPPED_KEY) === 'true';
-
-        // Reset timer if this is a new pipeline run (detected by checking if clients are in PENDING/RUNNING state)
-        // This will be validated on first data fetch
-        let timerInitialized = false;
-
+        // Execution timer - persists across page refreshes
+        let startTime = null;  // Will be set from status file data
         let timerInterval;
 
-        function initializeTimer(isNewRun) {
-            if (timerInitialized) return;
+        function initializeTimer(data) {
+            // Always update start time from status files (handles page refresh)
+            let earliestStartTime = null;
 
-            if (!startTime) {
-                // No saved time - fresh start
-                startTime = Date.now();
-                localStorage.setItem(TIMER_KEY, startTime);
-                localStorage.setItem(TIMER_STOPPED_KEY, 'false');
-                timerStopped = false;
-                console.log('Timer started for new pipeline run');
-            } else if (isNewRun) {
-                // Saved time exists but files are very fresh
-                // Check if saved time is recent (within 2 minutes) - if so, resume
-                const savedAge = (Date.now() - parseInt(startTime, 10)) / 1000;
-                if (savedAge < 120) {
-                    // Recent saved time - resume (page refresh during active run)
-                    startTime = parseInt(startTime, 10);
-                    console.log('Timer resumed from localStorage (page refresh)');
-                } else {
-                    // Old saved time but fresh files - new run, reset timer
-                    startTime = Date.now();
-                    localStorage.setItem(TIMER_KEY, startTime);
-                    localStorage.setItem(TIMER_STOPPED_KEY, 'false');
-                    timerStopped = false;
-                    console.log('Timer reset for new pipeline run (old timer cleared)');
-                }
-            } else {
-                // Resume from saved time
-                startTime = parseInt(startTime, 10);
-                console.log('Timer resumed from localStorage');
+            if (data && data.clients && data.clients.length > 0) {
+                data.clients.forEach(client => {
+                    if (client.start_time) {
+                        const clientStartTime = client.start_time * 1000;  // Convert to milliseconds
+                        if (!earliestStartTime || clientStartTime < earliestStartTime) {
+                            earliestStartTime = clientStartTime;
+                        }
+                    }
+                });
             }
 
-            timerInitialized = true;
+            if (earliestStartTime) {
+                startTime = earliestStartTime;
+                console.log('Timer synchronized from status file start_time:', new Date(startTime));
+            }
+            // If no start_time in status (pipeline not started), timer shows 00m 00s
         }
 
         function updateTimer() {
-            if (timerStopped) return;
+            if (!startTime) {
+                document.getElementById('execution-time').textContent = '00m 00s';
+                return;
+            }
 
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
             const minutes = Math.floor(elapsed / 60);
@@ -658,29 +621,7 @@
                 String(minutes).padStart(2, '0') + 'm ' + String(seconds).padStart(2, '0') + 's';
         }
 
-        function stopTimer() {
-            if (timerStopped) return;
-
-            timerStopped = true;
-            localStorage.setItem(TIMER_STOPPED_KEY, 'true');
-            if (timerInterval) {
-                clearInterval(timerInterval);
-            }
-            console.log('Timer stopped at completion');
-        }
-
-        function resetTimer() {
-            // Called when starting new pipeline run
-            localStorage.removeItem(TIMER_KEY);
-            localStorage.removeItem(TIMER_STOPPED_KEY);
-            localStorage.removeItem(PIPELINE_RUN_ID_KEY);
-            startTime = Date.now();
-            localStorage.setItem(TIMER_KEY, startTime);
-            timerStopped = false;
-            timerInitialized = false;
-            console.log('Timer reset for new run');
-        }
-
+        // Update timer every second
         timerInterval = setInterval(updateTimer, 1000);
     </script>
 </body>
