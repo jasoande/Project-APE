@@ -135,15 +135,15 @@ run_container() {
     # Create directories if they don't exist
     mkdir -p logs .multi_process_status
 
-    # Run container
+    # Run container with SELinux-compatible volume flags
     $runtime run -it --rm \
         --name project-ape \
         -p ${DASHBOARD_PORT}:8765 \
-        -v $(pwd)/.env:/app/.env:ro \
-        -v $(pwd)/vars.py:/app/vars.py:ro \
-        -v $(pwd)/jasoande-3aec1043e544.json:/app/service-account.json:ro \
-        -v $(pwd)/logs:/app/logs \
-        -v $(pwd)/.multi_process_status:/app/.multi_process_status \
+        -v $(pwd)/.env:/app/.env:ro,z \
+        -v $(pwd)/vars.py:/app/vars.py:ro,z \
+        -v $(pwd)/jasoande-3aec1043e544.json:/app/service-account.json:ro,z \
+        -v $(pwd)/logs:/app/logs:z \
+        -v $(pwd)/.multi_process_status:/app/.multi_process_status:z \
         "${image}" \
         ${cmd}
 }
@@ -163,12 +163,54 @@ main() {
     if [ $# -eq 0 ]; then
         echo "ERROR: Mode is required (fast or deep)" >&2
         echo "Usage: $0 {fast|deep} [client1 client2 ...]" >&2
+        echo "   or: $0 --mode {fast|deep} [--clients client1 client2 ...]" >&2
         exit 1
     fi
 
-    local mode="$1"
-    shift
-    local clients="$@"
+    local mode=""
+    local clients=""
+
+    # Parse arguments - support both positional and flag-based syntax
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --mode)
+                mode="$2"
+                shift 2
+                ;;
+            --clients)
+                shift
+                # Collect all remaining args as clients
+                clients="$@"
+                break
+                ;;
+            fast|deep)
+                if [ -z "$mode" ]; then
+                    mode="$1"
+                    shift
+                else
+                    # If mode already set, treat as client
+                    clients="$clients $1"
+                    shift
+                fi
+                ;;
+            *)
+                # Any other arg is a client name
+                clients="$clients $1"
+                shift
+                ;;
+        esac
+    done
+
+    # Trim leading whitespace from clients
+    clients=$(echo "$clients" | xargs)
+
+    # Validate mode is set
+    if [ -z "$mode" ]; then
+        echo "ERROR: Mode is required (fast or deep)" >&2
+        echo "Usage: $0 {fast|deep} [client1 client2 ...]" >&2
+        echo "   or: $0 --mode {fast|deep} [--clients client1 client2 ...]" >&2
+        exit 1
+    fi
 
     # Detect system
     local arch=$(detect_architecture)
