@@ -11,6 +11,28 @@ NC='\033[0m'
 
 VOLUME_NAME="project-ape-credentials"
 HOST_CREDS="${HOME}/.notebooklm"
+IMAGE_VERSION="3.0.5"
+REGISTRY="quay.io/jasoande/project_ape"
+
+# Detect architecture
+detect_architecture() {
+    local arch=$(uname -m)
+    case "$arch" in
+        x86_64|amd64)
+            echo "amd64"
+            ;;
+        aarch64|arm64)
+            echo "arm64"
+            ;;
+        *)
+            echo "ERROR: Unsupported architecture: $arch" >&2
+            exit 1
+            ;;
+    esac
+}
+
+ARCH=$(detect_architecture)
+IMAGE="${REGISTRY}/project-ape:${IMAGE_VERSION}-${ARCH}"
 
 echo "========================================================================"
 echo "PROJECT APE - CREDENTIAL SETUP"
@@ -52,10 +74,11 @@ chmod -R a+rX "${HOST_CREDS}" 2>/dev/null || true
 
 # Copy credentials to volume using a temporary container
 echo "Copying credentials to persistent volume..."
+echo "Using image: ${IMAGE}"
 podman run --rm \
     -v "${HOST_CREDS}:/source:ro,z" \
     -v "${VOLUME_NAME}:/dest" \
-    quay.io/jasoande/project_ape/project-ape:latest \
+    "${IMAGE}" \
     bash -c "cp -a /source/. /dest/ && chmod -R 700 /dest && ls -la /dest/profiles/default/storage_state.json && echo 'Credentials copied successfully'"
 
 # Restore original permissions
