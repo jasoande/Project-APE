@@ -543,6 +543,20 @@ class ClientPipeline:
             logger.warning(f"[{self.client_id}] No ask prompts found")
             return
 
+        # Anti-collision delay to prevent NotebookLM rate limits
+        # When multiple clients run simultaneously, they all try to START_DEEP_RESEARCH
+        # at the same time, hitting NotebookLM's ~2-3 per minute rate limit
+        import random
+        if self.mode == "deep":
+            # Deep mode: higher rate limits, need longer spread (10-60s)
+            delay = random.uniform(10, 60)
+        else:
+            # Fast mode: lower rate limits, shorter spread (0-15s)
+            delay = random.uniform(0, 15)
+
+        logger.info(f"[{self.client_id}] ⏱️  Anti-rate-limit delay: {delay:.1f}s")
+        time.sleep(delay)
+
         logger.info(f"[{self.client_id}] Running {len(ask_prompts)} research prompts...")
 
         for idx, prompt_file in enumerate(ask_prompts, 1):
