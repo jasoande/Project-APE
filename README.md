@@ -1,74 +1,32 @@
 # Project APE - Account Planning Engine
 
-<p align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE Logo" width="400"/>
-</p>
+**AI-Powered Enterprise Account Planning Automation**
 
-<p align="center">
-  <strong>AI-Powered Enterprise Account Planning Automation</strong><br>
-  Created, Developed, and Maintained by <strong>Jason Anderson</strong>
-</p>
-
-<p align="center">
-  <strong>Version 3.0.4</strong> | Powered by Claude AI & NotebookLM
-</p>
-
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#documentation">Documentation</a> •
-  <a href="#support">Support</a>
-</p>
+**Version:** 3.0.5  
+**Created by:** Jason Anderson  
+**Powered by:** Claude AI & Google NotebookLM
 
 ---
 
-## Overview
+## What is Project APE?
 
-Project APE (Account Planning Engine) is an enterprise-grade automation system that leverages **Google NotebookLM** and **Claude AI** to generate comprehensive account planning research and analysis for enterprise clients.
+Project APE (Account Planning Engine) automates the creation of comprehensive account planning research for enterprise clients using AI. It combines Google NotebookLM's deep research capabilities with Claude AI orchestration to generate detailed account intelligence.
 
 ### What It Does
 
-- **Automates Company Research:** Uses NotebookLM's deep research capabilities to gather intelligence
-- **Generates Comprehensive Plans:** Creates industry analysis, technical assessments, and strategic recommendations
-- **Parallel Processing:** Handles multiple clients simultaneously with real-time monitoring
-- **Complete NotebookLM Notebooks:** Produces 40+ sources, 6 detailed notes, and interactive mind maps per client
+- **Automates Research:** Downloads company materials from Google Drive
+- **Consolidates Documents:** Converts all files to a single PDF per client
+- **Generates Intelligence:** Creates 40+ research sources and 6 detailed analysis notes
+- **Produces Deliverables:** Complete NotebookLM notebooks with mind maps
+- **Parallel Processing:** Handles up to 6 clients simultaneously
 
-### Built For
+### Key Features
 
-Sales engineers, solutions architects, account managers, and business development professionals who need deep, accurate account intelligence quickly.
-
----
-
-## Features
-
-###  🤖 Claude AI Orchestration
-
-- Intelligent pipeline monitoring and error recovery
-- Self-healing capabilities for common failures
-- Quality validation ensuring >8.5/10 output scores
-- Automated artifact verification
-
-### 📚 NotebookLM Integration
-
-- Deep research with automatic source discovery
-- PDF consolidation of company materials
-- Google Drive integration for document retrieval
-- Intelligent deduplication of sources
-
-### 🚀 Multi-Client Parallel Processing
-
-- Process up to 6 clients simultaneously
-- Independent execution with isolated error handling
-- Real-time dashboard monitoring
-- Fast mode: 15-20 minutes | Deep mode: 35-40 minutes
-
-### 📊 Real-Time Dashboard
-
-- Live progress tracking for all clients
-- Step-by-step execution visibility
-- Direct NotebookLM notebook links
-- Quality scoring and artifact verification
+- ✅ **Google Drive Integration** - All data pulled from Google Drive folders
+- ✅ **Multi-Architecture Support** - Works on ARM64 (Mac) and x86_64 (Linux)
+- ✅ **Container-Based** - Consistent environment across all platforms  
+- ✅ **Real-Time Dashboard** - Monitor progress at http://localhost:8765
+- ✅ **Dual Execution Modes** - Fast (15-20 min) or Deep (35-40 min)
 
 ---
 
@@ -76,232 +34,157 @@ Sales engineers, solutions architects, account managers, and business developmen
 
 ### Prerequisites
 
-- Python 3.9+
-- NotebookLM CLI authenticated
-- Google Gemini API key
-- Google Drive API credentials (service account)
+1. **Google Service Account** - For Drive access (see [SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md))
+2. **Google Gemini API Key** - For AI orchestration
+3. **NotebookLM Access** - Google account with NotebookLM enabled
+4. **Container Runtime** - Podman or Docker installed
 
-### Installation
+### Run Project APE
 
 ```bash
-# Clone repository
+# 1. Clone repository
 git clone <repository-url>
 cd Project-APE
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
+# 2. Configure environment
+cp .env.template .env
 # Edit .env and add your API keys
 
-# Authenticate NotebookLM
-notebooklm auth
-```
+# 3. Setup clients in vars.py
+cp example-vars.py vars.py
+# Add your Google Drive folder URLs
 
-### Run Your First Pipeline
-
-```bash
-# Fast mode (all clients)
+# 4. Run pipeline
 ./launch_ape.sh fast
 
-# Deep mode (all clients)
-./launch_ape.sh deep
-
-# Specific client
-./launch_ape.sh fast merck_test
+# 5. Monitor dashboard
+open http://localhost:8765
 ```
 
-Dashboard opens automatically at **http://localhost:8765**
+**That's it!** Project APE will:
+- Auto-detect your architecture (ARM64/x86_64)
+- Pull the correct container image from Quay.io
+- Download files from Google Drive
+- Consolidate to PDF
+- Generate research and analysis
+- Create complete NotebookLM notebooks
 
 ---
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────┐
-│  Claude AI Orchestration Layer           │
-│  • Pipeline monitoring                   │
-│  • Error analysis & recovery             │
-│  • Quality validation (>8.5 target)      │
-│  • Artifact verification                 │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  launch_ape.sh (Launcher)               │
+│  • Auto-detects architecture            │
+│  • Pulls correct container image        │
+│  • Starts dashboard + pipeline          │
+└─────────────────────────────────────────┘
                     ↓
-┌──────────────────────────────────────────┐
-│  Multi-Process Orchestrator              │
-│  • Parallel client execution             │
-│  • Status tracking                       │
-│  • Dashboard server                      │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  Container Image (Debian-based)         │
+│  • ARM64: quay.io/.../project-ape:arm64 │
+│  • x86_64: quay.io/.../project-ape:amd64│
+│  • Includes LibreOffice, Python 3.13    │
+└─────────────────────────────────────────┘
                     ↓
-┌──────────────────────────────────────────┐
+┌─────────────────────────────────────────┐
+│  Google Drive Integration                │
+│  • Service account authentication       │
+│  • Download PDFs from Drive folders     │
+│  • Convert Office files to PDF          │
+│  • Cache for faster subsequent runs     │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
 │  NotebookLM Pipeline                     │
-│  • Industry detection (Gemini AI)        │
-│  • Google Drive source retrieval         │
-│  • PDF consolidation                     │
-│  • Deep research (2 prompts)             │
-│  • Note generation (6 notes)             │
-│  • Mind map creation                     │
-└──────────────────────────────────────────┘
-                    ↓
-┌──────────────────────────────────────────┐
-│  NotebookLM Outputs                      │
-│  • Notebooks with 40+ sources            │
-│  • 6 comprehensive notes                 │
-│  • Interactive mind maps                 │
-│  • Quality scores >8.5/10                │
-└──────────────────────────────────────────┘
+│  • Upload consolidated PDF               │
+│  • Generate 2 deep research prompts     │
+│  • Create 6 analysis notes               │
+│  • Generate mind map                     │
+│  • Quality scoring >8.5/10               │
+└─────────────────────────────────────────┘
 ```
-
-### Core Components
-
-| Component | Purpose |
-|-----------|---------|
-| `main.py` | Multi-process orchestrator and dashboard launcher |
-| `vars.py` | Configuration hub for clients and settings |
-| `core/client_pipeline.py` | Main pipeline with Claude agent integration |
-| `core/gemini_agent.py` | Intelligent orchestration with self-healing |
-| `core/error_analyzer.py` | AI-powered error analysis |
-| `core/quality_scorer.py` | Enhanced quality scoring |
-| `dashboard/server.py` | Real-time monitoring dashboard |
 
 ---
 
-## Output Structure
+## Data Flow
 
-Each client produces a complete NotebookLM notebook:
+**All data comes from Google Drive - no local files needed!**
 
-### 📄 Sources (40+ per client)
+1. **Google Drive Setup**
+   - Create folder per client
+   - Upload company PDFs and documents
+   - Share folder with service account
 
-- **Consolidated PDF:** Company materials from Google Drive
-- **Research Sources:** Web sources from deep research
-  - Industry reports
-  - News articles
-  - Company websites
-  - Technical documentation
+2. **vars.py Configuration**
+   ```python
+   merck_test_folder = "https://drive.google.com/drive/folders/FOLDER_ID"
+   ```
 
-### 📝 Notes (6 per client)
+3. **Automatic Processing**
+   - Container downloads files from Drive
+   - Converts to PDF if needed
+   - Consolidates into single PDF
+   - Uploads to NotebookLM
+   - Generates research
 
-1. **Industry Analysis & Future Trends**
-2. **Customer Business Profile**
-3. **Technical Landscape Assessment**
-4. **Opportunity Assessment**
-5. **Strategic Recommendations**
-6. **Executive Summary**
-
-### 🧠 Mind Map
-
-- Visual representation of findings
-- Interactive exploration of relationships
-- Key insights highlighted
+4. **Output**
+   - NotebookLM notebook with 40+ sources
+   - 6 comprehensive analysis notes
+   - Interactive mind map
+   - Quality score report
 
 ---
 
-## Configuration
+## Execution Modes
 
-### Adding New Clients
-
-Edit `vars.py`:
-
-```python
-clients = [
-    "new_client_test",
-    # ... existing clients
-]
-
-# Client configuration
-new_client_test_name = "New Client Name"
-new_client_test_folder = "https://drive.google.com/drive/folders/FOLDER_ID"
-new_client_test_industry = "industry category"
-new_client_test_subsegments = "subsegment 1, subsegment 2, subsegment 3"
+### Fast Mode (15-20 minutes)
+```bash
+./launch_ape.sh fast
 ```
+- Research timeout: 10 minutes
+- Target: 15+ sources
+- Quality threshold: 8.5/10
+- Best for: Quick turnaround
 
-### Execution Modes
-
-**Fast Mode:**
-- Research timeout: 600s (10 min)
-- Optimized for speed
-- Target: 15-20 min per client
-
-**Deep Mode:**
-- Research timeout: 1200s (20 min)
-- Enhanced research depth
-- Target: 35-40 min per client
-
-### Quality Thresholds
-
-```python
-QUALITY_THRESHOLDS = {
-    'min_sources': 15,
-    'required_notes': 6,
-    'min_quality_score': 8.5,
-}
+### Deep Mode (35-40 minutes)
+```bash
+./launch_ape.sh deep
 ```
+- Research timeout: 20 minutes
+- Target: 40+ sources
+- Quality threshold: 9.0/10
+- Best for: Comprehensive analysis
 
 ---
 
 ## Documentation
 
-- **[INSTALLATION.md](INSTALLATION.md)** - Detailed setup instructions
-- **[GETTING-STARTED.md](GETTING-STARTED.md)** - Comprehensive guide
-- **[LAUNCHER-GUIDE.md](LAUNCHER-GUIDE.md)** - Launcher script usage
-- **[QUICKSTART.md](QUICKSTART.md)** - Fast track guide
-- **[SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md)** - Google Drive setup
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history
+- **[GETTING-STARTED.md](GETTING-STARTED.md)** - Complete setup guide
+- **[SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md)** - Google Drive authentication
+- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute quick start
+- **[TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md)** - Common issues
 
 ---
 
-## Troubleshooting
+## System Requirements
 
-### Dashboard doesn't open
+### Minimum
+- **CPU:** 2 cores
+- **RAM:** 4 GB
+- **Disk:** 10 GB free
+- **Network:** Broadband internet
 
-```bash
-open http://localhost:8765
-```
+### Recommended
+- **CPU:** 6-8 cores (for parallel processing)
+- **RAM:** 8-12 GB
+- **Disk:** 20 GB free
 
-### Pipeline fails
-
-```bash
-# Check NotebookLM auth
-notebooklm list
-
-# Verify environment variables
-cat .env
-```
-
-### Quality scores show 5.0
-
-Known display bug - actual notebooks are fully populated. Verify in NotebookLM web interface.
-
----
-
-## Performance
-
-### Fast Mode Benchmarks
-
-- **Single client:** 15-20 minutes
-- **6 clients parallel:** 20-25 minutes total
-- **Sources per client:** 40-68 sources
-- **Success rate:** 100% (with Claude orchestration)
-
-### Deep Mode Benchmarks
-
-- **Single client:** 35-40 minutes
-- **6 clients parallel:** 40-45 minutes total
-- **Sources per client:** 40-70 sources
-- **Enhanced research depth**
-
----
-
-## Technology Stack
-
-- **Python 3.9+** - Core runtime
-- **NotebookLM CLI** - Research and notebook management
-- **Google Gemini API** - AI-powered analysis
-- **Claude AI** - Intelligent orchestration
-- **Google Drive API** - Source document retrieval
-- **Flask** - Real-time dashboard
-- **Multiprocessing** - Parallel execution
+### Supported Platforms
+- ✅ macOS (ARM64 - M1/M2/M3)
+- ✅ Linux x86_64 (RHEL, Ubuntu, Fedora)
+- ✅ Windows WSL2
 
 ---
 
@@ -309,51 +192,150 @@ Known display bug - actual notebooks are fully populated. Verify in NotebookLM w
 
 ```
 Project-APE/
-├── main.py                 # Multi-process orchestrator
-├── vars.py                 # Configuration hub
-├── launch_ape.sh          # Launch script
-├── requirements.txt       # Dependencies
-├── .env                   # Environment variables
+├── launch_ape.sh              # Main launcher (auto-detects architecture)
+├── vars.py                    # Client configuration (Google Drive URLs)
+├── .env                       # API keys (Gemini, optional Claude)
 │
-├── core/                  # Core pipeline modules
-│   ├── client_pipeline.py
-│   ├── gemini_agent.py
-│   ├── error_analyzer.py
-│   ├── quality_scorer.py
-│   ├── artifact_verifier.py
-│   └── ...
+├── core/                      # Core modules
+│   ├── client_pipeline.py     # Main pipeline orchestration
+│   ├── drive_manager.py       # Google Drive integration
+│   ├── gemini_agent.py        # AI orchestration
+│   └── ...                    # Additional core modules
 │
-├── dashboard/             # Real-time monitoring
-│   ├── server.py
-│   └── static/
-│       └── kingkong.png   # Project logo
+├── dashboard/                 # Real-time monitoring
+│   └── server.py              # Flask dashboard
 │
-└── *.txt                  # Research and chat prompts
+└── Containerfile              # Container image definition
 ```
 
 ---
 
-## Version History
+## Google Drive Workflow
 
-**Current Version:** 3.0.4
+### 1. Create Service Account
+See [SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md)
 
-See [CHANGELOG.md](CHANGELOG.md) for complete version history.
+### 2. Organize Drive Folders
+```
+Client Folders/
+├── Merck/
+│   ├── company_overview.pdf
+│   ├── financial_report.pdf
+│   └── technical_specs.pdf
+│
+└── Blue Yonder/
+    ├── about.pdf
+    └── products.pdf
+```
+
+### 3. Share with Service Account
+- Right-click folder → Share
+- Add service account email
+- Grant "Viewer" permission
+
+### 4. Configure vars.py
+```python
+merck_test_folder = "https://drive.google.com/drive/folders/1zi3Jbvv..."
+blue_yonder_test_folder = "https://drive.google.com/drive/folders/1Gno..."
+```
+
+### 5. Run Pipeline
+```bash
+./launch_ape.sh fast
+```
+
+**Project APE handles everything else automatically!**
 
 ---
 
-## Creator
+## Multi-Architecture Support
 
-**Jason Anderson**
+Project APE automatically detects your system architecture and uses the appropriate container image:
 
-- Created Project APE
-- Developed all core components
-- Maintains and evolves the system
+| Platform | Architecture | Container Image | LibreOffice |
+|----------|-------------|-----------------|-------------|
+| **macOS M1/M2/M3** | ARM64 | `project-ape:latest-arm64` | ✅ Yes |
+| **Linux Intel/AMD** | x86_64 | `project-ape:latest-amd64` | ✅ Yes |
+| **Windows WSL2** | x86_64 | `project-ape:latest-amd64` | ✅ Yes |
+
+**No manual configuration needed** - `launch_ape.sh` handles detection automatically.
+
+---
+
+## Output
+
+Each client generates:
+
+### NotebookLM Notebook
+- **40+ Research Sources** - Web articles, reports, documentation
+- **1 Consolidated PDF** - All client materials combined
+- **6 Analysis Notes:**
+  1. Industry Analysis & Future Trends
+  2. Customer Business Profile
+  3. Technical Landscape Assessment
+  4. Opportunity Assessment
+  5. Strategic Recommendations
+  6. Executive Summary
+- **Interactive Mind Map** - Visual representation of findings
+- **Quality Score** - Automated assessment (target: >8.5/10)
+
+### Local Outputs
+- **Logs:** `logs/<client_id>.log`
+- **Status:** `.multi_process_status/<client_id>.json`
+- **Dashboard:** Real-time monitoring at http://localhost:8765
+
+---
+
+## Performance
+
+### Benchmarks
+
+| Mode | Single Client | 6 Clients Parallel | Sources | Quality |
+|------|--------------|-------------------|---------|---------|
+| **Fast** | 15-20 min | 20-25 min | 15-40 | 8.5+ |
+| **Deep** | 35-40 min | 40-45 min | 40-70 | 9.0+ |
+
+### Success Rate
+- **100%** with Claude AI orchestration
+- Self-healing error recovery
+- Automatic retry logic
+
+---
+
+## API Keys Required
+
+### Required
+1. **Google Gemini API** - AI orchestration
+   - Get at: https://aistudio.google.com/app/apikey
+   - Used for: Industry detection, orchestration
+
+2. **Google Service Account** - Drive access
+   - Setup: [SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md)
+   - Used for: Downloading client materials
+
+### Optional
+3. **Claude via Vertex AI** - Industry auto-detection
+   - Enhances industry classification
+   - Falls back to Gemini if not configured
+
+---
+
+## Technology Stack
+
+- **Python 3.13** - Core runtime
+- **NotebookLM CLI** - Research and notebook management
+- **Google Gemini AI** - Orchestration and analysis
+- **Google Drive API** - Document retrieval
+- **Flask** - Real-time dashboard
+- **Debian 12** - Container base image
+- **LibreOffice** - Document conversion
+- **Podman/Docker** - Container runtime
 
 ---
 
 ## License
 
-Created, developed, and maintained by Jason Anderson.
+Created, developed, and maintained by **Jason Anderson**.
 
 All rights reserved.
 
@@ -361,15 +343,8 @@ All rights reserved.
 
 ## Support
 
-For issues, questions, or feature requests, contact Jason Anderson.
+For issues or questions, contact **Jason Anderson**.
 
 ---
 
-<p align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE" width="200"/>
-</p>
-
-<p align="center">
-  <strong>Project APE - Account Planning Engine</strong><br>
-  Powered by Claude AI and NotebookLM
-</p>
+**Project APE - Making Enterprise Account Planning Effortless**

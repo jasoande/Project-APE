@@ -1,499 +1,427 @@
 # Getting Started with Project APE
 
-<p align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE Logo" width="120"/>
-</p>
-
-<h3 align="center">Deployment Guide</h3>
-
-<p align="center">
-  Jason Anderson | Project Owner & Maintainer
-</p>
+**Complete setup guide for first-time users**
 
 ---
 
-**Choose your deployment method** - Container (recommended) or Local installation.
+## Overview
+
+Project APE automates enterprise account planning research. This guide walks you through setup to your first successful run.
+
+**Time to complete:** 30-45 minutes
 
 ---
 
-## Which Method Should I Use?
+## Prerequisites
 
-### Use Container If...
+Before starting, you need:
 
-✅ You just want to **run Project APE**  
-✅ You're an **account team member**  
-✅ You **don't need to modify the code**  
-✅ You want **automatic updates**  
-✅ You want **no dependency hassles**  
-
-**→ Go to:** [Container Quick Start](#container-quick-start-5-minutes)
+1. ✅ Google account with NotebookLM access
+2. ✅ Podman or Docker installed  
+3. ✅ Internet connection
+4. ✅ macOS (M1/M2/M3) OR Linux x86_64
 
 ---
 
-### Use Local Install If...
+## Step 1: Install Container Runtime
 
-✅ You're **developing Project APE**  
-✅ You need to **customize the code**  
-✅ You want to **contribute to the project**  
-✅ You're **debugging issues**  
-✅ You prefer **traditional Python workflow**  
-
-**→ Go to:** [Local Installation](#local-installation-15-minutes)
-
----
-
-## Container Quick Start (5 minutes)
-
-### Prerequisites
-
-- **Podman** installed
-- **Google account** (for NotebookLM)
-- **Client data files**
-
-### Steps
-
-#### 1. Install Podman (one-time)
-
-**macOS:**
+### macOS
 ```bash
-brew install podman
-podman machine init
-podman machine start
+# Install Podman Desktop
+brew install podman-desktop
+# OR install Docker Desktop from docker.com
 ```
 
-**RHEL/Fedora:**
+### Linux (RHEL/Fedora)
 ```bash
 sudo dnf install podman
 ```
 
-**Ubuntu:**
+### Linux (Ubuntu/Debian)
 ```bash
 sudo apt-get install podman
 ```
 
-#### 2. Get Project APE
+**Verify installation:**
+```bash
+podman --version
+# Should show: podman version 4.x or higher
+```
+
+---
+
+## Step 2: Get Google Gemini API Key
+
+1. Go to https://aistudio.google.com/app/apikey
+2. Click "Create API Key"
+3. Copy the key (starts with "AIza...")
+4. Save for Step 5
+
+---
+
+## Step 3: Setup Google Service Account
+
+**This is required for Google Drive access.**
+
+See complete guide: **[SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md)**
+
+Quick steps:
+1. Go to https://console.cloud.google.com
+2. Create new project "Project APE"
+3. Enable Google Drive API
+4. Create Service Account
+5. Download JSON key file
+6. Save as `jasoande-3aec1043e544.json` in Project APE directory
+
+**Copy the service account email** (format: `name@project.iam.gserviceaccount.com`)
+
+---
+
+## Step 4: Setup Google Drive Folders
+
+### Create Client Folders
+
+```
+My Drive/
+└── Client Research/
+    ├── Merck/
+    │   ├── company_overview.pdf
+    │   ├── 10k_report.pdf
+    │   └── tech_stack.pdf
+    │
+    └── Blue Yonder/
+        ├── company_profile.pdf
+        └── solutions.pdf
+```
+
+### Share with Service Account
+
+For each client folder:
+1. Right-click folder → **Share**
+2. Paste service account email
+3. Grant **Viewer** access
+4. Click **Send**
+
+### Get Folder URLs
+
+1. Open folder in Google Drive
+2. Copy URL from browser address bar
+3. Should look like: `https://drive.google.com/drive/folders/1zi3Jbvv9eW...`
+
+---
+
+## Step 5: Clone and Configure Project APE
+
+### Clone Repository
 
 ```bash
-# Clone repo (for config files and scripts)
-git clone https://github.com/jasoande/Project-APE.git
+cd ~/Projects  # or your preferred location
+git clone <repository-url>
 cd Project-APE
 ```
 
-#### 3. Configure Your Clients
+### Configure Environment (.env)
 
 ```bash
-# Copy single-client template (recommended for first time)
-cp example-container.py vars.py
+# Copy template
+cp .env.template .env
 
-# Or use multi-client template
-# cp container-vars.py vars.py
+# Edit with your API keys
+nano .env  # or use your favorite editor
+```
 
-# Edit with your clients
+Add your keys:
+```bash
+# Gemini API (required)
+GEMINI_API_KEY=AIzaSy...your-key-here
+
+# Google Drive Service Account path
+GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY=/app/service-account.json
+
+# Optional: Claude via Vertex AI
+CLAUDE_CODE_USE_VERTEX=1
+ANTHROPIC_VERTEX_PROJECT_ID=your-gcp-project
+ANTHROPIC_VERTEX_REGION=us-east5
+```
+
+Save and close.
+
+### Configure Clients (vars.py)
+
+```bash
+# Copy example
+cp example-vars.py vars.py
+
+# Edit configuration
 nano vars.py
 ```
 
-**Example:**
+Add your clients:
 ```python
-# Set your role/perspective
-persona = "Red Hat solutions architect"
+clients = [
+    "merck_test",
+    "blue_yonder_test"
+]
 
-# Define your client
-clients = ["acme_corp"]
+# Merck Configuration
+merck_test_name = "Merck"
+merck_test_folder = "https://drive.google.com/drive/folders/YOUR_FOLDER_ID"
+merck_test_industry = "pharmaceuticals and life sciences"
+merck_test_subsegments = "drug discovery, clinical trials, manufacturing"
 
-acme_corp_name = "ACME Corporation"
-acme_corp_industry = "technology"
-acme_corp_subsegments = "cloud computing, enterprise software"
-acme_corp_folder = "/app/client_data/ACME"
+# Blue Yonder Configuration  
+blue_yonder_test_name = "Blue Yonder"
+blue_yonder_test_folder = "https://drive.google.com/drive/folders/YOUR_FOLDER_ID"
+blue_yonder_test_industry = "supply chain software"
+blue_yonder_test_subsegments = "demand planning, warehouse management, logistics"
 ```
 
-**Persona options:** account executive, solutions architect, marketing specialist, customer success manager
+Save and close.
 
-#### 4. Add Client Data
+### Place Service Account File
 
 ```bash
-mkdir -p client_data/ACME
-cp ~/Documents/ACME/*.pdf client_data/ACME/
+# Copy your service account JSON to project directory
+cp ~/Downloads/service-account-key.json ./jasoande-3aec1043e544.json
+
+# Verify it's there
+ls -la jasoande-*.json
 ```
-
-#### 5. Login to NotebookLM (one-time)
-
-```bash
-npm install -g notebooklm
-notebooklm login
-```
-
-#### 6. Run!
-
-```bash
-./ape-run.sh --mode fast
-```
-
-**That's it!** Results in `logs/` directory.
-
-### Full Guide
-
-See **[QUICKSTART.md](QUICKSTART.md)** for detailed instructions.
 
 ---
 
-## Local Installation (15 minutes)
+## Step 6: Authenticate NotebookLM
 
-### Prerequisites
+**This step requires NotebookLM CLI - only available after first container run.**
 
-- **Python 3.10+**
-- **pip**
-- **LibreOffice** (for PDF conversion)
-- **Node.js 18+** (for NotebookLM CLI)
-
-### Steps
-
-#### 1. Install System Dependencies
-
-**macOS:**
-```bash
-brew install --cask libreoffice
-brew install node git
-```
-
-**RHEL/Fedora:**
-```bash
-sudo dnf install -y libreoffice python3-pip
-curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-sudo dnf install -y nodejs
-```
-
-**Ubuntu:**
-```bash
-sudo apt-get install -y libreoffice python3-pip nodejs npm
-```
-
-#### 2. Clone Repository
-
-```bash
-git clone https://github.com/jasoande/Project-APE.git
-cd Project-APE
-```
-
-#### 3. Install Python Dependencies
-
-```bash
-python3 -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-#### 4. Install NotebookLM CLI
-
-```bash
-npm install -g notebooklm
-notebooklm login
-```
-
-#### 5. Configure Clients
-
-```bash
-cp example-vars.py vars.py
-nano vars.py  # Edit with your clients
-```
-
-**Example (with Gemini AI auto-detection):**
-```python
-# Enable Gemini AI
-GEMINI_API_KEY="your-gemini-api-key"  # Add to .env file
-
-GEMINI_CONFIG = {
-    'enabled': True,
-    'model': 'gemini-2.5-flash',
-}
-
-clients = ["acme_corp"]
-
-acme_corp_name = "ACME Corporation"
-acme_corp_folder = str(Path(__file__).parent / "client_data" / "ACME")
-# Industry & subsegments auto-detected by Gemini AI
-```
-
-**Example (manual configuration):**
-```python
-clients = ["acme_corp"]
-
-acme_corp_name = "ACME Corporation"
-acme_corp_industry = "technology"
-acme_corp_subsegments = "cloud infrastructure, enterprise software"
-acme_corp_folder = str(Path(__file__).parent / "client_data" / "ACME")
-```
-
-> **NEW:** Gemini AI can automatically detect industry and subsegments!  
-> See [GEMINI-INTEGRATION.md](GEMINI-INTEGRATION.md) for setup guide.
-
-#### 6. Add Client Data
-
-```bash
-mkdir -p client_data/ACME
-cp ~/Documents/ACME/*.pdf client_data/ACME/
-```
-
-#### 7. Run!
-
-```bash
-python3 main.py --mode fast --clients acme_corp
-```
-
-### Full Guide
-
-See **Installation** section in [README.md](README.md) for detailed instructions.
+We'll do this in Step 7 on first run.
 
 ---
 
-## Comparison
+## Step 7: Run Your First Pipeline
 
-| Feature | Container | Local Install |
-|---------|-----------|---------------|
-| **Setup Time** | 5 minutes | 15 minutes |
-| **Dependencies** | None (in container) | Python, LibreOffice, Node.js |
-| **Updates** | `podman pull` | `git pull` + `pip install` |
-| **Portability** | ✅ Works anywhere | ⚠️ Depends on system |
-| **Customization** | ❌ Code in container | ✅ Full access |
-| **Development** | ❌ Not ideal | ✅ Perfect |
-| **Production** | ✅ Recommended | ✅ Works |
-| **Team Distribution** | ✅ Easy (pull image) | ⚠️ Each installs deps |
+### Run Fast Mode (Single Client)
+
+```bash
+./launch_ape.sh fast merck_test
+```
+
+**What happens:**
+1. Script detects your architecture (ARM64 or x86_64)
+2. Pulls correct container image from Quay.io
+3. Starts dashboard at http://localhost:8765
+4. Downloads files from Google Drive
+5. Consolidates to PDF
+6. Runs NotebookLM pipeline
+
+**Expected output:**
+```
+════════════════════════════════════════════════════════════════
+  Project APE - Account Planning Engine
+  Automatic Architecture Detection & Container Launcher
+════════════════════════════════════════════════════════════════
+
+[INFO] Detected architecture: arm64
+[INFO] Detected runtime: podman
+
+[STEP] Pulling image from Quay.io...
+[INFO] Image: quay.io/jasoande/project_ape/project-ape:3.0.5-arm64
+[INFO] ✅ Image pulled successfully
+
+[STEP] Starting Project APE...
+[INFO] Mode: fast
+[INFO] Clients: merck_test
+[INFO] Dashboard: http://localhost:8765
+```
+
+### First-Time NotebookLM Auth
+
+On first run, you'll be prompted:
+```
+ERROR: NotebookLM authentication required
+
+Please authenticate by running:
+  notebooklm login
+```
+
+**To authenticate:**
+
+1. **Open new terminal** (keep pipeline running)
+
+2. **Enter container:**
+   ```bash
+   podman exec -it project-ape bash
+   ```
+
+3. **Login to NotebookLM:**
+   ```bash
+   notebooklm login
+   ```
+
+4. **Follow prompts:**
+   - Browser will open
+   - Login to Google account
+   - Grant permissions
+   - Return to terminal
+
+5. **Exit container:**
+   ```bash
+   exit
+   ```
+
+6. **Restart pipeline:**
+   ```bash
+   ./launch_ape.sh fast merck_test
+   ```
+
+### Monitor Progress
+
+Open dashboard in browser:
+```bash
+open http://localhost:8765
+```
+
+**Dashboard shows:**
+- Real-time progress for each client
+- Current pipeline step
+- Elapsed time
+- Quality scores
+- Direct links to NotebookLM notebooks
+
+### Expected Timeline (Fast Mode)
+- Download from Drive: 1-2 min
+- PDF consolidation: 1-2 min  
+- Research generation: 10-12 min
+- Note creation: 2-4 min
+- Mind map: 1-2 min
+
+**Total: 15-20 minutes**
 
 ---
 
-## What Happens When You Run
+## Step 8: View Results
 
-### Pipeline Flow
+### Check Dashboard
 
+Dashboard shows:
+- ✅ **Status:** COMPLETED
+- 📊 **Quality Score:** 8.7/10 (or similar)
+- 🔗 **NotebookLM Link:** Click to open notebook
+
+### Open NotebookLM Notebook
+
+Click the notebook link in dashboard, or:
+1. Go to https://notebooklm.google.com
+2. Find notebook named `DEV_merck_test-TEST`
+3. Review:
+   - 40+ sources
+   - 6 analysis notes
+   - Interactive mind map
+
+### Check Logs
+
+```bash
+tail -f logs/merck_test.log
 ```
-1. PDF Consolidation (1-2 min)
-   └─→ Converts all docs to single PDF
-
-2. Notebook Creation (5s)
-   └─→ Creates NotebookLM notebook
-
-3. Source Upload (1-2 min)
-   └─→ Uploads consolidated PDF
-
-4. Research Phase (3-5 min in fast mode)
-   └─→ Runs 20 strategic research questions
-   └─→ Adds 10-20 web sources
-
-5. Analysis Phase (8-10 min)
-   └─→ Generates 12 strategic notes:
-       • Executive Summary
-       • Industry Analysis
-       • Technology Recommendations
-       • Solution Ideas
-       • Account Plan
-       • ... and 7 more
-
-6. Mind Map (1 min)
-   └─→ Creates visual summary
-
-7. Complete! (13-15 min total)
-   └─→ Output in logs/ directory
-```
-
-### Output Files
-
-```
-logs/
-├── project_ape_YYYYMMDD_HHMMSS.log
-└── ACME/
-    ├── ACME-Executive-Brief.pdf
-    ├── ACME-Mind-Map.pdf
-    ├── ACME-Research.txt
-    └── ACME-One.pdf  ← Complete consolidated output
-```
-
-### Dashboard
-
-Open browser to **http://localhost:8765** to watch progress in real-time.
 
 ---
 
-## Common Workflows
+## Step 9: Run Multiple Clients
 
-### First-Time Setup (Container)
+### All Clients (Fast Mode)
 
 ```bash
-# Day 1: Setup
-brew install podman
-podman machine init && podman machine start
-git clone https://github.com/jasoande/Project-APE.git
-cd Project-APE
-npm install -g notebooklm
-notebooklm login
-
-# Day 1: First run
-cp container-vars.py vars.py
-nano vars.py  # Configure
-mkdir -p client_data/Client1
-cp ~/docs/*.pdf client_data/Client1/
-./ape-run.sh --mode fast
-
-# Day 2+: Regular use
-./ape-run.sh --mode fast
+./launch_ape.sh fast
 ```
 
-### First-Time Setup (Local)
+Runs all clients defined in `vars.py` in parallel.
+
+### All Clients (Deep Mode)
 
 ```bash
-# Day 1: Setup
-brew install --cask libreoffice
-brew install node git
-git clone https://github.com/jasoande/Project-APE.git
-cd Project-APE
-pip install -r requirements.txt
-npm install -g notebooklm
-notebooklm login
-
-# Day 1: First run
-cp example-vars.py vars.py
-nano vars.py  # Configure
-mkdir -p client_data/Client1
-cp ~/docs/*.pdf client_data/Client1/
-python3 main.py --mode fast --clients client1
-
-# Day 2+: Regular use
-python3 main.py --mode fast
+./launch_ape.sh deep
 ```
 
-### Weekly Account Planning Run
+Takes 35-40 minutes but produces higher quality research.
+
+### Specific Clients
 
 ```bash
-# Update client data
-cp ~/new-docs/*.pdf client_data/ACME/
-
-# Run analysis
-./ape-run.sh --mode fast --clients acme_corp
-
-# Review output
-open logs/ACME/ACME-One.pdf
+./launch_ape.sh fast merck_test blue_yonder_test organon_test
 ```
 
-### Multiple Clients (Parallel)
+---
 
+## Common Issues
+
+### Issue: Container image not found
+
+**Solution:**
 ```bash
-# Update vars.py with all clients
-clients = ["acme", "globex", "initech"]
+# Login to Quay.io
+podman login quay.io
 
-# Run all in parallel (fast mode)
-./ape-run.sh --mode fast
+# Pull manually
+podman pull quay.io/jasoande/project_ape/project-ape:latest
+```
 
-# Or specific clients
-./ape-run.sh --mode fast --clients acme,globex
+### Issue: Permission denied on service account
+
+**Solution:**
+1. Verify file exists: `ls -la jasoande-*.json`
+2. Check permissions: `chmod 644 jasoande-*.json`
+3. Verify in .env: `GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY=/app/service-account.json`
+
+### Issue: Can't download from Google Drive
+
+**Solution:**
+1. Verify folder is shared with service account email
+2. Check folder URL in vars.py is correct
+3. Test service account has access:
+   ```bash
+   # In container
+   python3 -c "from core.drive_manager import DriveManager; print('OK')"
+   ```
+
+### Issue: Dashboard not accessible
+
+**Solution:**
+```bash
+# Check if port 8765 is already in use
+lsof -i :8765
+
+# Kill existing process if needed
+kill <PID>
+
+# Restart pipeline
+./launch_ape.sh fast
 ```
 
 ---
 
 ## Next Steps
 
-### After Your First Run
-
-1. ✅ **Review output** - Open the `-One.pdf` file
-2. ✅ **Check NotebookLM** - Click link in dashboard
-3. ✅ **Adjust timing** - Edit `vars.py` if needed
-4. ✅ **Add more clients** - Scale to your accounts
-5. ✅ **Try deep mode** - For critical accounts
-
-### Customization
-
-**Container users:**
-- Edit `vars.py` for clients and settings
-- Client data in `client_data/`
-- Can't modify code (it's in container)
-
-**Local users:**
-- Edit `vars.py` for clients and settings
-- Edit prompt templates in project root
-- Modify Python code as needed
-
-### Getting Help
-
-- **Container:** [QUICKSTART.md](QUICKSTART.md), [README-CONTAINER.md](README-CONTAINER.md)
-- **Local:** [README.md](README.md)
-- **Auth:** [GOOGLE_AUTH_GUIDE.md](GOOGLE_AUTH_GUIDE.md)
-- **Issues:** GitHub Issues
-
----
-
-## Troubleshooting
-
-### Container Issues
-
-```bash
-# Podman not running (Mac)
-podman machine start
-
-# Image pull failed
-podman login quay.io
-podman pull quay.io/jasoande/project_ape/project-ape:latest
-
-# Volume mount errors
-realpath ./vars.py  # Must be absolute paths
-```
-
-### Local Issues
-
-```bash
-# LibreOffice not found
-brew install --cask libreoffice  # macOS
-sudo dnf install libreoffice     # RHEL
-
-# Python package errors
-pip install -r requirements.txt --force-reinstall
-
-# NotebookLM auth
-notebooklm logout
-notebooklm login
-```
-
-### Common to Both
-
-```bash
-# Check NotebookLM auth
-notebooklm status
-
-# View logs
-tail -f logs/*.log
-
-# Check dashboard
-open http://localhost:8765
-```
+1. ✅ **Read** [QUICKSTART.md](QUICKSTART.md) for quick reference
+2. ✅ **Review** [SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md) for Drive details
+3. ✅ **Check** [TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md) for common issues
+4. ✅ **Optimize** Run deep mode for higher quality research
 
 ---
 
 ## Summary
 
-### Container (Recommended)
+**You've successfully:**
+- ✅ Installed container runtime
+- ✅ Created Google service account
+- ✅ Setup Google Drive folders
+- ✅ Configured Project APE
+- ✅ Run your first pipeline
+- ✅ Generated NotebookLM research
 
-```bash
-# 3 commands to get started
-podman pull quay.io/jasoande/project_ape/project-ape:latest
-cp container-vars.py vars.py && nano vars.py
-./ape-run.sh --mode fast
-```
-
-✅ **Best for:** Account teams, production use  
-✅ **Setup:** 5 minutes  
-✅ **Maintenance:** Zero  
+**Project APE is now ready for production use!**
 
 ---
 
-### Local Install
+**Need Help?** Contact Jason Anderson
 
-```bash
-# Setup and run
-pip install -r requirements.txt
-notebooklm login
-python3 main.py --mode fast
-```
-
-✅ **Best for:** Development, customization  
-✅ **Setup:** 15 minutes  
-✅ **Maintenance:** Manual updates  
-
----
-
-**Project APE - Getting Started Guide**  
-Version 3.0.4 | Jason Anderson | 2026
+**All data flows through Google Drive - no local files needed!**
