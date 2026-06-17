@@ -118,6 +118,10 @@ class ClientPipeline:
                 except:
                     pass  # If file doesn't exist or is corrupted, proceed without start_time
 
+            # Remove start_time from kwargs if it's None (don't let it override)
+            if 'start_time' in kwargs and kwargs['start_time'] is None:
+                kwargs = {k: v for k, v in kwargs.items() if k != 'start_time'}
+
             status_data = {
                 "name": self.client_name,
                 "token": self.client_id,
@@ -131,8 +135,12 @@ class ClientPipeline:
             }
 
             # Preserve start_time from initial status file creation
-            if existing_start_time is not None:
-                status_data["start_time"] = existing_start_time
+            if 'start_time' not in status_data:
+                if existing_start_time is not None:
+                    status_data["start_time"] = existing_start_time
+                else:
+                    # First time creating status in pipeline - set start_time now
+                    status_data["start_time"] = time.time()
 
             with open(self.status_file, 'w') as f:
                 json.dump(status_data, f, indent=2)

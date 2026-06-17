@@ -13,9 +13,20 @@ set -e
 
 # Configuration
 IMAGE_NAME="project-ape"
-IMAGE_VERSION="3.0.5"
 REGISTRY="quay.io/jasoande/project_ape"
 DASHBOARD_PORT=8765
+
+# Version selection based on architecture
+# amd64: Use versioned tag (more stable for production EC2)
+# arm64: Use latest tag (Mac development)
+get_image_version() {
+    local arch=$1
+    if [ "$arch" = "amd64" ]; then
+        echo "3.0.5-amd64"
+    else
+        echo "latest"  # arm64 uses latest
+    fi
+}
 
 # Color output
 GREEN='\033[0;32m'
@@ -75,12 +86,13 @@ detect_runtime() {
 pull_image() {
     local runtime=$1
     local arch=$2
-    local image="${REGISTRY}/${IMAGE_NAME}:${IMAGE_VERSION}-${arch}"
+    local version=$(get_image_version "$arch")
+    local image="${REGISTRY}/${IMAGE_NAME}:${version}"
 
     log_step "Checking for container image..."
 
     # Check if image exists locally
-    if $runtime images | grep -q "${IMAGE_NAME}.*${IMAGE_VERSION}-${arch}"; then
+    if $runtime images | grep -q "${IMAGE_NAME}.*${version}"; then
         log_info "Using local image: ${image}"
         return 0
     fi
@@ -94,8 +106,8 @@ pull_image() {
         return 0
     else
         echo "ERROR: Failed to pull image ${image}" >&2
-        echo "Trying latest tag..." >&2
-        $runtime pull "${REGISTRY}/${IMAGE_NAME}:latest-${arch}" || {
+        echo "Trying latest tag as fallback..." >&2
+        $runtime pull "${REGISTRY}/${IMAGE_NAME}:latest" || {
             echo "ERROR: Could not pull container image" >&2
             exit 1
         }
@@ -113,7 +125,8 @@ run_container() {
     shift 3
     local clients="$@"
 
-    local image="${REGISTRY}/${IMAGE_NAME}:${IMAGE_VERSION}-${arch}"
+    local version=$(get_image_version "$arch")
+    local image="${REGISTRY}/${IMAGE_NAME}:${version}"
 
     # Build command
     local cmd="/opt/venv/bin/python3 main.py --mode ${mode}"
@@ -136,8 +149,17 @@ run_container() {
     mkdir -p logs .multi_process_status
 
     # Set permissions so container user can write (container runs as UID 1000)
-    # Option 1: World-writable (simple but less secure)
+    # Make directories world-writable
     chmod 777 logs .multi_process_status
+
+    # Also fix permissions on any existing files (important for Mac)
+    # This ensures old logs don't block new runs
+    if [ -d "logs" ]; then
+        chmod -R a+rw logs 2>/dev/null || true
+    fi
+    if [ -d ".multi_process_status" ]; then
+        chmod -R a+rw .multi_process_status 2>/dev/null || true
+    fi
 
     # Option 2: If you want tighter permissions, use --userns=keep-id
     # This maps the container user to your host user
@@ -165,9 +187,13 @@ run_container() {
     fi
 
     # Run container with SELinux-compatible volume flags
+    # IMPORTANT: Set HOME=/home/apeuser so NotebookLM CLI finds credentials
+    # NOTE: core/, dashboard/, main.py could be mounted for development but
+    #       require container rebuild to pick up dependency changes
     $runtime run -it --rm \
         --name project-ape \
         -p ${DASHBOARD_PORT}:8765 \
+        -e HOME=/home/apeuser \
         -v $(pwd)/.env:/app/.env:ro,z \
         -v $(pwd)/vars.py:/app/vars.py:ro,z \
         -v $(pwd)/jasoande-3aec1043e544.json:/app/service-account.json:ro,z \

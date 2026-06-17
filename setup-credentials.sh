@@ -11,7 +11,6 @@ NC='\033[0m'
 
 VOLUME_NAME="project-ape-credentials"
 HOST_CREDS="${HOME}/.notebooklm"
-IMAGE_VERSION="3.0.5"
 REGISTRY="quay.io/jasoande/project_ape"
 
 # Detect architecture
@@ -31,8 +30,19 @@ detect_architecture() {
     esac
 }
 
+# Get appropriate image version for architecture
+get_image_version() {
+    local arch=$1
+    if [ "$arch" = "amd64" ]; then
+        echo "3.0.5-amd64"
+    else
+        echo "latest"  # arm64 uses latest
+    fi
+}
+
 ARCH=$(detect_architecture)
-IMAGE="${REGISTRY}/project-ape:${IMAGE_VERSION}-${ARCH}"
+IMAGE_VERSION=$(get_image_version "$ARCH")
+IMAGE="${REGISTRY}/project-ape:${IMAGE_VERSION}"
 
 echo "========================================================================"
 echo "PROJECT APE - CREDENTIAL SETUP"

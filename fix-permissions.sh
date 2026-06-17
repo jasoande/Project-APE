@@ -23,6 +23,10 @@ echo "Creating directories with proper permissions..."
 mkdir -p logs .multi_process_status
 chmod 777 logs .multi_process_status
 
+# Make all existing files writable (important for Mac)
+echo "Fixing file permissions inside directories..."
+chmod -R a+rw logs .multi_process_status 2>/dev/null || true
+
 echo
 echo "✅ Permissions fixed!"
 echo
