@@ -132,8 +132,15 @@ run_container() {
     log_info "Dashboard: http://localhost:${DASHBOARD_PORT}"
     echo ""
 
-    # Create directories if they don't exist
+    # Create directories if they don't exist with proper permissions
     mkdir -p logs .multi_process_status
+
+    # Set permissions so container user can write (container runs as UID 1000)
+    # Option 1: World-writable (simple but less secure)
+    chmod 777 logs .multi_process_status
+
+    # Option 2: If you want tighter permissions, use --userns=keep-id
+    # This maps the container user to your host user
 
     # Run container with SELinux-compatible volume flags
     $runtime run -it --rm \

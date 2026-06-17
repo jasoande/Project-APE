@@ -365,6 +365,28 @@ podman login quay.io
 podman pull quay.io/jasoande/project_ape/project-ape:latest
 ```
 
+### Issue: Permission denied writing to logs or status files (RHEL9/Linux)
+
+**Symptoms:**
+```
+❌ Fatal error: [Errno 13] Permission denied: '/app/.multi_process_status/merck_test.json'
+```
+
+**Root Cause:** Container runs as non-root user (UID 1000) and can't write to host directories.
+
+**Solution:**
+```bash
+# Quick fix - run the fix script
+./fix-permissions.sh
+
+# Or manually:
+rm -rf logs .multi_process_status
+mkdir -p logs .multi_process_status  
+chmod 777 logs .multi_process_status
+```
+
+**Note:** The `launch_ape.sh` script now automatically sets these permissions, but if you created the directories before updating the script, you need to fix them manually.
+
 ### Issue: Permission denied on service account
 
 **Solution:**
