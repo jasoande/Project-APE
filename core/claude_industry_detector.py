@@ -94,7 +94,7 @@ class ClaudeIndustryDetector:
         Detect industry and subsegments for a client.
 
         Args:
-            client_name: Company name (e.g., "Organon", "Merck")
+            client_name: Company name (e.g., "Acme Corp", "TechCo Inc")
             drive_files: List of file names from Google Drive folder (optional)
             company_overview: Company description text (optional)
 

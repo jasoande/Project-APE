@@ -433,7 +433,7 @@ open http://localhost:8765
 
 **Ready to transform your account planning?**
 
-See: [README.md](README.md) | [Getting Started](GETTING-STARTED.md) | [Service Account Setup](SERVICE-ACCOUNT-SETUP.md)
+See: [README.md](README.md) | [Service Account Setup](SERVICE-ACCOUNT-SETUP.md) | [Quick Start](QUICKSTART.md)
 
 **Questions?** Open an issue in the project repository.
 

@@ -152,7 +152,7 @@ your_client_test_subsegments = "drug discovery, clinical trials, manufacturing"
 2. Navigate to the client's folder
 3. Copy the URL from the address bar
    ```
-   https://drive.google.com/drive/folders/1zi3Jbvv9eWSg-F3IFZ0aOqsGMT2tqRen
+   https://drive.google.com/drive/folders/YOUR_FOLDER_ID_HERE
    ```
 
 **Industry and Subsegments:**
@@ -164,21 +164,21 @@ your_client_test_subsegments = "drug discovery, clinical trials, manufacturing"
 
 ```python
 clients = [
-    "merck_test",
-    "blue_yonder_test",
+    "acme_corp",
+    "techco_inc",
 ]
 
-# Merck
-merck_test_name = "Merck"
-merck_test_folder = "https://drive.google.com/drive/folders/1zi3Jbvv9eWSg-F3IFZ0aOqsGMT2tqRen"
-merck_test_industry = "pharmaceuticals and life sciences"
-merck_test_subsegments = "drug discovery, clinical trials, manufacturing operations"
+# Acme Corp
+acme_corp_name = "Acme Corporation"
+acme_corp_folder = "https://drive.google.com/drive/folders/YOUR_FOLDER_ID_1"
+acme_corp_industry = "manufacturing and industrial automation"
+acme_corp_subsegments = "robotics, supply chain optimization, quality control"
 
-# Blue Yonder
-blue_yonder_test_name = "Blue Yonder"
-blue_yonder_test_folder = "https://drive.google.com/drive/folders/1GnoQMM8ZK-0PSZElLIWa2z_3fy1TpoBK"
-blue_yonder_test_industry = "supply chain and logistics software"
-blue_yonder_test_subsegments = "demand planning, warehouse management, transportation optimization"
+# TechCo Inc
+techco_inc_name = "TechCo Inc"
+techco_inc_folder = "https://drive.google.com/drive/folders/YOUR_FOLDER_ID_2"
+techco_inc_industry = "enterprise software and cloud services"
+techco_inc_subsegments = "SaaS platforms, data analytics, API integration"
 ```
 
 **Time:** ~5 minutes per client
@@ -319,8 +319,11 @@ Once pipeline completes, view your notebooks:
 1. **Open NotebookLM:** [https://notebooklm.google.com](https://notebooklm.google.com)
 2. **Sign in** with your Google account (same as Step 5)
 3. **Find your notebooks:**
-   - Named after your clients (e.g., "Merck Test", "Blue Yonder Test")
+   - Named after your clients (e.g., "Acme Corporation", "TechCo Inc")
    - Sorted by creation date (most recent first)
+
+**Notebook naming:**
+- Named after your clients (e.g., "Acme Corporation", "TechCo Inc")
 
 **Each notebook contains:**
 - 📄 **Consolidated PDF source** - All client documents in one file
@@ -512,8 +515,8 @@ tail -f logs/merck_test.log
 **Contents:**
 ```json
 {
-  "name": "Merck",
-  "token": "merck_test",
+  "name": "Acme Corporation",
+  "token": "acme_corp",
   "status": "Researching",
   "start_time": 1718654321.5,
   "quality_score": 8.7,
@@ -529,7 +532,7 @@ tail -f logs/merck_test.log
 
 **Location:** Your Google account at [notebooklm.google.com](https://notebooklm.google.com)
 
-**Naming:** Client name (e.g., "Merck", "Blue Yonder")
+**Naming:** Client name (e.g., "Acme Corporation", "TechCo Inc")
 
 **Persistent** - notebooks remain in your account indefinitely.
 
@@ -545,8 +548,8 @@ To run specific clients, edit `vars.py`:
 ```python
 # Comment out clients you don't want to run
 clients = [
-    "merck_test",
-    # "blue_yonder_test",  # Skip this one
+    "acme_corp",
+    # "techco_inc",  # Skip this one
 ]
 ```
 
@@ -686,7 +689,7 @@ podman pull quay.io/jasoande/project_ape/project-ape:latest
 
 - **[EXECUTIVE-SUMMARY.md](EXECUTIVE-SUMMARY.md)** - Why Project APE? Problem, solution, advantages
 - **[SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md)** - Complete Google service account guide with screenshots
-- **[GETTING-STARTED.md](GETTING-STARTED.md)** - Detailed setup walkthrough
+- **This README** - Complete setup workflow (Steps 1-10 above)
 - **[QUICKSTART.md](QUICKSTART.md)** - 5-minute quick reference
 - **[CHANGES-SUMMARY.md](CHANGES-SUMMARY.md)** - Recent fixes and improvements
 

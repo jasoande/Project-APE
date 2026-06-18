@@ -361,7 +361,7 @@ project-ape-service@project-ape.iam.gserviceaccount.com
 #### Locate the Client Folder
 
 1. Find the folder containing your client's documents
-   - Example: "Merck Test Documents", "Blue Yonder Files", etc.
+   - Example: "Acme Corp Documents", "TechCo Files", etc.
 2. These are the folders whose URLs you put in `vars.py`
 
 #### Share the Folder
@@ -384,7 +384,7 @@ project-ape-service@project-ape.iam.gserviceaccount.com
 
    ![Screenshot: Share dialog with service account email entered]
    ```
-   Share "Merck Test Documents"
+   Share "Acme Corp Documents"
    
    Add people and groups
    ┌─────────────────────────────────────┐
@@ -432,12 +432,12 @@ cat > drive-folders-shared.txt << 'EOF'
 # Project APE - Google Drive Folders
 # Service Account: project-ape-service@project-ape.iam.gserviceaccount.com
 
-# Merck Test
-https://drive.google.com/drive/folders/1zi3Jbvv9eWSg-F3IFZ0aOqsGMT2tqRen
+# Client 1
+https://drive.google.com/drive/folders/YOUR_FOLDER_ID_1
 Shared: ✅ 2026-06-17
 
-# Blue Yonder Test  
-https://drive.google.com/drive/folders/1GnoQMM8ZK-0PSZElLIWa2z_3fy1TpoBK
+# Client 2
+https://drive.google.com/drive/folders/YOUR_FOLDER_ID_2
 Shared: ✅ 2026-06-17
 
 # [Add all your client folders here]
@@ -517,7 +517,7 @@ if files:
     print("✅ Service account can access Drive API!")
     print("\nFiles/folders shared with service account:")
     for f in files:
-        print(f"  - {f['name']} (ID: {f['id']})")
+        print(f"  - {f['name']}")
 else:
     print("⚠️  No files found. Make sure you shared folders with the service account.")
 EOF
@@ -528,8 +528,9 @@ Expected output:
 ✅ Service account can access Drive API!
 
 Files/folders shared with service account:
-  - Merck Test Documents (ID: 1zi3Jbvv9eWSg-F3IFZ0aOqsGMT2tqRen)
-  - Blue Yonder Files (ID: 1GnoQMM8ZK-0PSZElLIWa2z_3fy1TpoBK)
+  - Acme Corp Documents
+  - TechCo Files
+  - Client ABC Folder
   ...
 ```
 
@@ -679,7 +680,7 @@ See [README.md](README.md) for complete usage documentation.
 - **Project APE Documentation:**
   - [README.md](README.md) - Main documentation
   - [EXECUTIVE-SUMMARY.md](EXECUTIVE-SUMMARY.md) - Why Project APE?
-  - [GETTING-STARTED.md](GETTING-STARTED.md) - Step-by-step guide
+  - [README.md](README.md) - Step-by-step guide
 
 ---
 
