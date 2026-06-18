@@ -92,14 +92,22 @@ DRIVE_CONFIG = {
 }
 
 # ==============================================================================
-# GEMINI AGENT CONFIGURATION
+# ADVANCED: GEMINI AI ORCHESTRATION (Optional)
 # ==============================================================================
+# Used for pipeline orchestration, error recovery, and quality validation
+# Most users can leave these as default
 
 GEMINI_AGENT_CONFIG = {
-    'enabled': True,  # Enable intelligent orchestration
+    'enabled': True,
     'model': 'gemini-2.0-flash-exp',
-    'max_retries': 3,
-    'recovery_enabled': True,
+    'temperature': 0.2,
+    'max_retries': 5,
+    'retry_base_delay': 10.0,
+    'timeout': 60,
+    'enable_error_analysis': True,
+    'enable_quality_validation': True,
+    'enable_self_healing': True,
+    'quality_target': 8.5,
 }
 
 # ==============================================================================

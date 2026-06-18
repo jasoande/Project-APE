@@ -1,6 +1,6 @@
 #!/bin/bash
-# Project APE - Complete Environment Setup Script
-# Installs Podman, Node.js, and NotebookLM CLI
+# Project APE - Environment Setup Script
+# Installs Podman and NotebookLM CLI for end users
 
 set -e  # Exit on error
 
@@ -15,10 +15,13 @@ echo "========================================================================"
 echo "PROJECT APE - ENVIRONMENT SETUP"
 echo "========================================================================"
 echo
-echo "This script will install:"
+echo "This script will install the required tools for running Project APE:"
+echo
 echo "  1. Podman (container runtime)"
 echo "  2. Node.js (required for NotebookLM CLI)"
 echo "  3. NotebookLM CLI (notebooklm-py)"
+echo
+echo "NOTE: Python is NOT required - Project APE runs in a pre-built container."
 echo
 read -p "Continue? (y/n) " -n 1 -r
 echo
@@ -88,7 +91,7 @@ else
             echo "Installing Podman on RHEL/Fedora..."
             echo
 
-            sudo dnf install -y podman podman-compose
+            sudo dnf install -y podman
 
             echo
             echo -e "${GREEN}✅ Podman installed successfully${NC}"
@@ -101,11 +104,6 @@ else
 
             sudo apt-get update
             sudo apt-get install -y podman
-
-            # Install podman-compose separately
-            echo
-            echo "Installing podman-compose..."
-            sudo pip3 install podman-compose
 
             echo
             echo -e "${GREEN}✅ Podman installed successfully${NC}"
@@ -156,6 +154,7 @@ else
             if ! grep -q "/opt/homebrew/opt/node@20/bin" ~/.zshrc 2>/dev/null; then
                 echo 'export PATH="/opt/homebrew/opt/node@20/bin:$PATH"' >> ~/.zshrc
                 echo "Added Node.js to PATH in ~/.zshrc"
+                echo "Run: source ~/.zshrc"
             fi
 
             echo -e "${GREEN}✅ Node.js installed${NC}"
@@ -226,75 +225,6 @@ fi
 echo
 
 # ==============================================================================
-# STEP 4: Python Dependencies (optional - for local execution)
-# ==============================================================================
-
-echo "========================================================================"
-echo "STEP 4: PYTHON DEPENDENCIES (OPTIONAL)"
-echo "========================================================================"
-echo
-
-if [ -f "requirements.txt" ]; then
-    echo "Found requirements.txt"
-    echo
-    read -p "Install Python dependencies for local execution? (y/n) " -n 1 -r
-    echo
-
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "Installing Python dependencies..."
-        pip3 install -r requirements.txt
-        echo -e "${GREEN}✅ Python dependencies installed${NC}"
-    else
-        echo "Skipped Python dependencies (can install later with: pip3 install -r requirements.txt)"
-    fi
-else
-    echo "No requirements.txt found - skipping Python dependencies"
-fi
-
-echo
-
-# ==============================================================================
-# STEP 5: Authenticate with NotebookLM
-# ==============================================================================
-
-echo "========================================================================"
-echo "STEP 5: NOTEBOOKLM AUTHENTICATION"
-echo "========================================================================"
-echo
-
-if [ -f "$HOME/.notebooklm/credentials.json" ]; then
-    echo -e "${GREEN}✅ NotebookLM credentials found${NC}"
-    echo "Credentials: $HOME/.notebooklm/credentials.json"
-    echo
-    read -p "Re-authenticate? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Keeping existing credentials"
-    else
-        echo "Opening browser for authentication..."
-        notebooklm login
-    fi
-else
-    echo "NotebookLM authentication required"
-    echo
-    echo "This will open a browser for Google authentication..."
-    echo
-    read -p "Continue? (y/n) " -n 1 -r
-    echo
-
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        notebooklm login
-        echo
-        echo -e "${GREEN}✅ NotebookLM authentication complete${NC}"
-    else
-        echo -e "${YELLOW}⚠️  Skipped authentication${NC}"
-        echo "Run 'notebooklm login' later to authenticate"
-    fi
-fi
-
-echo
-
-# ==============================================================================
 # SETUP COMPLETE
 # ==============================================================================
 
@@ -310,33 +240,39 @@ echo
 
 echo -e "${BLUE}Next Steps:${NC}"
 echo
-echo "  1. Configure vars.py with your client details:"
-echo "     cp example-container.py vars.py"
+echo "  1. Create Google service account (see SERVICE-ACCOUNT-SETUP.md)"
+echo
+echo "  2. Configure vars.py with your clients:"
+echo "     cp example-vars.py vars.py"
 echo "     nano vars.py"
 echo
-echo "  2. Add client data:"
-echo "     mkdir -p client_data/YourClient"
-echo "     cp /path/to/documents/* client_data/YourClient/"
+echo "  3. Authenticate with NotebookLM:"
+echo "     notebooklm login"
 echo
-echo "  3a. Run locally (direct execution):"
-echo "      python3 main.py --mode fast --clients yourclient"
+echo "  4. Setup credentials for container:"
+echo "     ./setup-credentials.sh"
 echo
-echo "  3b. Or run in container:"
-echo "      ./ape-run.sh --vars ./vars.py --clients yourclient --mode fast"
+echo "  5. Launch Project APE:"
+echo "     ./launch_ape.sh fast     # Fast mode (15-20 min)"
+echo "     ./launch_ape.sh deep     # Deep mode (35-40 min)"
 echo
-echo "  4. Access dashboard:"
-echo "      http://localhost:8765"
+echo "  6. Monitor progress:"
+echo "     http://localhost:8765"
 echo
+echo "  7. View results in your NotebookLM account:"
+echo "     https://notebooklm.google.com"
+echo
+
 echo -e "${BLUE}Useful Commands:${NC}"
 echo "  notebooklm login                   # Authenticate with NotebookLM"
 echo "  notebooklm list                    # List your notebooks"
 echo "  podman images                      # List container images"
 echo "  podman ps                          # List running containers"
-echo "  python3 main.py --help             # Show main.py options"
 echo
 
 echo "For detailed documentation, see:"
-echo "  README.md - Complete user guide"
-echo "  INSTALLATION.md - Installation troubleshooting"
-echo "  QUICKSTART.md - 5-minute quick start"
+echo "  README.md                          # Complete user guide"
+echo "  EXECUTIVE-SUMMARY.md               # Why Project APE?"
+echo "  SERVICE-ACCOUNT-SETUP.md           # Service account creation"
+echo "  GETTING-STARTED.md                 # Step-by-step walkthrough"
 echo

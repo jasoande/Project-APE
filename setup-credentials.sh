@@ -104,7 +104,10 @@ if [ $? -eq 0 ]; then
     echo "Volume '${VOLUME_NAME}' is ready to use."
     echo
     echo "Run workflows with:"
-    echo "  ./ape-run.sh --vars ./vars.py --clients yourclient --mode fast"
+    echo "  ./launch_ape.sh fast"
+    echo
+    echo "Or for deep research mode:"
+    echo "  ./launch_ape.sh deep"
     echo
 else
     echo
