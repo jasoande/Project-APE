@@ -55,10 +55,11 @@ cd Project-APE
 
 **What it installs:**
 - Podman (container runtime)
-- Node.js 20+ (for NotebookLM CLI)
-- NotebookLM CLI
+- Python 3 (for NotebookLM CLI)
+- NotebookLM CLI (notebooklm-py with browser support)
+- Playwright browser (Chromium)
 
-**Note:** Python is NOT required - runs in container.
+**Note:** Python for the pipeline runs in container - only needed for notebooklm CLI.
 
 ---
 
@@ -101,6 +102,8 @@ notebooklm login
 - Opens browser for Google authentication
 - You sign in and grant permissions
 - Credentials saved to `~/.notebooklm/`
+
+**Linux/SSH users:** If connecting via SSH, use `ssh -X -Y user@host` for X11 forwarding, or run `xvfb-run notebooklm login` for headless mode.
 
 ---
 

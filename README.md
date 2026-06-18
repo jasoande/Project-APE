@@ -101,19 +101,21 @@ This script installs everything you need to run Project APE.
    - macOS: via Homebrew, includes Podman machine initialization
    - Linux: via dnf (RHEL/Fedora) or apt (Debian/Ubuntu)
 
-2. **Node.js 20+** (required for NotebookLM CLI)
+2. **Python 3** (required for NotebookLM CLI)
    - macOS: via Homebrew
-   - Linux: via NodeSource repository
+   - Linux: via dnf/apt
 
-3. **NotebookLM CLI** (notebooklm-py)
-   - Installed globally via npm
+3. **NotebookLM CLI** (notebooklm-py with browser support)
+   - Installed via pip3 with `notebooklm-py[browser]`
    - Provides `notebooklm` command
+   - Includes Playwright browser automation
 
 **What you DON'T need:**
-- ❌ Python (runs inside pre-built container)
+- ❌ Python for the pipeline (runs inside pre-built container)
 - ❌ LibreOffice (included in container)
 - ❌ Document conversion tools (included in container)
 - ❌ Image building tools (pre-built images provided)
+- ❌ Node.js (not required for this version)
 
 **Time:** ~5 minutes (automated, requires sudo on Linux)
 

@@ -23,6 +23,7 @@ from core.notebook_manager import NotebookManager
 from core.source_manager import SourceManager
 from core.pdf_consolidator_fast import FastPDFConsolidator
 from core.drive_manager import DriveManager
+from core.research_queue import ResearchQueue
 
 # Gemini Agent (optional - enabled via config)
 try:
@@ -543,56 +544,87 @@ class ClientPipeline:
             logger.warning(f"[{self.client_id}] No ask prompts found")
             return
 
-        # Anti-collision delay to prevent NotebookLM rate limits
-        # When multiple clients run simultaneously, they all try to START_DEEP_RESEARCH
-        # at the same time, hitting NotebookLM's ~2-3 per minute rate limit
-        import random
+        # DEEP MODE: Use queue to serialize research (one client at a time)
+        # FAST MODE: Small random delay to avoid simultaneous starts
         if self.mode == "deep":
-            # Deep mode: higher rate limits, need longer spread (10-60s)
-            delay = random.uniform(10, 60)
-        else:
-            # Fast mode: lower rate limits, shorter spread (0-15s)
-            delay = random.uniform(0, 15)
+            # Deep mode: acquire research queue lock
+            # Only one client runs research at a time to avoid API rate limits
+            queue_dir = self.project_root / ".multi_process_status"
+            queue = ResearchQueue(self.client_id, queue_dir)
 
-        logger.info(f"[{self.client_id}] ⏱️  Anti-rate-limit delay: {delay:.1f}s")
-        time.sleep(delay)
+            # Acquire lock (wait in queue if needed)
+            if not queue.acquire(timeout=7200):  # 2 hour max wait
+                logger.error(f"[{self.client_id}] Failed to acquire research queue")
+                return
 
-        logger.info(f"[{self.client_id}] Running {len(ask_prompts)} research prompts...")
-
-        for idx, prompt_file in enumerate(ask_prompts, 1):
             try:
-                # No jitter delay - removed to maximize speed
-                progress = 30 + (idx / len(ask_prompts)) * 30  # 30-60%
-                self.update_status(f"Research {idx}/{len(ask_prompts)}: {prompt_file.stem}", int(progress))
+                logger.info(f"[{self.client_id}] Running {len(ask_prompts)} research prompts...")
 
-                logger.info(f"[{self.client_id}] Research prompt: {prompt_file.name}")
+                for idx, prompt_file in enumerate(ask_prompts, 1):
+                    try:
+                        progress = 30 + (idx / len(ask_prompts)) * 30  # 30-60%
+                        self.update_status(f"Research {idx}/{len(ask_prompts)}: {prompt_file.stem}", int(progress))
 
-                # Run research with source import (with variable substitution)
-                result = self.source_manager.add_research_with_import(
-                    prompt_file,
-                    mode="deep" if self.mode == "deep" else "fast",
-                    client_name=self.client_name,
-                    client_industry=self.industry,
-                    client_subsegments=self.subsegments
-                )
+                        logger.info(f"[{self.client_id}] Research prompt: {prompt_file.name}")
 
-                if result["success"]:
-                    logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
-                else:
-                    logger.warning(f"[{self.client_id}] Research failed: {result.get('error')}")
+                        # Run research with source import (with variable substitution)
+                        result = self.source_manager.add_research_with_import(
+                            prompt_file,
+                            mode="deep",
+                            client_name=self.client_name,
+                            client_industry=self.industry,
+                            client_subsegments=self.subsegments
+                        )
 
-                # DEEP MODE ONLY: Deduplicate after EACH research prompt
-                # Deep research imports 100+ sources per prompt, many duplicates
-                # Deduplicating immediately keeps source count manageable
-                if self.mode == "deep":
-                    logger.info(f"[{self.client_id}] Deduplicating sources (after prompt {idx})...")
-                    removed = self.source_manager.deduplicate_sources()
-                    logger.info(f"[{self.client_id}] ✅ Removed {removed} duplicates")
+                        if result["success"]:
+                            logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
+                        else:
+                            logger.warning(f"[{self.client_id}] Research failed: {result.get('error')}")
 
-                # No delay between prompts - removed to maximize speed
+                        # Deduplicate after EACH research prompt
+                        logger.info(f"[{self.client_id}] Deduplicating sources (after prompt {idx})...")
+                        removed = self.source_manager.deduplicate_sources()
+                        logger.info(f"[{self.client_id}] ✅ Removed {removed} duplicates")
 
-            except Exception as e:
-                logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")
+                    except Exception as e:
+                        logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")
+
+            finally:
+                # Release queue lock
+                queue.release()
+
+        else:
+            # Fast mode: small random delay, then run in parallel
+            import random
+            delay = random.uniform(0, 15)
+            logger.info(f"[{self.client_id}] ⏱️  Anti-rate-limit delay: {delay:.1f}s")
+            time.sleep(delay)
+
+            logger.info(f"[{self.client_id}] Running {len(ask_prompts)} research prompts...")
+
+            for idx, prompt_file in enumerate(ask_prompts, 1):
+                try:
+                    progress = 30 + (idx / len(ask_prompts)) * 30  # 30-60%
+                    self.update_status(f"Research {idx}/{len(ask_prompts)}: {prompt_file.stem}", int(progress))
+
+                    logger.info(f"[{self.client_id}] Research prompt: {prompt_file.name}")
+
+                    # Run research with source import (with variable substitution)
+                    result = self.source_manager.add_research_with_import(
+                        prompt_file,
+                        mode="fast",
+                        client_name=self.client_name,
+                        client_industry=self.industry,
+                        client_subsegments=self.subsegments
+                    )
+
+                    if result["success"]:
+                        logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
+                    else:
+                        logger.warning(f"[{self.client_id}] Research failed: {result.get('error')}")
+
+                except Exception as e:
+                    logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")
 
     def _deduplicate_sources(self):
         """Deduplicate sources after research."""

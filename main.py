@@ -301,7 +301,7 @@ def main():
         # Start client processes
         logger.info("\n🚀 Launching client processes...")
 
-        # Launch clients with 5-second stagger to avoid Gemini API rate limits
+        # Launch clients with 5-second stagger to avoid initial collision
         for i, client_id in enumerate(clients):
             logger.info(f"\n🚀 Starting: {getattr(config, f'{client_id}_name', client_id)}")
             logger.info(f"   Mode: {args.mode.upper()}")
@@ -310,9 +310,9 @@ def main():
             process = manager.start_client_process(client_id, args.mode)
             manager.client_processes.append(process)
 
-            # Stagger launches to prevent simultaneous Gemini API calls
+            # Stagger launches to prevent simultaneous starts
             if i < len(clients) - 1:  # Don't wait after the last client
-                logger.info(f"   ⏳ Waiting 5s before next client (avoiding API rate limits)...")
+                logger.info(f"   ⏳ Waiting 5s before next client...")
                 time.sleep(5)
 
         # Monitor processes
