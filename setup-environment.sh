@@ -305,12 +305,22 @@ if ! command -v notebooklm &> /dev/null || ! notebooklm --version 2>&1 | grep -q
         echo "Installing X11 and browser system dependencies..."
         case $OS in
             RHEL/Fedora)
+                # Install core X11 and browser dependencies for RHEL 9/Fedora
                 sudo dnf install -y \
-                    xorg-x11-server-Xvfb \
                     libX11 libXcomposite libXdamage libXext \
                     libXrandr nss cups-libs libdrm \
                     mesa-libgbm pango alsa-lib \
-                    at-spi2-atk gtk3
+                    at-spi2-atk gtk3 \
+                    xorg-x11-xauth
+
+                # Try to install Xvfb (package name varies by RHEL/Fedora version)
+                if ! command -v Xvfb &> /dev/null; then
+                    echo "Installing Xvfb for headless browser support..."
+                    # Try different package names
+                    sudo dnf install -y xorg-x11-server-Xvfb 2>/dev/null || \
+                    sudo dnf install -y xvfb 2>/dev/null || \
+                    echo -e "${YELLOW}⚠️  Xvfb not available - you'll need SSH X11 forwarding (ssh -X -Y)${NC}"
+                fi
                 ;;
             Debian/Ubuntu)
                 sudo apt-get install -y \
