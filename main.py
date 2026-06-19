@@ -301,7 +301,10 @@ def main():
         # Start client processes
         logger.info("\n🚀 Launching client processes...")
 
-        # Launch clients with 5-second stagger to avoid initial collision
+        # Determine stagger delay based on mode
+        stagger_delay = 15 if args.mode == "deep" else 5
+
+        # Launch clients with stagger to avoid initial collision
         for i, client_id in enumerate(clients):
             logger.info(f"\n🚀 Starting: {getattr(config, f'{client_id}_name', client_id)}")
             logger.info(f"   Mode: {args.mode.upper()}")
@@ -312,8 +315,8 @@ def main():
 
             # Stagger launches to prevent simultaneous starts
             if i < len(clients) - 1:  # Don't wait after the last client
-                logger.info(f"   ⏳ Waiting 5s before next client...")
-                time.sleep(5)
+                logger.info(f"   ⏳ Waiting {stagger_delay}s before next client...")
+                time.sleep(stagger_delay)
 
         # Monitor processes
         manager.monitor_processes()
