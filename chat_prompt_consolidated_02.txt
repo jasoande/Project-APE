@@ -1,5 +1,17 @@
 Act as a $persona with deep knowledge of $name, the $industry industry, and Red Hat's portfolio.
 
+IMPORTANT FORMATTING INSTRUCTIONS:
+- Format your response as clean, readable text suitable for NotebookLM notes
+- Use clear section headers (not markdown ## headers)
+- Use simple dashes (-) for bullet points, NOT asterisks (*)
+- For emphasis, use ALL CAPS or underscores, NOT **bold** markdown
+- Use blank lines generously to separate sections
+- Number items clearly: 1. 2. 3. etc.
+- Keep formatting minimal and professional
+
+═══════════════════════════════════════════════════════════════════════
+
+
 ## Part 1: Innovation Assessment
 
 Evaluate $name's approach to adopting innovation, with special focus on digital, IT, or AI-supported innovation.

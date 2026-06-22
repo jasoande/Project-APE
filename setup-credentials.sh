@@ -7,9 +7,11 @@ set -e
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
 VOLUME_NAME="project-ape-credentials"
+VENV_DIR="${HOME}/.project-ape-venv"
 HOST_CREDS="${HOME}/.notebooklm"
 REGISTRY="quay.io/jasoande/project_ape"
 
@@ -49,12 +51,25 @@ echo "PROJECT APE - CREDENTIAL SETUP"
 echo "========================================================================"
 echo
 
+# Check if virtual environment exists
+if [ ! -d "${VENV_DIR}" ]; then
+    echo -e "${RED}✗${NC} Virtual environment not found at: ${VENV_DIR}"
+    echo
+    echo "Please run setup-environment.sh first to create the virtual environment."
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} Found virtual environment: ${VENV_DIR}"
+
 # Check if host credentials exist
 if [ ! -d "${HOST_CREDS}/profiles/default" ]; then
     echo -e "${RED}✗${NC} NotebookLM credentials not found on host"
     echo
     echo "Please authenticate first:"
-    echo "  pip install notebooklm-py"
+    echo -e "${BLUE}Step 1:${NC} Activate the virtual environment:"
+    echo "  source ./activate-ape-env.sh"
+    echo
+    echo -e "${BLUE}Step 2:${NC} Login to NotebookLM:"
     echo "  notebooklm login"
     echo
     echo "Then run this script again."
@@ -85,7 +100,10 @@ chmod -R a+rX "${HOST_CREDS}" 2>/dev/null || true
 # Copy credentials to volume using a temporary container
 echo "Copying credentials to persistent volume..."
 echo "Using image: ${IMAGE}"
+
+# Use --userns=keep-id to match launch_ape.sh UID mapping
 podman run --rm \
+    --userns=keep-id \
     --entrypoint bash \
     -v "${HOST_CREDS}:/source:ro,z" \
     -v "${VOLUME_NAME}:/dest" \

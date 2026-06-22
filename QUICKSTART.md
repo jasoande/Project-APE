@@ -1,297 +1,224 @@
 # Project APE - Quick Start Guide
 
-**Get running in 30 minutes** (complete first-time setup)
+**Get up and running in 30 minutes**
 
 ---
 
 ## Prerequisites
 
-Before you begin, you need:
-
-✅ **Mac (M1/M2/M3/M4) or Linux (x86_64)**  
-✅ **Google account** with NotebookLM access  
-✅ **Google Drive folders** with client documents  
-✅ **30 minutes** for one-time setup
-
-**This guide assumes you're starting from scratch.**
+Before you start, ensure you have:
+- [ ] macOS or Linux machine
+- [ ] Google Cloud account
+- [ ] Google Drive folders with client documents
+- [ ] Terminal access
 
 ---
 
-## 30-Minute Setup
-
-### 1. Create Google Service Account (~15 min, one-time)
-
-**Why:** Allows Project APE to download files from your Google Drive folders automatically.
-
-**Steps:**
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create new project
-3. Enable Google Drive API
-4. Create service account
-5. Download JSON key file
-6. Save key file to `~/Downloads/`
-
-**Detailed guide:** [SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md)
-
-**Save the service account email** (e.g., `project-ape-service@your-project.iam.gserviceaccount.com`)
-
----
-
-### 2. Clone Repository (~1 min)
+## Step 1: Clone Repository
 
 ```bash
-cd ~
-git clone <repository-url>
+git clone <repository-url> Project-APE
 cd Project-APE
 ```
 
 ---
 
-### 3. Install Requirements (~5 min, automated)
+## Step 2: Run Setup
 
 ```bash
-./setup-environment.sh
+./setup.sh
 ```
 
-**What it installs:**
-- Podman (container runtime)
-- Python 3 (for NotebookLM CLI)
-- NotebookLM CLI (notebooklm-py with browser support)
-- Playwright browser (Chromium)
+This will:
+1. Install Podman (or Docker), Python 3.14, NotebookLM CLI
+2. Open browser for NotebookLM authentication
+3. Create Google Cloud service account
+4. Configure container credentials
+5. Prompt for client configuration
 
-**Note:** Python for the pipeline runs in container - only needed for notebooklm CLI.
+**Follow the prompts** - the script guides you through each step.
 
 ---
 
-### 4. Configure vars.py (~5 min)
+## Step 3: Configure Clients
+
+Edit `vars.py`:
 
 ```bash
-# Copy example
-cp example-vars.py vars.py
-
-# Edit with your clients
 nano vars.py
 ```
 
-**Add your clients:**
+Add your clients:
+
 ```python
 clients = [
-    "client1",
+    "acme_corp",
+    "globex_industries"
 ]
 
-client1_name = "Your Client Name"
-client1_folder = "https://drive.google.com/drive/folders/YOUR_FOLDER_ID"
-client1_industry = "your industry"
-client1_subsegments = "segment1, segment2, segment3"
+acme_corp_name = "Acme Corporation"
+acme_corp_folder = "https://drive.google.com/drive/folders/1abc...xyz"
+
+globex_industries_name = "Globex Industries" 
+globex_industries_folder = "https://drive.google.com/drive/folders/2def...uvw"
 ```
 
-**How to get folder ID:**
-1. Open Google Drive folder in browser
-2. Copy URL from address bar
-3. Extract the ID after `/folders/`
+**Save and exit:** Ctrl+O, Enter, Ctrl+X
 
 ---
 
-### 5. Authenticate NotebookLM (~2 min, one-time)
+## Step 4: Share Drive Folders
+
+Get your service account email:
 
 ```bash
-notebooklm login
+grep SERVICE_ACCOUNT_EMAIL .env
 ```
 
-**What happens:**
-- Opens browser for Google authentication
-- You sign in and grant permissions
-- Credentials saved to `~/.notebooklm/`
+For **each** client folder:
 
-**Linux/SSH users:** If connecting via SSH, use `ssh -X -Y user@host` for X11 forwarding, or run `xvfb-run notebooklm login` for headless mode.
-
----
-
-### 6. Setup Credentials (~1 min)
-
-```bash
-./setup-credentials.sh
-```
-
-**What it does:**
-- Copies NotebookLM credentials to container
-- Creates persistent volume
-- You only do this once
+1. Open https://drive.google.com
+2. Right-click the folder → **Share**
+3. Paste service account email
+4. Set permission to **"Viewer"**
+5. Uncheck **"Notify people"**
+6. Click **"Share"**
 
 ---
 
-### 7. Share Drive Folders (~2 min per folder)
+## Step 5: Launch Project APE
 
-For each folder in `vars.py`:
-
-1. **Open Google Drive** in browser
-2. **Right-click folder** → **Share**
-3. **Paste service account email** (from Step 1)
-4. **Set permission to "Viewer"**
-5. **Uncheck "Notify people"**
-6. **Click Share**
-
----
-
-### 8. Launch Pipeline! (~15-40 min automated)
-
-**Fast mode (15-20 min):**
 ```bash
 ./launch_ape.sh fast
 ```
 
-**Deep mode (35-40 min):**
+**Monitor progress:**
+- Dashboard: http://localhost:8765
+- Logs: `tail -f logs/*.log`
+
+**Wait for completion:**
+- 1 client: ~15-20 minutes
+- 3 clients: ~45-60 minutes
+
+---
+
+## Step 6: View Results
+
+Open NotebookLM:
+
+```bash
+open https://notebooklm.google.com
+```
+
+You'll see a notebook for each client with 6 comprehensive notes:
+1. Industry Analysis & Business Profile
+2. Innovation Assessment & Executive Summary
+3. Technology Partners & Value Propositions
+4. Strategic Ideas & How Might We Statements
+5. Account Team & Partner Onboarding
+6. Comprehensive Account Plan
+
+---
+
+## Next Steps
+
+### Run Again for Updates
+
+```bash
+./launch_ape.sh fast client_name
+```
+
+### Add New Client
+
+```bash
+# 1. Edit vars.py
+nano vars.py
+
+# 2. Add new client entry
+
+# 3. Share Drive folder with service account
+
+# 4. Run analysis
+./launch_ape.sh fast new_client
+```
+
+### Try Deep Mode
+
 ```bash
 ./launch_ape.sh deep
 ```
 
-**What happens automatically:**
-- Downloads container image
-- Starts dashboard at http://localhost:8765
-- Downloads files from Google Drive
-- Consolidates PDFs
-- Generates 40+ research sources
-- Creates 6 analysis notes
-- Builds mind maps
-- Calculates quality scores
+More thorough analysis (35-40 min/client)
 
 ---
 
-### 9. Monitor Progress
+## Troubleshooting
 
-**Open dashboard:**
+### Command Not Found: notebooklm
+
 ```bash
+source ./activate-ape-env.sh
+notebooklm --version
+```
+
+### Can't Access Drive Folder
+
+Make sure folder is shared with service account:
+
+```bash
+grep SERVICE_ACCOUNT_EMAIL .env
+# Share folder with this email in Google Drive
+```
+
+### Podman/Docker Not Running
+
+**macOS (Podman):**
+```bash
+podman machine start
+```
+
+**Docker:**
+```bash
+open -a Docker
+```
+
+---
+
+## Command Reference
+
+```bash
+# Setup
+./setup.sh                      # Complete setup
+
+# Run pipeline
+./launch_ape.sh fast            # Fast mode (all clients)
+./launch_ape.sh deep            # Deep mode (all clients)
+./launch_ape.sh fast client1    # Specific client
+
+# Activate venv (new terminals)
+source ./activate-ape-env.sh
+
+# View dashboard
 open http://localhost:8765
-```
 
-**Dashboard shows:**
-- Real-time client status
-- Execution timers
-- Progress through pipeline stages
-- Quality scores
+# View results
+open https://notebooklm.google.com
 
----
-
-### 10. View Results
-
-**Open NotebookLM:**
-1. Go to [notebooklm.google.com](https://notebooklm.google.com)
-2. Sign in with your Google account
-3. Find your notebooks (named after clients)
-
-**Each notebook contains:**
-- Consolidated PDF source
-- 40+ research sources
-- 6 detailed analysis notes
-- Interactive mind map
-- Chat interface
-
----
-
-## Quick Reference
-
-### Run All Clients (Fast Mode)
-```bash
-./launch_ape.sh fast
-```
-
-### Run All Clients (Deep Mode)
-```bash
-./launch_ape.sh deep
-```
-
-### Run Specific Clients
-Edit `vars.py` and comment out clients you don't want:
-```python
-clients = [
-    "client1",
-    # "client2",  # Skip this one
-]
-```
-
-### View Logs
-```bash
-tail -f logs/client1.log
-```
-
-### Stop Pipeline
-```bash
-# Press Ctrl+C in terminal
-# Or:
-podman stop <container-id>
+# Check status
+podman ps                       # Running containers
+docker ps                       # (if using Docker)
+tail -f logs/*.log             # Live logs
 ```
 
 ---
 
-## Common Issues
+## Getting Help
 
-### "Service account key not found"
-```bash
-# Verify file exists
-ls -la ~/Project-APE/*.json
-
-# Should show your service account key file
-```
-
-### "403 Forbidden" from Google Drive
-**Cause:** Drive folder not shared with service account
-
-**Fix:** Complete Step 7 above for each folder
-
-### Dashboard not loading
-```bash
-# Check if port 8765 is in use
-lsof -i :8765
-
-# Kill process if needed
-kill <PID>
-
-# Restart
-./launch_ape.sh fast
-```
-
-### "Permission denied" errors (Linux only)
-```bash
-# Run permission fix script
-./fix-permissions.sh
-
-# Then restart
-./launch_ape.sh fast
-```
+- **Full documentation:** README.md
+- **Detailed troubleshooting:** TROUBLESHOOTING.md
+- **Setup issues:** Check logs in `./logs/`
+- **Dashboard:** http://localhost:8765
 
 ---
 
-## What's Next?
-
-After your first successful run:
-
-1. ✅ **Explore** your NotebookLM notebooks
-2. ✅ **Try deep mode** for higher quality research
-3. ✅ **Add more clients** to vars.py
-4. ✅ **Review** [EXECUTIVE-SUMMARY.md](EXECUTIVE-SUMMARY.md) for full value prop
-5. ✅ **Read** [README.md](README.md) for detailed documentation
-
----
-
-## Time Breakdown
-
-| Step | Time | Frequency |
-|------|------|-----------|
-| Create service account | 15 min | One-time |
-| Clone repository | 1 min | One-time |
-| Install requirements | 5 min | One-time |
-| Configure vars.py | 5 min | Per client batch |
-| Authenticate NotebookLM | 2 min | One-time |
-| Setup credentials | 1 min | One-time |
-| Share folders | 2 min | Per folder |
-| **First-time total** | **~30 min** | - |
-| Run pipeline | 15-40 min | Every run |
-
-**After first setup:** Just edit vars.py and run `./launch_ape.sh fast`
-
----
-
-**For detailed documentation:** [README.md](README.md)  
-**For service account setup:** [SERVICE-ACCOUNT-SETUP.md](SERVICE-ACCOUNT-SETUP.md)
-
-**Project APE - Transform 40 hours of manual research into 20 minutes of automated intelligence.**
+**That's it! You're ready to generate AI-powered account plans.**

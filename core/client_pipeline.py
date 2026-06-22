@@ -243,13 +243,14 @@ class ClientPipeline:
                 consolidated_pdf = self._consolidate_pdfs()
                 self.update_status("PDF consolidation complete", 25)
 
-            # Step 4: Upload Consolidated PDF (only if new notebook or PDF was regenerated)
-            if consolidated_pdf and not is_existing:
+            # Step 4: Upload Consolidated PDF (always upload for reliability)
+            if consolidated_pdf:
+                logger.info(f"[{self.client_id}] Uploading PDF to notebook (existing: {is_existing})")
                 self._upload_pdf(consolidated_pdf)
                 self.update_status("Sources uploaded", 30)
-            elif is_existing:
-                logger.info(f"[{self.client_id}] Notebook exists, skipping PDF upload")
-                self.update_status("PDF upload skipped", 30)
+            else:
+                logger.warning(f"[{self.client_id}] No consolidated PDF to upload")
+                self.update_status("No PDF to upload", 30)
 
             # Step 5: ALWAYS Run Ask Prompts (Research) for fresh web data
             # Deep mode deduplicates after EACH prompt (inside _run_ask_prompts)
@@ -586,8 +587,9 @@ class ClientPipeline:
 
         else:
             # Fast mode: small random delay, then run in parallel
+            # Reduced jitter: 0-12s (was 0-15s, reduced by 20% for faster execution)
             import random
-            delay = random.uniform(0, 15)
+            delay = random.uniform(0, 12)
             logger.info(f"[{self.client_id}] ⏱️  Anti-rate-limit delay: {delay:.1f}s")
             time.sleep(delay)
 

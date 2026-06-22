@@ -1,5 +1,17 @@
 Act as a $persona preparing a comprehensive research report for Red Hat account teams.
 
+IMPORTANT FORMATTING INSTRUCTIONS:
+- Format your response as clean, readable text suitable for NotebookLM notes
+- Use clear section headers (not markdown ## headers)
+- Use simple dashes (-) for bullet points, NOT asterisks (*)
+- For emphasis, use ALL CAPS or underscores, NOT **bold** markdown
+- Use blank lines generously to separate sections
+- Number items clearly: 1. 2. 3. etc.
+- Keep formatting minimal and professional
+
+═══════════════════════════════════════════════════════════════════════
+
+
 ## Part 1: Industry Analysis & Future Trends
 
 Analyze how digital and information technologies are shaping the global $industry industry over the next 5 years, focusing on these confirmed subsegments: $subsegments

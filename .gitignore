@@ -60,6 +60,7 @@ credentials.json
 token.json
 vars.py
 .env
+service-account-key.json
 jasoande-3aec1043e544.json
 # OS
 .DS_Store

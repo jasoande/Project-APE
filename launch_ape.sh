@@ -186,17 +186,25 @@ run_container() {
         cache_mount="-v ${cache_volume}:/home/apeuser/.project-ape"
     fi
 
+    # Detect if we need --userns=keep-id for Podman
+    # This allows container to access host files with proper permissions
+    userns_flag=""
+    if [[ "$runtime" == "podman" ]]; then
+        userns_flag="--userns=keep-id"
+    fi
+
     # Run container with SELinux-compatible volume flags
     # IMPORTANT: Set HOME=/home/apeuser so NotebookLM CLI finds credentials
     # NOTE: core/, dashboard/, main.py could be mounted for development but
     #       require container rebuild to pick up dependency changes
     $runtime run -it --rm \
         --name project-ape \
+        ${userns_flag} \
         -p ${DASHBOARD_PORT}:8765 \
         -e HOME=/home/apeuser \
         -v $(pwd)/.env:/app/.env:ro,z \
         -v $(pwd)/vars.py:/app/vars.py:ro,z \
-        -v $(pwd)/jasoande-3aec1043e544.json:/app/service-account.json:ro,z \
+        -v $(pwd)/service-account-key.json:/app/service-account.json:ro,z \
         -v $(pwd)/logs:/app/logs:z \
         -v $(pwd)/.multi_process_status:/app/.multi_process_status:z \
         ${creds_mount} \
