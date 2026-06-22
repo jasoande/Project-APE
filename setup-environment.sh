@@ -399,8 +399,12 @@ else
             echo "Installing Google Cloud SDK on RHEL/Fedora..."
             echo
 
-            # Add Google Cloud SDK repo
-            sudo tee /etc/yum.repos.d/google-cloud-sdk.repo << EOM
+            # Detect architecture
+            ARCH=$(uname -m)
+
+            if [[ "$ARCH" == "x86_64" ]]; then
+                # x86_64: Use official repo
+                sudo tee /etc/yum.repos.d/google-cloud-sdk.repo << EOM
 [google-cloud-cli]
 name=Google Cloud CLI
 baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el9-x86_64
@@ -410,7 +414,26 @@ repo_gpgcheck=0
 gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
 EOM
 
-            sudo dnf install -y google-cloud-cli
+                sudo dnf install -y google-cloud-cli
+            else
+                # ARM or other: Install from tarball
+                echo "Detected $ARCH architecture - installing from tarball..."
+
+                cd /tmp
+                curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-arm.tar.gz
+                tar -xf google-cloud-cli-linux-arm.tar.gz
+
+                # Install to /opt and create symlinks
+                sudo mkdir -p /opt
+                sudo mv google-cloud-sdk /opt/
+                sudo ln -sf /opt/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud
+                sudo ln -sf /opt/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil
+
+                # Run install script (non-interactive)
+                /opt/google-cloud-sdk/install.sh --quiet --usage-reporting=false --path-update=false
+
+                cd -
+            fi
 
             GCLOUD_INSTALLED=true
             echo -e "${GREEN}✅ Google Cloud SDK installed successfully${NC}"
