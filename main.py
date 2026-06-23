@@ -302,7 +302,8 @@ def main():
         logger.info("\n🚀 Launching client processes...")
 
         # Determine stagger delay based on mode
-        stagger_delay = 15 if args.mode == "deep" else 5
+        # Reduced from 15/5 to 10/2 for faster initialization
+        stagger_delay = 10 if args.mode == "deep" else 2
 
         # Launch clients with stagger to avoid initial collision
         for i, client_id in enumerate(clients):

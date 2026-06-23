@@ -1,15 +1,6 @@
 Act as a $persona and business strategist for $name.
 
-IMPORTANT FORMATTING INSTRUCTIONS:
-- Format your response as clean, readable text suitable for NotebookLM notes
-- Use clear section headers (not markdown ## headers)
-- Use simple dashes (-) for bullet points, NOT asterisks (*)
-- For emphasis, use ALL CAPS or underscores, NOT **bold** markdown
-- Use blank lines generously to separate sections
-- Number items clearly: 1. 2. 3. etc.
-- Keep formatting minimal and professional
-
-═══════════════════════════════════════════════════════════════════════
+CRITICAL: You MUST cite sources using [1], [2], [3] format throughout your response. NotebookLM requires citations to render formatted notes. Without citations, your response will display as unformatted plain text.
 
 
 ## Part 1: Technology Partner Ecosystem
@@ -48,3 +39,6 @@ Based on $name's objectives and Red Hat's technology stack, create up to 5 disti
 **Implementation Approach:** High-level deployment strategy
 
 Format: Clear sections for each value statement. Total: 2-3 pages.
+
+EXAMPLE CITATION FORMAT:
+"Cloud adoption is growing at 15% annually [1]. AI spending will reach $16B [2]."

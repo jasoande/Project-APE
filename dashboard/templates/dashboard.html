@@ -423,11 +423,7 @@
                     document.getElementById('stat-complete').textContent = data.complete;
                     document.getElementById('stat-failed').textContent = data.failed;
 
-                    // Always synchronize timer from status files (handles page refresh)
-                    initializeTimer(data);
-                    updateTimer(); // Update display immediately
-
-                    // Detect if pipeline is complete
+                    // Detect if pipeline is complete BEFORE initializing timer
                     const allComplete = data.total > 0 && (data.complete + data.failed) === data.total;
                     allClientsComplete = allComplete;  // Store for use in error handler
 
@@ -441,6 +437,10 @@
                             completionTime = Date.now();
                             console.log('Pipeline complete - timer stopped, will stop refreshing in 5 minutes');
                         }
+                    } else {
+                        // Only initialize/update timer if pipeline is NOT complete
+                        initializeTimer(data);
+                        updateTimer(); // Update display immediately
                     }
 
                     // Stop auto-refresh 5 minutes after completion
@@ -587,8 +587,22 @@
         // Execution timer - persists across page refreshes
         let startTime = null;  // Will be set from status file data
         let timerInterval;
+        let timerStopped = false;  // Track if timer was explicitly stopped
+
+        function startTimer() {
+            // Only start timer interval if not already running and not stopped
+            if (!timerInterval && !timerStopped) {
+                timerInterval = setInterval(updateTimer, 1000);
+                console.log('Execution timer started');
+            }
+        }
 
         function initializeTimer(data) {
+            // Don't re-enable timer if it was explicitly stopped
+            if (timerStopped) {
+                return;
+            }
+
             // Always update start time from status files (handles page refresh)
             let earliestStartTime = null;
 
@@ -606,6 +620,8 @@
             if (earliestStartTime) {
                 startTime = earliestStartTime;
                 console.log('Timer synchronized from status file start_time:', new Date(startTime));
+                // Start the timer interval now that we have a start time
+                startTimer();
             }
             // If no start_time in status (pipeline not started), timer shows 00m 00s
         }
@@ -616,7 +632,9 @@
                 return;
             }
 
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            // Calculate elapsed time (stops incrementing when timerStopped is true)
+            const now = timerStopped && completionTime ? completionTime : Date.now();
+            const elapsed = Math.floor((now - startTime) / 1000);
             const minutes = Math.floor(elapsed / 60);
             const seconds = elapsed % 60;
             document.getElementById('execution-time').textContent =
@@ -627,12 +645,16 @@
             if (timerInterval) {
                 clearInterval(timerInterval);
                 timerInterval = null;
+                timerStopped = true;  // Mark as stopped to prevent re-enabling
+
+                // Do one final update to freeze the timer at completion time
+                updateTimer();
+
                 console.log('Execution timer stopped');
             }
         }
 
-        // Update timer every second
-        timerInterval = setInterval(updateTimer, 1000);
+        // Timer interval will be started by initializeTimer() when first status data arrives
     </script>
 </body>
 </html>

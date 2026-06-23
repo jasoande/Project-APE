@@ -678,13 +678,13 @@ class ClientPipeline:
                         # Get descriptive title or fallback to filename
                         note_title = note_titles.get(prompt_file.name, prompt_file.stem.replace('_', ' ').title())
 
+                        # Step 1: Get AI response with --json (preserves formatting)
                         result = subprocess.run(
                             [
                                 "notebooklm", "ask",
-                                "--prompt-file", tmp_path,  # Use substituted prompt
+                                "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
-                                "--save-as-note",
-                                "-t", note_title
+                                "--json"
                             ],
                             capture_output=True,
                             text=True,
@@ -692,8 +692,34 @@ class ClientPipeline:
                         )
 
                         if result.returncode == 0:
-                            logger.info(f"[{self.client_id}] ✅ Created note: {prompt_file.stem}")
-                            break
+                            # Step 2: Create note from the response
+                            try:
+                                import json
+                                response_data = json.loads(result.stdout)
+                                note_content = response_data.get('answer', '')
+
+                                # Create note with the markdown content
+                                create_result = subprocess.run(
+                                    [
+                                        "notebooklm", "note", "create",
+                                        "--content", note_content,
+                                        "-t", note_title,
+                                        "-n", self.notebook_id
+                                    ],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=60
+                                )
+
+                                if create_result.returncode == 0:
+                                    logger.info(f"[{self.client_id}] ✅ Created note: {prompt_file.stem}")
+                                    break
+                                else:
+                                    logger.warning(f"[{self.client_id}] Note creation failed: {create_result.stderr}")
+                                    result = create_result  # Fall through to error handling
+                            except json.JSONDecodeError as e:
+                                logger.error(f"[{self.client_id}] Failed to parse JSON response: {e}")
+                                break
                         elif "rate limit" in result.stderr.lower() or "quota" in result.stderr.lower() or "rpc_code=3" in result.stderr.lower() or "rpc_code=9" in result.stderr.lower() or "rpc_code=8" in result.stderr.lower():
                             if attempt < max_retries - 1:
                                 logger.warning(f"[{self.client_id}] Quota/rate limit hit, waiting {retry_delay}s (attempt {attempt + 1}/{max_retries})")
@@ -701,6 +727,13 @@ class ClientPipeline:
                                 retry_delay *= 2  # Exponential backoff
                             else:
                                 logger.error(f"[{self.client_id}] Chat failed after {max_retries} retries (quota exhausted): {result.stderr}")
+                        elif "no parseable chunks" in result.stderr.lower():
+                            # Intermittent streaming error - retry with delay
+                            if attempt < max_retries - 1:
+                                logger.warning(f"[{self.client_id}] Streaming error, retrying in 10s (attempt {attempt + 1}/{max_retries})")
+                                time.sleep(10)
+                            else:
+                                logger.error(f"[{self.client_id}] Chat failed after {max_retries} retries (streaming error): {result.stderr}")
                         else:
                             logger.warning(f"[{self.client_id}] Chat failed: {result.stderr}")
                             break

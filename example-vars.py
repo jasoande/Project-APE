@@ -87,7 +87,7 @@ QUALITY_THRESHOLDS = {
 
 DRIVE_CONFIG = {
     'cache_enabled': True,
-    'cache_ttl_hours': 24,
+    'cache_ttl_hours': 168,  # 7 days - recommended for development (adjust to 24 for frequent Drive changes)
     'download_timeout': 300,
 }
 

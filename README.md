@@ -564,7 +564,7 @@ Enable/disable Drive caching in `config.py`:
 ```python
 DRIVE_CONFIG = {
     'cache_enabled': True,  # False to always re-download
-    'cache_ttl_hours': 24
+    'cache_ttl_hours': 168  # 7 days - recommended for development
 }
 ```
 
