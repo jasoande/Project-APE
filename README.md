@@ -48,6 +48,37 @@ cd Project-APE
 
 **Total Time:** 20-30 minutes (mostly waiting for downloads)
 
+### Container Deployment (Alternative)
+
+**For production or simplified deployment:**
+
+```bash
+# 1. Pull the container
+podman pull quay.io/jasoande/project_ape/project-ape:latest
+
+# 2. Create configuration files (.env, vars.py, service-account.json)
+# See DEPLOYMENT-GUIDE.md for details
+
+# 3. Run
+podman run --rm \
+  -v $(pwd)/.env:/app/.env:ro \
+  -v $(pwd)/vars.py:/app/vars.py:ro \
+  -v $(pwd)/service-account.json:/app/service-account.json:ro \
+  -p 8765:8765 \
+  quay.io/jasoande/project_ape/project-ape:latest \
+  python3 main.py --mode fast
+
+# Dashboard: http://localhost:8765
+```
+
+**Benefits:**
+- ✅ No local installation needed
+- ✅ Multi-architecture support (ARM64 + AMD64)
+- ✅ Isolated environment
+- ✅ Production-ready
+
+**See:** [DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md) for complete container documentation
+
 ### Run Your First Analysis
 
 ```bash
@@ -177,6 +208,8 @@ open https://notebooklm.google.com
 | **AI Research** | Google NotebookLM | Document analysis, source generation, note creation |
 | **Document Processing** | PyPDF2, python-docx | PDF consolidation from mixed file types |
 | **Drive Integration** | Google Drive API v3 | Automated document download |
+
+**Detailed Architecture:** See [ARCHITECTURE.md](ARCHITECTURE.md) for complete system design, data flow, and component descriptions.
 | **Monitoring** | Flask Dashboard | Real-time progress tracking |
 | **Authentication** | Google Cloud Service Account | Secure, automated API access |
 
@@ -536,16 +569,29 @@ For enterprise deployments, consider:
 
 ## Support
 
-### Documentation
-- **README.md** - This file
-- **SETUP.md** - Detailed setup guide
-- **TROUBLESHOOTING.md** - Common issues
+### Complete Documentation
+
+**Quick Start:**
+- [README.md](README.md) - This file (overview and features)
+- [QUICKSTART.md](QUICKSTART.md) - Step-by-step setup guide
+
+**Deployment & Operations:**
+- [DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md) - Container deployment, systemd, production setup
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design, components, data flow
+- [Docs/TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md) - Common issues and solutions
+
+**Production Readiness:**
+- [PRODUCTION-READINESS.md](PRODUCTION-READINESS.md) - Pre-deployment checklist and review
+- [build-and-push.sh](build-and-push.sh) - Multi-arch container build automation
+
+**Developer Documentation:**
+- [developer-docs/](developer-docs/) - Archived development notes and analysis
 
 ### Getting Help
 1. Check logs: `./logs/`
 2. Check dashboard: `http://localhost:8765`
-3. Review TROUBLESHOOTING.md
-4. Check GitHub issues
+3. Review [Docs/TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md)
+4. See [PRODUCTION-READINESS.md](PRODUCTION-READINESS.md) for known issues
 
 ---
 

@@ -715,11 +715,37 @@ class ClientPipeline:
                                     logger.info(f"[{self.client_id}] ✅ Created note: {prompt_file.stem}")
                                     break
                                 else:
-                                    logger.warning(f"[{self.client_id}] Note creation failed: {create_result.stderr}")
-                                    result = create_result  # Fall through to error handling
+                                    # Check if note creation error is retryable
+                                    stderr_lower = create_result.stderr.lower()
+                                    if "rate limit" in stderr_lower or "quota" in stderr_lower or "rpc_code" in stderr_lower:
+                                        if attempt < max_retries - 1:
+                                            logger.warning(f"[{self.client_id}] Note creation quota/rate limit, waiting {retry_delay}s (attempt {attempt + 1}/{max_retries})")
+                                            time.sleep(retry_delay)
+                                            retry_delay *= 2
+                                            continue  # Retry
+                                        else:
+                                            logger.error(f"[{self.client_id}] Note creation failed after {max_retries} retries: {create_result.stderr}")
+                                            break
+                                    elif "no parseable chunks" in stderr_lower or "streaming" in stderr_lower:
+                                        if attempt < max_retries - 1:
+                                            logger.warning(f"[{self.client_id}] Note creation streaming error, retrying in 10s (attempt {attempt + 1}/{max_retries})")
+                                            time.sleep(10)
+                                            continue  # Retry
+                                        else:
+                                            logger.error(f"[{self.client_id}] Note creation failed after {max_retries} retries: {create_result.stderr}")
+                                            break
+                                    else:
+                                        logger.warning(f"[{self.client_id}] Note creation failed (non-retryable): {create_result.stderr}")
+                                        break
                             except json.JSONDecodeError as e:
-                                logger.error(f"[{self.client_id}] Failed to parse JSON response: {e}")
-                                break
+                                # JSON parse error might be transient (truncated response, network issue)
+                                if attempt < max_retries - 1:
+                                    logger.warning(f"[{self.client_id}] JSON parse error, retrying (attempt {attempt + 1}/{max_retries}): {e}")
+                                    time.sleep(10)
+                                    continue  # Retry
+                                else:
+                                    logger.error(f"[{self.client_id}] JSON parse failed after {max_retries} retries: {e}")
+                                    break
                         elif "rate limit" in result.stderr.lower() or "quota" in result.stderr.lower() or "rpc_code=3" in result.stderr.lower() or "rpc_code=9" in result.stderr.lower() or "rpc_code=8" in result.stderr.lower():
                             if attempt < max_retries - 1:
                                 logger.warning(f"[{self.client_id}] Quota/rate limit hit, waiting {retry_delay}s (attempt {attempt + 1}/{max_retries})")
