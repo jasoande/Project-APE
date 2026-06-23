@@ -431,13 +431,15 @@
                     const allComplete = data.total > 0 && (data.complete + data.failed) === data.total;
                     allClientsComplete = allComplete;  // Store for use in error handler
 
-                    // Stop auto-refresh 5 minutes after completion
+                    // Stop timer and prepare to stop auto-refresh when pipeline completes
                     if (allComplete) {
+                        // Stop the execution timer immediately
+                        stopTimer();
 
                         // Record completion time for auto-refresh delay
                         if (!completionTime) {
                             completionTime = Date.now();
-                            console.log('Pipeline complete - will stop refreshing in 5 minutes');
+                            console.log('Pipeline complete - timer stopped, will stop refreshing in 5 minutes');
                         }
                     }
 
@@ -619,6 +621,14 @@
             const seconds = elapsed % 60;
             document.getElementById('execution-time').textContent =
                 String(minutes).padStart(2, '0') + 'm ' + String(seconds).padStart(2, '0') + 's';
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                console.log('Execution timer stopped');
+            }
         }
 
         // Update timer every second

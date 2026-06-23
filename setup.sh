@@ -265,48 +265,45 @@ fi
 log_info "Client configuration step complete"
 
 ################################################################################
-# Step 8: Share Google Drive Folders
+# Step 8: Share Google Drive Folders (Automated)
 ################################################################################
 
 log_step "Share Google Drive Folders with Service Account"
 
-# Get service account email
-SA_EMAIL=""
-if [ -f "./service-account-key.json" ]; then
-    SA_EMAIL=$(python3 -c "import json; print(json.load(open('service-account-key.json'))['client_email'])" 2>/dev/null || echo "")
+# Check if share script exists
+if [ ! -f "./share-drive-folders.py" ]; then
+    log_error "share-drive-folders.py not found"
+    exit 1
 fi
 
-if [ -z "$SA_EMAIL" ]; then
-    log_warn "Could not read service account email"
+# Check if vars.py exists and has clients
+if [ ! -f "./vars.py" ]; then
+    log_warn "vars.py not found - skipping folder sharing"
+    log_warn "Configure vars.py and run: ./share-drive-folders.py"
 else
-    echo
-    echo "To allow Project APE to access your Google Drive folders,"
-    echo "you must share each folder with the service account."
-    echo
-    echo -e "${BLUE}Service Account Email:${NC}"
-    echo "  ${GREEN}$SA_EMAIL${NC}"
-    echo
-    echo -e "${BLUE}How to share:${NC}"
-    echo "  1. Go to https://drive.google.com"
-    echo "  2. Right-click each client folder → Share"
-    echo "  3. Paste the service account email above"
-    echo "  4. Set permission to 'Viewer'"
-    echo "  5. Uncheck 'Notify people'"
-    echo "  6. Click 'Share'"
+    # Automatically share folders via Drive API
+    log_info "Automatically sharing Drive folders via API..."
     echo
 
-    # Copy service account email to clipboard if possible
-    if command -v pbcopy &> /dev/null; then
-        echo "$SA_EMAIL" | pbcopy
-        log_info "Service account email copied to clipboard!"
-    elif command -v xclip &> /dev/null; then
-        echo "$SA_EMAIL" | xclip -selection clipboard
-        log_info "Service account email copied to clipboard!"
+    # Activate venv if not already active
+    if [ -z "$VIRTUAL_ENV" ]; then
+        source ./activate-ape-env.sh
     fi
 
-    echo
-    read -p "Press Enter after sharing all Drive folders..."
-    echo
+    # Run share script
+    python3 ./share-drive-folders.py
+
+    if [ $? -eq 0 ]; then
+        log_info "All Drive folders shared successfully"
+    else
+        log_error "Some folders could not be shared automatically"
+        echo "You may need to manually share them - see error messages above"
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
 fi
 
 log_info "Drive folder sharing step complete"

@@ -509,7 +509,7 @@ class ClientPipeline:
             # Use FastPDFConsolidator which converts ALL file types to PDF
             # Handles: PDFs, text files, images, office docs (xlsx, docx, pptx)
             # Write consolidated PDF to logs directory (writable in containers)
-            logs_dir = Path(vars.LOGS_DIR if hasattr(vars, 'LOGS_DIR') else './logs')
+            logs_dir = Path(self.config.LOGS_DIR if hasattr(self.config, 'LOGS_DIR') else './logs')
             with FastPDFConsolidator(
                 self.client_id,
                 self.client_folder,

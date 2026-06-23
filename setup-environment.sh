@@ -754,6 +754,11 @@ if [[ "$NEED_INSTALL_NOTEBOOKLM" == "true" ]]; then
     # Install notebooklm-py with browser support in virtual environment
     "$VENV_DIR/bin/python3" -m pip install notebooklm-py[browser]
 
+    # Install Google API libraries for Drive folder sharing automation
+    echo
+    echo "Installing Google Drive API libraries..."
+    "$VENV_DIR/bin/python3" -m pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
+
     echo
     echo "Installing Playwright browser (Chromium)..."
 

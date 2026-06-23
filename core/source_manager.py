@@ -77,12 +77,12 @@ class SourceManager:
         Returns:
             Dict with status and imported source count
         """
-        # Retry configuration
-        max_attempts = 5
+        # Retry configuration - Deep mode uses fewer retries to reduce execution time
+        max_attempts = 1 if mode == "deep" else 5
         base_delay = 30.0  # Start with 30s delay
 
         try:
-            logger.info(f"[{self.client_id}] Running research: {query_file.name} ({mode} mode)")
+            logger.info(f"[{self.client_id}] Running research: {query_file.name} ({mode} mode, {max_attempts} attempt{'s' if max_attempts > 1 else ''})")
 
             # Read prompt and substitute variables
             prompt_text = query_file.read_text()
