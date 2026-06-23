@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE Logo" width="200"/>
+</div>
+
 # Project APE - Account Planning Engine
 
 **Transform Enterprise Account Research from 40 Hours to 15 Minutes**
@@ -703,26 +707,6 @@ Powered by:
 - **Capacity:** 10x increase in accounts researched per quarter
 - **Speed:** Same-day response to inbound opportunities
 - **Coverage:** Research entire addressable market, not just top accounts
-
----
-
-## 📚 Additional Resources
-
-### Documentation
-- **[QUICKSTART.md](QUICKSTART.md)** - 30-minute quick start guide
-- **[EXECUTIVE-SUMMARY.md](EXECUTIVE-SUMMARY.md)** - Business value and ROI details
-- **[CODE-REVIEW-2026-06-23.md](CODE-REVIEW-2026-06-23.md)** - Technical deep-dive and quality audit
-- **[TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md)** - Common issues and solutions
-
-### Presentations
-- **[PRESENTATION-SLIDES.md](PRESENTATION-SLIDES.md)** - Management presentation outline
-- **[PRESENTATION-TALKING-POINTS.md](PRESENTATION-TALKING-POINTS.md)** - Detailed speaker notes
-- **[PRESENTATION-CREATION-GUIDE.md](PRESENTATION-CREATION-GUIDE.md)** - How to create the slides
-
-### Community & Support
-- **Issues:** Report bugs or request features via GitHub Issues
-- **Discussions:** Share use cases and ask questions
-- **Contributions:** Pull requests welcome for enhancements
 
 ---
 

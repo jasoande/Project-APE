@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE Logo" width="200"/>
+</div>
+
 # Project APE - Quick Start Guide
 ## From Zero to First Research in 30 Minutes
 
