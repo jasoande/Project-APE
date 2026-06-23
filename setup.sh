@@ -174,6 +174,12 @@ if [ ! -f "./service-account-key.json" ]; then
     exit 1
 fi
 
+# Fix permissions for container access
+# On macOS, Podman runs in a VM so --userns=keep-id doesn't work the same way
+# Make the key readable by the container user (644 instead of 600)
+log_info "Fixing service account key permissions for container access..."
+chmod 644 ./service-account-key.json
+
 log_info "Service account ready"
 
 ################################################################################

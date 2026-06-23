@@ -233,7 +233,7 @@ else
 fi
 
 # Secure the key file
-chmod 600 $KEY_FILE
+chmod 644 $KEY_FILE  # 644 instead of 600 for container compatibility
 log_info "Key file permissions set to 600 (read/write owner only)"
 
 # Verify key file
