@@ -496,6 +496,16 @@ Project-APE/
 - **Python:** 3.11+ (auto-installed by setup script)
 - **Container Runtime:** Podman or Docker (auto-installed by setup script)
 
+### Python Dependencies
+Project APE uses a **minimal set of dependencies** (10 packages):
+- **Google Drive API** - Document download and service account auth
+- **Flask** - Real-time web dashboard
+- **pypdf + Pillow** - PDF consolidation and image processing
+- **python-dotenv** - Configuration management
+
+**No AI SDKs required** - Pipeline uses NotebookLM CLI (not Python SDK)  
+See `requirements.txt` for complete list.
+
 ### Google Cloud
 - Google Cloud account (free tier sufficient)
 - Billing enabled (required for Drive API, ~$0 actual cost for typical usage)
@@ -712,7 +722,7 @@ Powered by:
 
 ## 🏆 Production Status
 
-✅ **Version 3.1.0** - Production-Ready Release  
+✅ **Version 3.2.0** - Simplified Dependencies Release  
 ✅ **Code Review:** Passed principal engineer audit (June 23, 2026)  
 ✅ **Pilot Results:** 6/6 accounts successful, 8.7/10 average quality  
 ✅ **Platforms:** macOS (Intel/ARM), Linux (x86_64/ARM64)  
@@ -750,7 +760,7 @@ Powered by:
 
 ---
 
-**Version:** 3.1.0 - Production Release  
+**Version:** 3.2.0 - Simplified Dependencies Release  
 **Last Updated:** June 23, 2026  
 **Status:** ✅ Ready for Production Deployment
 

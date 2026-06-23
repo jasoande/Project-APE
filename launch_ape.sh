@@ -11,6 +11,31 @@
 
 set -e
 
+# Show help if requested
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    echo "Project APE - Account Planning Engine v3.2.0"
+    echo ""
+    echo "Usage:"
+    echo "  ./launch_ape.sh fast                      # All clients, fast mode (15-20 min)"
+    echo "  ./launch_ape.sh deep                      # All clients, deep mode (35-40 min)"
+    echo "  ./launch_ape.sh fast client1 client2      # Specific clients only"
+    echo ""
+    echo "Modes:"
+    echo "  fast     Quick research (15-20 minutes per client)"
+    echo "  deep     Thorough research (35-40 minutes per client)"
+    echo ""
+    echo "Examples:"
+    echo "  ./launch_ape.sh fast                      # Run all clients in vars.py"
+    echo "  ./launch_ape.sh fast merck_test           # Run one client"
+    echo "  ./launch_ape.sh deep merck_test blue_yonder_test  # Multiple clients, deep mode"
+    echo ""
+    echo "Dashboard:"
+    echo "  Automatically opens at http://localhost:8765"
+    echo "  Shows real-time progress, quality scores, and logs"
+    echo ""
+    exit 0
+fi
+
 # Configuration
 IMAGE_NAME="project-ape"
 REGISTRY="quay.io/jasoande/project_ape"

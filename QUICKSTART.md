@@ -303,8 +303,10 @@ new_client_industry = "industry name"
 ./launch_ape.sh fast  # Up to 6 clients run simultaneously
 ```
 
-**Disable dashboard:**
+**Disable dashboard (Advanced):**
 ```bash
+# Dashboard runs automatically and stops after completion
+# To run without dashboard (advanced users only):
 python3 main.py --mode fast --no-dashboard
 ```
 
@@ -473,7 +475,7 @@ rm -rf .multi_process_status/*      # Clear status files
 
 ---
 
-**Version:** 3.1.0 - Production Release  
+**Version:** 3.2.0 - Simplified Dependencies Release  
 **Status:** ✅ Ready for Organization-Wide Deployment
 
 **Questions?** Check the documentation above or open an issue on GitHub.
