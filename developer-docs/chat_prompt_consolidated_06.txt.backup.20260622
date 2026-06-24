@@ -1,8 +1,5 @@
 Act as a $persona creating a comprehensive account plan for $name.
 
-CRITICAL: You MUST cite sources using [1], [2], [3] format throughout your response. NotebookLM requires citations to render formatted notes. Without citations, your response will display as unformatted plain text.
-
-
 ## Instructions
 
 Create a complete, professional Red Hat account plan following this structure. **CRITICAL:** Cite all facts as [Source Name]. Only include details from available sources - explicitly state "Information not available" if missing.
@@ -118,6 +115,3 @@ For each:
 - Clear value articulation
 - Actionable recommendations
 - Professional tone suitable for executive review
-
-EXAMPLE CITATION FORMAT:
-"Cloud adoption is growing at 15% annually [1]. AI spending will reach $16B [2]."

@@ -1,46 +1,53 @@
-# ==============================================================================
-# PROJECT APE - EXAMPLE CONFIGURATION
-# Configuration Template - Copy to vars.py and customize
-# ==============================================================================
+"""
+Example vars.py for Project APE Container
+==========================================
+Copy this file to vars.py and customize for your clients
+"""
 
 from pathlib import Path
 
 # ==============================================================================
-# PERSONA CONFIGURATION
-# ==============================================================================
-
-# Define the persona/role for AI responses in chat prompts
-# This determines the perspective and expertise level of the generated content
-# Examples:
-#   - "Red Hat account executive"
-#   - "Red Hat solutions architect"
-#   - "Red Hat marketing specialist"
-#   - "Red Hat customer success manager"
-#   - "Red Hat technical account manager"
-#   - "senior industry analyst"
-persona = "Red Hat solutions architect"
-
-# ==============================================================================
-# CLIENT DEFINITIONS
+# CLIENT CONFIGURATIONS
 # ==============================================================================
 
 clients = [
     "example_client",
 ]
 
-# --- Example Client Configuration ---
+# --- Example Client ---
 example_client_name = "Example Corporation"
+
+# Google Drive folder (container will download at runtime)
+example_client_folder = "https://drive.google.com/drive/folders/YOUR_FOLDER_ID_HERE"
+
+# OR Local folder path (mount as volume)
+# example_client_folder = "/app/client_data/example_client"
+
 example_client_industry = "technology"
-example_client_subsegments = "cloud computing, enterprise software, cybersecurity"
-example_client_folder = "/app/client_data/Example_Corporation"
+example_client_subsegments = "cloud computing, enterprise software, AI/ML"
 
 # ==============================================================================
-# EXECUTION MODES & TIMING (Advanced - Usually no changes needed)
+# GENERAL SETTINGS
 # ==============================================================================
 
+# Persona for AI responses
+persona = "solutions architect"
+
+# Default execution mode
 default_mode = "fast"
 
-# FAST MODE - Optimized for speed (12-16 minutes per client)
+# ==============================================================================
+# DASHBOARD SETTINGS
+# ==============================================================================
+
+DASHBOARD_PORT = 8765
+DASHBOARD_REFRESH_INTERVAL = 2  # seconds
+
+# ==============================================================================
+# EXECUTION TIMING PROFILES
+# ==============================================================================
+
+# FAST MODE - Optimized for speed (15-20 minute target)
 TIMINGS = {
     'notebook_creation_delay': 3.0,
     'source_add_delay': (2.0, 4.0),
@@ -52,64 +59,60 @@ TIMINGS = {
     'source_import_wait': 10.0,
 }
 
-# DEEP MODE - Balanced delays for quality with improved performance
-# Optimized based on actual API timing analysis while maintaining safety margins
+# DEEP MODE - Enhanced quality (35-40 minute target)
 DEEP_TIMINGS = {
-    'notebook_creation_delay': 3.0,           # Reduced from 5.0 - no quota impact
-    'source_add_delay': (2.0, 4.0),           # Reduced from (3.0, 5.0) - safe range
-    'source_processing_delay': 45.0,          # Reduced from 90.0 - still conservative
-    'ask_prompt_delay': (15.0, 25.0),         # Reduced from (90.0, 120.0) - API handles spacing
-    'chat_prompt_delay': (10.0, 15.0),        # Reduced from (120.0, 180.0) - consolidated prompts longer
-    'deduplication_delay': 25.0,              # Reduced from 45.0 - operation is fast
-    'mindmap_delay': 20.0,                    # Reduced from 30.0 - operation is fast
-    'source_import_wait': 30.0,               # Increased from 20.0 - deep mode imports 90-180 sources
-}
-
-# Retry configuration for API errors
-RETRY_CONFIG = {
-    'max_attempts': 5,
-    'base_delay': 10.0,
-    'ask_max_attempts': 7,
-    'ask_base_delay': 30.0,
+    'notebook_creation_delay': 3.0,
+    'source_add_delay': (2.0, 4.0),
+    'source_processing_delay': 45.0,
+    'ask_prompt_delay': (15.0, 25.0),
+    'chat_prompt_delay': (10.0, 15.0),
+    'deduplication_delay': 25.0,
+    'mindmap_delay': 20.0,
+    'source_import_wait': 15.0,
 }
 
 # ==============================================================================
-# DASHBOARD SETTINGS
+# QUALITY THRESHOLDS
 # ==============================================================================
 
-DASHBOARD_PORT = 8765
-DASHBOARD_REFRESH_INTERVAL = 2
+QUALITY_THRESHOLDS = {
+    'min_sources': 15,
+    'required_notes': 6,
+    'min_quality_score': 8.5,
+}
 
 # ==============================================================================
-# PDF CONSOLIDATION SETTINGS
+# GOOGLE DRIVE CONFIGURATION
 # ==============================================================================
 
-PDF_CONSOLIDATION = {
+DRIVE_CONFIG = {
+    'cache_enabled': True,
+    'cache_ttl_hours': 168,  # 7 days - recommended for development (adjust to 24 for frequent Drive changes)
+    'download_timeout': 300,
+}
+
+# ==============================================================================
+# ADVANCED: GEMINI AI ORCHESTRATION (Optional)
+# ==============================================================================
+# Used for pipeline orchestration, error recovery, and quality validation
+# Most users can leave these as default
+
+GEMINI_AGENT_CONFIG = {
     'enabled': True,
-    'output_suffix': '-One.pdf',
-    'max_file_size_mb': 500,
+    'model': 'gemini-2.0-flash-exp',
+    'temperature': 0.2,
+    'max_retries': 5,
+    'retry_base_delay': 10.0,
+    'timeout': 60,
+    'enable_error_analysis': True,
+    'enable_quality_validation': True,
+    'enable_self_healing': True,
+    'quality_target': 8.5,
 }
 
 # ==============================================================================
-# AUTHENTICATION SETTINGS
+# PATHS (Container-specific)
 # ==============================================================================
 
-AUTH_CHECK_INTERVAL = 300
-AUTH_PROFILE = "default"
-
-# ==============================================================================
-# LOGGING SETTINGS
-# ==============================================================================
-
-LOG_LEVEL = "INFO"
-LOG_FORMAT = "%(asctime)s | %(levelname)s | [%(processName)s] %(message)s"
-LOG_DATE_FORMAT = "%H:%M:%S"
-
-# ==============================================================================
-# PATHS (Auto-configured for containers - do not change)
-# ==============================================================================
-
-PROJECT_ROOT = Path("/app")
-STATUS_DIR = PROJECT_ROOT / ".multi_process_status"
-LOGS_DIR = PROJECT_ROOT / "logs"
-DOCS_DIR = PROJECT_ROOT / "docs"
+STATUS_DIR = Path('/app/.multi_process_status')
+LOGS_DIR = Path('/app/logs')

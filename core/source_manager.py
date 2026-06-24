@@ -77,12 +77,12 @@ class SourceManager:
         Returns:
             Dict with status and imported source count
         """
-        # Retry configuration
-        max_attempts = 5
+        # Retry configuration - Deep mode uses 3 attempts for critical failures, fast mode uses 5
+        max_attempts = 3 if mode == "deep" else 5
         base_delay = 30.0  # Start with 30s delay
 
         try:
-            logger.info(f"[{self.client_id}] Running research: {query_file.name} ({mode} mode)")
+            logger.info(f"[{self.client_id}] Running research: {query_file.name} ({mode} mode, {max_attempts} attempt{'s' if max_attempts > 1 else ''})")
 
             # Read prompt and substitute variables
             prompt_text = query_file.read_text()
@@ -119,11 +119,11 @@ class SourceManager:
                                     "--prompt-file", tmp_path,
                                     "-n", self.notebook_id,
                                     "--import-all",
-                                    "--timeout", "600"
+                                    "--timeout", "1200"  # 20 minutes for deep mode
                                 ],
                                 capture_output=True,
                                 text=True,
-                                timeout=700
+                                timeout=1500  # 25 minutes total (20 min + 5 min buffer)
                             )
                         else:
                             # Fast mode: standard fast research
@@ -160,6 +160,10 @@ class SourceManager:
                             "rpc_code=3" in stderr_lower or
                             "rpc_code=9" in stderr_lower or
                             "rpc_code=8" in stderr_lower or  # RESOURCE_EXHAUSTED
+                            "rpc_code=16" in stderr_lower or  # UNAUTHENTICATED
+                            "unauthenticated" in stderr_lower or
+                            "authentication expired" in stderr_lower or
+                            "token refresh failed" in stderr_lower or
                             "transportservererror" in stderr_lower or
                             "failed precondition" in stderr_lower
                         )

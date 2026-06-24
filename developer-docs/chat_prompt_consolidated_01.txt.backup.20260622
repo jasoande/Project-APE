@@ -1,7 +1,5 @@
 Act as a $persona preparing a comprehensive research report for Red Hat account teams.
 
-CRITICAL: You MUST cite sources using [1], [2], [3] format throughout your response. NotebookLM requires citations to render formatted notes. Without citations, your response will display as unformatted plain text.
-
 ## Part 1: Industry Analysis & Future Trends
 
 Analyze how digital and information technologies are shaping the global $industry industry over the next 5 years, focusing on these confirmed subsegments: $subsegments
@@ -36,11 +34,7 @@ What are $name's top 3-5 business objectives?
 - What are their success metrics?
 
 ## Format Requirements:
-- Structure with clear headers and bullet points using markdown (## and **bold**)
-- MANDATORY: Cite sources for EVERY factual claim using [1], [2], [3] format
-- Include at minimum 20-30 citations throughout your response
+- Structure with clear headers and bullet points
+- Cite sources for factual claims
 - Focus on verified, recent information
 - Keep total response to 2-3 pages maximum
-
-EXAMPLE CITATION FORMAT:
-"Cloud adoption in pharma is growing at 15% annually [1]. AI spending will reach $16B by 2034 [2]."

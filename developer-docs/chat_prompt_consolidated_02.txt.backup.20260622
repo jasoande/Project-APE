@@ -1,8 +1,5 @@
 Act as a $persona with deep knowledge of $name, the $industry industry, and Red Hat's portfolio.
 
-CRITICAL: You MUST cite sources using [1], [2], [3] format throughout your response. NotebookLM requires citations to render formatted notes. Without citations, your response will display as unformatted plain text.
-
-
 ## Part 1: Innovation Assessment
 
 Evaluate $name's approach to adopting innovation, with special focus on digital, IT, or AI-supported innovation.
@@ -36,6 +33,3 @@ Create a 7-bullet point executive summary for Red Hat's Chief Revenue Officer (A
 - Key opportunities for partnership
 
 Format: Clear, concise bullet points. Total length: Max 1 page.
-
-EXAMPLE CITATION FORMAT:
-"Cloud adoption is growing at 15% annually [1]. AI spending will reach $16B [2]."
