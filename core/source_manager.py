@@ -77,8 +77,8 @@ class SourceManager:
         Returns:
             Dict with status and imported source count
         """
-        # Retry configuration - Deep mode uses fewer retries to reduce execution time
-        max_attempts = 1 if mode == "deep" else 5
+        # Retry configuration - Deep mode uses 3 attempts for critical failures, fast mode uses 5
+        max_attempts = 3 if mode == "deep" else 5
         base_delay = 30.0  # Start with 30s delay
 
         try:
@@ -160,6 +160,10 @@ class SourceManager:
                             "rpc_code=3" in stderr_lower or
                             "rpc_code=9" in stderr_lower or
                             "rpc_code=8" in stderr_lower or  # RESOURCE_EXHAUSTED
+                            "rpc_code=16" in stderr_lower or  # UNAUTHENTICATED
+                            "unauthenticated" in stderr_lower or
+                            "authentication expired" in stderr_lower or
+                            "token refresh failed" in stderr_lower or
                             "transportservererror" in stderr_lower or
                             "failed precondition" in stderr_lower
                         )

@@ -225,7 +225,7 @@ def print_banner():
     print("  PROJECT APE - ACCOUNT PLANNING ENGINE")
     print("  AI-Powered Enterprise Account Planning Automation")
     print("="*70)
-    print(f"  Version: 3.2.0 - Simplified Dependencies Release")
+    print(f"  Version: 3.2.1 - Critical Auth Retry Fix")
     print(f"  Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*70 + "\n")
 

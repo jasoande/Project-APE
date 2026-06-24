@@ -575,7 +575,10 @@ class ClientPipeline:
                     if result["success"]:
                         logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
                     else:
-                        logger.warning(f"[{self.client_id}] Research failed: {result.get('error')}")
+                        # Critical failure: research failed after retries
+                        error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
+                        logger.error(f"[{self.client_id}] ❌ {error_msg}")
+                        raise RuntimeError(error_msg)
 
                     # Deduplicate after EACH research prompt (deep mode only)
                     logger.info(f"[{self.client_id}] Deduplicating sources (after prompt {idx})...")
@@ -614,7 +617,10 @@ class ClientPipeline:
                     if result["success"]:
                         logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
                     else:
-                        logger.warning(f"[{self.client_id}] Research failed: {result.get('error')}")
+                        # Critical failure: research failed after retries
+                        error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
+                        logger.error(f"[{self.client_id}] ❌ {error_msg}")
+                        raise RuntimeError(error_msg)
 
                 except Exception as e:
                     logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")
