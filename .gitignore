@@ -40,6 +40,8 @@ docs_generated/
 *.pptx
 *.docx
 
+developer-docs/
+
 # Client data (NEVER commit)
 client_data/
 Venella_2026/
