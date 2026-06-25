@@ -2,6 +2,8 @@
 ################################################################################
 # Project APE - Linux/Unix Launcher
 # Double-click or run this script to launch Project APE dashboard
+#
+# This launcher automatically handles first-time setup if needed
 ################################################################################
 
 # Get script directory
@@ -18,5 +20,5 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# Run the Python launcher
+# Run the Python launcher (it will auto-setup if needed)
 python3 "$SCRIPT_DIR/launch-project-ape.py"

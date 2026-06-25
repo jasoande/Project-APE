@@ -59,28 +59,72 @@ def is_server_running():
         return False
 
 
+def run_setup():
+    """Run setup script to create virtual environment and install dependencies"""
+    script_dir = get_script_directory()
+    setup_script = script_dir / "setup-environment.sh"
+
+    if not setup_script.exists():
+        print(f"❌ Error: Setup script not found at {setup_script}")
+        return False
+
+    print("\n" + "=" * 70)
+    print("🔧 FIRST-TIME SETUP")
+    print("=" * 70)
+    print("Running automated environment setup...")
+    print("This will take 2-5 minutes to install dependencies.")
+    print()
+
+    try:
+        # Run setup script and show output to user
+        result = subprocess.run(
+            ["bash", str(setup_script)],
+            cwd=str(script_dir),
+            check=True
+        )
+
+        if result.returncode == 0:
+            print("\n✅ Setup completed successfully!")
+            print()
+            return True
+        else:
+            print("\n❌ Setup failed")
+            return False
+
+    except subprocess.CalledProcessError as e:
+        print(f"\n❌ Setup script failed: {e}")
+        return False
+    except Exception as e:
+        print(f"\n❌ Failed to run setup: {e}")
+        return False
+
+
 def start_server():
     """Start the dashboard server in background"""
     script_dir = get_script_directory()
     venv_python = get_venv_python()
     server_script = script_dir / "dashboard" / "server.py"
 
-    # Verify virtual environment exists
-    if not venv_python.exists():
-        print("❌ Error: Virtual environment not found")
-        print(f"   Expected: {venv_python}")
-        print("\n⚠️  Please run the setup script first:")
-        if IS_WINDOWS:
-            print("   Note: Setup script requires bash shell (Git Bash, WSL, or Cygwin)")
-            print("   bash ./setup-environment.sh")
-        else:
-            print("   ./setup-environment.sh")
-        sys.exit(1)
-
     # Verify server script exists
     if not server_script.exists():
         print(f"❌ Error: Dashboard server not found at {server_script}")
         sys.exit(1)
+
+    # Check if venv exists, if not run setup automatically
+    if not venv_python.exists():
+        print("⚠️  Virtual environment not found")
+        print("   Running automatic setup...")
+        print()
+
+        if not run_setup():
+            print("\n❌ Setup failed - cannot start dashboard")
+            print("   Try running manually: ./setup-environment.sh")
+            sys.exit(1)
+
+        # Verify venv was created
+        if not venv_python.exists():
+            print(f"❌ Setup completed but venv still not found at {venv_python}")
+            sys.exit(1)
 
     # Start server in background (platform-specific)
     try:
