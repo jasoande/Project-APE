@@ -18,16 +18,21 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "Usage:"
     echo "  ./launch_ape.sh fast                      # All clients, fast mode (15-20 min)"
     echo "  ./launch_ape.sh deep                      # All clients, deep mode (35-40 min)"
+    echo "  ./launch_ape.sh fast --refresh            # Force refresh Drive cache"
     echo "  ./launch_ape.sh fast client1 client2      # Specific clients only"
     echo ""
     echo "Modes:"
     echo "  fast     Quick research (15-20 minutes per client)"
     echo "  deep     Thorough research (35-40 minutes per client)"
     echo ""
+    echo "Options:"
+    echo "  --refresh    Force refresh Google Drive cache (ignore 24hr TTL)"
+    echo ""
     echo "Examples:"
     echo "  ./launch_ape.sh fast                      # Run all clients in vars.py"
     echo "  ./launch_ape.sh fast merck_test           # Run one client"
     echo "  ./launch_ape.sh deep merck_test blue_yonder_test  # Multiple clients, deep mode"
+    echo "  ./launch_ape.sh fast --refresh            # Force fresh download from Drive"
     echo ""
     echo "Dashboard:"
     echo "  Automatically opens at http://localhost:8765"
@@ -147,8 +152,24 @@ run_container() {
     local runtime=$1
     local arch=$2
     local mode=$3
-    shift 3
+    local refresh_flag=$4
+    shift 4
     local clients="$@"
+
+    # Clear consolidation timestamps for fresh PDF generation each run
+    # This ensures each workflow run creates new PDFs even if files haven't changed
+    if [ -d "$HOME/.project-ape/consolidation_timestamps" ]; then
+        rm -f "$HOME/.project-ape/consolidation_timestamps"/*.json 2>/dev/null
+        log_info "Cleared consolidation cache for fresh run"
+    fi
+
+    # Clear previous run status files for fresh timer and status tracking
+    # This prevents old run data from showing in the dashboard
+    local status_dir="$(pwd)/.multi_process_status"
+    if [ -d "$status_dir" ]; then
+        rm -f "$status_dir"/*.json 2>/dev/null
+        log_info "Cleared previous run status files"
+    fi
 
     local version=$(get_image_version "$arch")
     local image="${REGISTRY}/${IMAGE_NAME}:${version}"
@@ -157,6 +178,9 @@ run_container() {
     local cmd="/opt/venv/bin/python3 main.py --mode ${mode}"
     if [ -n "$clients" ]; then
         cmd="${cmd} --clients ${clients}"
+    fi
+    if [ -n "$refresh_flag" ]; then
+        cmd="${cmd} ${refresh_flag}"
     fi
 
     log_step "Starting Project APE..."
@@ -220,22 +244,79 @@ run_container() {
 
     # Run container with SELinux-compatible volume flags
     # IMPORTANT: Set HOME=/home/apeuser so NotebookLM CLI finds credentials
-    # NOTE: core/, dashboard/, main.py could be mounted for development but
-    #       require container rebuild to pick up dependency changes
-    $runtime run -it --rm \
+    # Mount code for development (core/, dashboard/, main.py)
+    # Note: No -it flags so container exits cleanly when pipeline completes
+    $runtime run --rm \
         --name project-ape \
         ${userns_flag} \
         -p ${DASHBOARD_PORT}:8765 \
         -e HOME=/home/apeuser \
-        -v $(pwd)/.env:/app/.env:ro,z \
+        $([ -f "$(pwd)/.env" ] && echo "-v $(pwd)/.env:/app/.env:ro,z") \
         -v $(pwd)/vars.py:/app/vars.py:ro,z \
         -v $(pwd)/service-account-key.json:/app/service-account.json:ro,z \
+        -v $(pwd)/main.py:/app/main.py:ro,z \
+        -v $(pwd)/core:/app/core:ro,z \
+        -v $(pwd)/dashboard:/app/dashboard:ro,z \
         -v $(pwd)/logs:/app/logs:z \
         -v $(pwd)/.multi_process_status:/app/.multi_process_status:z \
+        -v $HOME/.project-ape:/home/apeuser/.project-ape:z \
         ${creds_mount} \
         ${cache_mount} \
         "${image}" \
         ${cmd}
+}
+
+################################################################################
+# NotebookLM Authentication Check
+################################################################################
+
+check_notebooklm_auth() {
+    log_step "Checking NotebookLM authentication..."
+
+    # Check if notebooklm CLI is available
+    if ! command -v notebooklm &> /dev/null; then
+        log_error "NotebookLM CLI not found"
+        echo "Please install: pip install notebooklm-cli"
+        return 1
+    fi
+
+    # Check authentication status
+    if ! notebooklm auth check &> /dev/null; then
+        log_error "NotebookLM authentication expired or invalid"
+        echo ""
+        echo "Your NotebookLM credentials need to be refreshed."
+        echo "This happens when:"
+        echo "  • Cookies expire (typically after 30-90 days)"
+        echo "  • Google session is invalidated"
+        echo "  • Browser profile is cleared"
+        echo ""
+        echo "To fix this, run:"
+        echo "  ${GREEN}notebooklm auth refresh${NC}"
+        echo ""
+        echo "This will:"
+        echo "  1. Open your browser"
+        echo "  2. Sign in to NotebookLM"
+        echo "  3. Save fresh credentials"
+        echo ""
+        read -p "Run auth refresh now? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            notebooklm auth refresh
+            if [ $? -eq 0 ]; then
+                log_info "✅ Authentication refreshed successfully"
+            else
+                log_error "Authentication refresh failed"
+                return 1
+            fi
+        else
+            echo "Please refresh authentication before launching workflows."
+            return 1
+        fi
+    else
+        log_info "✅ NotebookLM authentication valid"
+    fi
+
+    return 0
 }
 
 ################################################################################
@@ -259,6 +340,7 @@ main() {
 
     local mode=""
     local clients=""
+    local refresh_flag=""
 
     # Parse arguments - support both positional and flag-based syntax
     while [ $# -gt 0 ]; do
@@ -272,6 +354,10 @@ main() {
                 # Collect all remaining args as clients
                 clients="$@"
                 break
+                ;;
+            --refresh)
+                refresh_flag="--refresh"
+                shift
                 ;;
             fast|deep)
                 if [ -z "$mode" ]; then
@@ -302,6 +388,14 @@ main() {
         exit 1
     fi
 
+    # Check NotebookLM authentication before proceeding
+    if ! check_notebooklm_auth; then
+        echo ""
+        echo "Cannot proceed without valid NotebookLM authentication."
+        exit 1
+    fi
+    echo ""
+
     # Detect system
     local arch=$(detect_architecture)
     local runtime=$(detect_runtime)
@@ -315,7 +409,7 @@ main() {
     echo ""
 
     # Run container
-    run_container "$runtime" "$arch" "$mode" $clients
+    run_container "$runtime" "$arch" "$mode" "$refresh_flag" $clients
 }
 
 main "$@"

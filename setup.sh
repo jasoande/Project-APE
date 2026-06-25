@@ -14,7 +14,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 STEP_NUM=0
-TOTAL_STEPS=8
+TOTAL_STEPS=9
 
 log_step() {
     STEP_NUM=$((STEP_NUM + 1))
@@ -45,10 +45,10 @@ echo "This will set up Project APE from scratch:"
 echo "  1. Install environment (Podman, Google Cloud SDK, Python, NotebookLM CLI)"
 echo "  2. Activate virtual environment"
 echo "  3. Authenticate with NotebookLM"
-echo "  4. Create Google Cloud service account"
+echo "  4. Configure Google Drive authentication (OAuth or Service Account)"
 echo "  5. Configure container credentials"
 echo "  6. Configure client list"
-echo "  7. Share Google Drive folders"
+echo "  7. Verify Google Drive folder access"
 echo
 echo "Time required: ~20-30 minutes"
 echo
@@ -142,45 +142,144 @@ fi
 log_info "NotebookLM authentication complete"
 
 ################################################################################
-# Step 5: Google Cloud Service Account
+# Step 5: Google Drive Authentication Setup
 ################################################################################
 
-log_step "Google Cloud Service Account"
+log_step "Google Drive Authentication Setup"
 
-if [ ! -f "./create-service-account.sh" ]; then
-    log_error "create-service-account.sh not found"
-    exit 1
-fi
+echo
+echo "Project APE supports two authentication methods for Google Drive:"
+echo
+echo "  1. OAuth (Browser) - Recommended for personal use"
+echo "     ✅ No manual folder sharing needed"
+echo "     ✅ Automatic access to all your Drive files"
+echo "     ✅ One-time browser login"
+echo
+echo "  2. Service Account - For automation/servers"
+echo "     ⚠️  Requires manual folder sharing for each client"
+echo "     ✅ No browser login needed"
+echo "     ✅ Good for headless servers"
+echo
+read -p "Choose authentication method (1 for OAuth, 2 for Service Account): " -n 1 -r
+echo
+echo
 
-# Check if service account already exists
-if [ -f "./service-account-key.json" ]; then
-    log_info "Service account key already exists"
-    read -p "Create new service account? (y/n) " -n 1 -r
+if [[ $REPLY =~ ^[1]$ ]]; then
+    # OAuth Setup
+    log_info "Setting up OAuth authentication..."
+
     echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        log_info "Skipping service account creation"
+    echo "OAuth Setup Instructions:"
+    echo
+    echo "1. Go to: https://console.cloud.google.com/apis/credentials"
+    echo "2. Click 'Create Credentials' → 'OAuth client ID'"
+    echo "3. Application type: 'Desktop app'"
+    echo "4. Name: 'Project APE Desktop'"
+    echo "5. Click 'Create' and download the JSON file"
+    echo "6. Save it as: ~/.project-ape/drive_credentials.json"
+    echo
+    echo "Press Enter when you have downloaded the credentials..."
+    read
+
+    # Create directory
+    mkdir -p ~/.project-ape
+
+    # Check if credentials exist
+    if [ -f "$HOME/.project-ape/drive_credentials.json" ]; then
+        log_info "✅ Found OAuth credentials"
+
+        # Run OAuth setup script
+        if [ -f "./setup-oauth-drive.py" ]; then
+            log_info "Running OAuth authentication..."
+            python3 ./setup-oauth-drive.py
+
+            if [ $? -eq 0 ]; then
+                log_info "✅ OAuth setup complete"
+            else
+                log_warn "OAuth setup encountered errors"
+                echo "You can run it manually later: python3 setup-oauth-drive.py"
+            fi
+        else
+            log_warn "setup-oauth-drive.py not found"
+            echo "You can set up OAuth manually later with: python3 setup-oauth-drive.py"
+        fi
     else
+        log_warn "OAuth credentials not found at: ~/.project-ape/drive_credentials.json"
+        echo
+        echo "Please complete OAuth setup manually:"
+        echo "  1. Download credentials from Google Cloud Console"
+        echo "  2. Save to: ~/.project-ape/drive_credentials.json"
+        echo "  3. Run: python3 setup-oauth-drive.py"
+        echo
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+
+    # Update vars.py to use OAuth (if it exists)
+    if [ -f "./vars.py" ]; then
+        log_info "Verifying vars.py uses OAuth..."
+        if grep -q "auth_method.*oauth" vars.py; then
+            log_info "✅ vars.py already configured for OAuth"
+        else
+            log_warn "vars.py may need to be updated to use OAuth"
+            echo "Ensure vars.py has: auth_method: 'oauth'"
+        fi
+    fi
+
+    log_info "OAuth authentication configured"
+
+else
+    # Service Account Setup
+    log_info "Setting up service account authentication..."
+
+    if [ ! -f "./create-service-account.sh" ]; then
+        log_error "create-service-account.sh not found"
+        exit 1
+    fi
+
+    # Check if service account already exists
+    if [ -f "./service-account-key.json" ]; then
+        log_info "Service account key already exists"
+        read -p "Create new service account? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_info "Skipping service account creation"
+        else
+            ./create-service-account.sh
+        fi
+    else
+        log_info "Creating Google Cloud service account..."
         ./create-service-account.sh
     fi
-else
-    log_info "Creating Google Cloud service account..."
-    ./create-service-account.sh
+
+    # Verify service account key exists
+    if [ ! -f "./service-account-key.json" ]; then
+        log_error "Service account key not found"
+        echo "create-service-account.sh may have failed"
+        exit 1
+    fi
+
+    # Fix permissions for container access
+    log_info "Fixing service account key permissions for container access..."
+    chmod 644 ./service-account-key.json
+
+    # Update vars.py to use service account (if it exists)
+    if [ -f "./vars.py" ]; then
+        log_info "Verifying vars.py uses service account..."
+        if grep -q "auth_method.*service_account" vars.py; then
+            log_info "✅ vars.py already configured for service account"
+        else
+            log_warn "vars.py may need to be updated to use service_account"
+            echo "Ensure vars.py has: auth_method: 'service_account'"
+        fi
+    fi
+
+    log_info "Service account ready"
+    log_warn "Remember: You must manually share Drive folders with the service account!"
 fi
-
-# Verify service account key exists
-if [ ! -f "./service-account-key.json" ]; then
-    log_error "Service account key not found"
-    echo "create-service-account.sh may have failed"
-    exit 1
-fi
-
-# Fix permissions for container access
-# On macOS, Podman runs in a VM so --userns=keep-id doesn't work the same way
-# Make the key readable by the container user (644 instead of 600)
-log_info "Fixing service account key permissions for container access..."
-chmod 644 ./service-account-key.json
-
-log_info "Service account ready"
 
 ################################################################################
 # Step 6: Container Credentials
@@ -271,48 +370,137 @@ fi
 log_info "Client configuration step complete"
 
 ################################################################################
-# Step 8: Share Google Drive Folders (Automated)
+# Step 8: Google Drive Folder Access Verification
 ################################################################################
 
-log_step "Share Google Drive Folders with Service Account"
+log_step "Google Drive Folder Access Verification"
 
-# Check if share script exists
-if [ ! -f "./share-drive-folders.py" ]; then
-    log_error "share-drive-folders.py not found"
-    exit 1
+# Check authentication method from vars.py
+AUTH_METHOD="unknown"
+if [ -f "./vars.py" ]; then
+    if grep -q "auth_method.*oauth" vars.py; then
+        AUTH_METHOD="oauth"
+    elif grep -q "auth_method.*service_account" vars.py; then
+        AUTH_METHOD="service_account"
+    fi
 fi
 
-# Check if vars.py exists and has clients
-if [ ! -f "./vars.py" ]; then
-    log_warn "vars.py not found - skipping folder sharing"
-    log_warn "Configure vars.py and run: ./share-drive-folders.py"
-else
-    # Automatically share folders via Drive API
-    log_info "Automatically sharing Drive folders via API..."
+if [ "$AUTH_METHOD" = "service_account" ]; then
+    # Service account requires manual folder sharing
+    log_info "Service Account authentication detected"
+    echo
+    echo "⚠️  Important: Service accounts require manual folder sharing"
     echo
 
-    # Activate venv if not already active
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source ./activate-ape-env.sh
-    fi
-
-    # Run share script
-    python3 ./share-drive-folders.py
-
-    if [ $? -eq 0 ]; then
-        log_info "All Drive folders shared successfully"
-    else
-        log_error "Some folders could not be shared automatically"
-        echo "You may need to manually share them - see error messages above"
-        read -p "Continue anyway? (y/n) " -n 1 -r
+    # Try automated sharing (but it will likely fail)
+    if [ -f "./share-drive-folders.py" ] && [ -f "./vars.py" ]; then
+        log_info "Attempting automated folder sharing via Drive API..."
         echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
+
+        # Activate venv if not already active
+        if [ -z "$VIRTUAL_ENV" ]; then
+            source ./activate-ape-env.sh
         fi
+
+        python3 ./share-drive-folders.py
+
+        if [ $? -eq 0 ]; then
+            log_info "✅ All Drive folders shared successfully"
+        else
+            log_warn "Automated sharing failed (expected)"
+            echo
+            echo "Please manually share folders with the service account:"
+            echo
+
+            # Get service account email
+            if [ -f "./service-account-key.json" ]; then
+                SA_EMAIL=$(python3 -c "import json; print(json.load(open('service-account-key.json'))['client_email'])" 2>/dev/null || echo "")
+                if [ -n "$SA_EMAIL" ]; then
+                    echo "  Service Account: ${BLUE}$SA_EMAIL${NC}"
+                fi
+            fi
+
+            echo
+            echo "  1. Go to https://drive.google.com"
+            echo "  2. Right-click each client folder → Share"
+            echo "  3. Add the service account email above"
+            echo "  4. Set permission: Viewer"
+            echo "  5. Uncheck 'Notify people'"
+            echo
+            echo "See: DRIVE_PERMISSIONS_FIX.md for detailed instructions"
+            echo
+
+            read -p "Continue setup? (y/n) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo
+                echo "Setup paused. When ready to continue:"
+                echo "  1. Manually share folders with service account"
+                echo "  2. Verify: python3 verify-drive-access.py"
+                echo "  3. Continue: ./launch-project-ape.command"
+                exit 0
+            fi
+        fi
+    else
+        log_warn "Skipping folder sharing - missing vars.py or share script"
     fi
+
+elif [ "$AUTH_METHOD" = "oauth" ]; then
+    # OAuth has automatic access to user's files
+    log_info "OAuth authentication detected"
+    log_info "✅ No manual folder sharing needed!"
+    echo
+    echo "OAuth automatically grants access to all your Drive files."
+    echo "No additional setup required for folder access."
+    echo
+
+    # Verify OAuth token exists
+    if [ -f "$HOME/.project-ape/drive_token.json" ]; then
+        log_info "✅ OAuth token found"
+    else
+        log_warn "OAuth token not found"
+        echo "You may need to run: python3 setup-oauth-drive.py"
+    fi
+
+else
+    log_warn "Could not detect authentication method from vars.py"
+    echo "Skipping folder access verification"
 fi
 
-log_info "Drive folder sharing step complete"
+log_info "Drive folder access step complete"
+
+################################################################################
+# Step 9: Create Setup Completion Marker
+################################################################################
+
+log_step "Creating Setup Completion Marker"
+
+MARKER_FILE="$HOME/.ape_setup_complete"
+SCRIPT_DIR_ABS="$(cd "$(dirname "$0")" && pwd)"
+
+cat > "$MARKER_FILE" <<EOF
+{
+  "setup_completed": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "setup_version": "3.3.0",
+  "platform": "$(uname -s)",
+  "script_dir": "$SCRIPT_DIR_ABS",
+  "components_installed": {
+    "podman": true,
+    "gcloud": true,
+    "python": true,
+    "notebooklm_cli": true,
+    "service_account": true,
+    "container_credentials": true
+  }
+}
+EOF
+
+if [ -f "$MARKER_FILE" ]; then
+    log_info "✅ Setup marker created: $MARKER_FILE"
+    log_info "   To reset setup state: rm $MARKER_FILE"
+else
+    log_warn "Failed to create setup marker file"
+fi
 
 ################################################################################
 # Setup Complete
@@ -327,10 +515,10 @@ echo -e "${BLUE}What was installed:${NC}"
 echo "  ✅ Podman, Google Cloud SDK, Python 3.14, NotebookLM CLI"
 echo "  ✅ Google Cloud authenticated"
 echo "  ✅ NotebookLM authenticated"
-echo "  ✅ Service account created"
+echo "  ✅ Google Drive authentication configured"
 echo "  ✅ Container credentials configured"
 echo "  ✅ Client configuration ready"
-echo "  ✅ Drive folders shared"
+echo "  ✅ Drive folder access verified"
 echo
 echo -e "${GREEN}▶ Launch Project APE:${NC}"
 echo
