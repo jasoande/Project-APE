@@ -54,6 +54,7 @@ PASTEL_BLUE = "#93c5fd"  # Soft blue
 PASTEL_GREEN = "#86efac"  # Soft green
 PASTEL_RED = "#fca5a5"  # Soft red/pink
 PASTEL_ORANGE = "#f0883e"  # Soft orange
+PASTEL_PURPLE = "#c4b5fd"  # Soft purple
 
 
 # ===========================
@@ -289,7 +290,7 @@ class Scene2_VisualArchitecture(Scene):
         """Create AI sparkle effects"""
         sparkles = VGroup()
         for _ in range(8):
-            star = Star(n=4, outer_radius=0.15, color=PASTEL_ORANGE, fill_opacity=0.8)
+            star = Star(n=4, outer_radius=0.15, density=1, color=PASTEL_ORANGE, fill_opacity=0.8)
             star.move_to(position + np.random.randn(3) * 0.5)
             sparkles.add(star)
         return sparkles
@@ -559,16 +560,311 @@ class ProjectExplainerFull(Scene):
     """
     def construct(self):
         # Scene 1: Title & Introduction
-        scene1 = Scene1_TitleIntro()
-        scene1.construct()
+        self.render_scene1()
 
         # Scene 2: Visual Architecture
-        scene2 = Scene2_VisualArchitecture()
-        scene2.construct()
+        self.render_scene2()
 
         # Scene 3: Web Browser Demo
-        scene3 = Scene3_WebBrowserDemo()
-        scene3.construct()
+        self.render_scene3()
+
+    def render_scene1(self):
+        """Render Scene 1: Title & Introduction"""
+        # Set dark background
+        self.camera.background_color = BG_DARK
+
+        # APE LOGO (King Kong)
+        logo_path = "dashboard/static/kingkong.png"
+        king_kong_logo = ImageMobject(logo_path).scale(1.5).shift(UP * 2)
+
+        # Red border around logo
+        logo_border = Circle(radius=1.5, color=ACCENT_RED, stroke_width=8).shift(UP * 2)
+
+        # Title
+        title = Text("Project APE", font_size=72, weight=BOLD, color=TEXT_PRIMARY)
+        title.next_to(king_kong_logo, DOWN, buff=0.5)
+
+        # Subtitle
+        subtitle = Text(
+            "AI-Powered Account Planning Engine",
+            font_size=32,
+            color=TEXT_SECONDARY,
+            weight=NORMAL
+        ).next_to(title, DOWN, buff=0.3)
+
+        # Bullet Points
+        bullet_points = VGroup(
+            Text("• Automated company research", font_size=28, color=PASTEL_BLUE),
+            Text("• AI-generated insights", font_size=28, color=PASTEL_GREEN),
+            Text("• Google Drive integration", font_size=28, color=PASTEL_ORANGE),
+            Text("• Web-based interface", font_size=28, color=PASTEL_RED),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+        bullet_points.next_to(subtitle, DOWN, buff=0.8)
+
+        # Animations - Fade in logo with scale effect
+        self.play(
+            FadeIn(king_kong_logo, scale=0.8),
+            Create(logo_border),
+            run_time=1.5
+        )
+        self.wait(0.5)
+
+        # Fade in title and subtitle
+        self.play(Write(title), run_time=1)
+        self.play(FadeIn(subtitle), run_time=0.8)
+        self.wait(1)
+
+        # Fade in bullet points one by one
+        for bullet in bullet_points:
+            self.play(FadeIn(bullet, shift=RIGHT * 0.3), run_time=0.8)
+            self.wait(0.4)
+
+        # Hold final composition
+        self.wait(3)
+
+        # Fade out everything
+        self.play(
+            FadeOut(king_kong_logo),
+            FadeOut(logo_border),
+            FadeOut(VGroup(title, subtitle, bullet_points)),
+            run_time=1
+        )
+
+    def render_scene2(self):
+        """Render Scene 2: Visual Architecture"""
+        self.camera.background_color = BG_DARK
+
+        # Title
+        title = Text("How It Works", font_size=60, weight=BOLD, color=PASTEL_BLUE)
+        title.to_edge(UP)
+        self.play(Write(title), run_time=1)
+        self.wait(0.5)
+
+        # Input box
+        input_box = self.create_box("Input: Company Name", PASTEL_GREEN)
+        input_box.to_edge(LEFT, buff=1).shift(UP*0.5)
+        self.play(FadeIn(input_box, scale=0.9), run_time=1)
+
+        # Arrow 1
+        arrow1 = Arrow(input_box.get_right(), input_box.get_right() + RIGHT*2, color=WHITE)
+        self.play(GrowArrow(arrow1), run_time=0.8)
+
+        # AI Processing box
+        ai_box = self.create_box("AI Research\nAgent", PASTEL_BLUE)
+        ai_box.next_to(arrow1, RIGHT, buff=0.3)
+        self.play(FadeIn(ai_box, scale=0.9), run_time=1)
+
+        # Add AI sparkles animation
+        sparkles = self.create_sparkles(ai_box.get_center())
+        self.play(FadeIn(sparkles), run_time=0.5)
+        self.play(sparkles.animate.scale(1.5).set_opacity(0), run_time=1)
+        self.remove(sparkles)
+
+        # Arrow 2
+        arrow2 = Arrow(ai_box.get_bottom(), ai_box.get_bottom() + DOWN*2, color=WHITE)
+        self.play(GrowArrow(arrow2), run_time=0.8)
+
+        # Data sources (branching)
+        sources = VGroup(
+            self.create_small_box("Perplexity API", PASTEL_ORANGE),
+            self.create_small_box("Web Search", PASTEL_ORANGE),
+            self.create_small_box("NotebookLM", PASTEL_ORANGE),
+        ).arrange(RIGHT, buff=0.8)
+        sources.next_to(arrow2, DOWN, buff=0.3)
+
+        for source in sources:
+            self.play(FadeIn(source, shift=DOWN*0.3), run_time=0.5)
+
+        self.wait(1)
+
+        # Arrow 3 (from NotebookLM)
+        notebooklm_box = sources[2]
+        arrow3 = Arrow(notebooklm_box.get_bottom(), notebooklm_box.get_bottom() + DOWN*2, color=WHITE)
+        self.play(GrowArrow(arrow3), run_time=0.8)
+
+        # Analysis box
+        analysis_box = self.create_analysis_box()
+        analysis_box.next_to(arrow3, DOWN, buff=0.3)
+        self.play(FadeIn(analysis_box, scale=0.9), run_time=1)
+
+        self.wait(1)
+
+        # Arrow 4
+        arrow4 = Arrow(analysis_box.get_right(), analysis_box.get_right() + RIGHT*2, color=WHITE)
+        self.play(GrowArrow(arrow4), run_time=0.8)
+
+        # Output box
+        output_box = self.create_box("Account Plan\nDocument", PASTEL_GREEN)
+        output_box.next_to(arrow4, RIGHT, buff=0.3)
+        self.play(FadeIn(output_box, scale=0.9), run_time=1)
+
+        self.wait(2)
+
+        # Fade out all
+        self.play(
+            *[FadeOut(mob) for mob in self.mobjects],
+            run_time=1
+        )
+
+    def render_scene3(self):
+        """Render Scene 3: Web Browser Demo"""
+        self.camera.background_color = BG_DARK
+
+        # Title
+        title = Text("Try It Yourself", font_size=60, weight=BOLD, color=PASTEL_BLUE)
+        title.to_edge(UP)
+        self.play(Write(title), run_time=1)
+        self.wait(0.5)
+
+        # Browser window
+        browser = self.create_browser_window()
+        browser.scale(0.8).next_to(title, DOWN, buff=0.8)
+        self.play(FadeIn(browser, scale=0.95), run_time=1)
+
+        self.wait(1)
+
+        # Input field highlight
+        input_field = Rectangle(width=4, height=0.5, color=PASTEL_ORANGE, stroke_width=4)
+        input_field.move_to(browser.get_center() + UP*1.5)
+        self.play(Create(input_field), run_time=0.8)
+
+        # Typing animation
+        company_name = Text("Anthropic", font_size=28, color=WHITE)
+        company_name.move_to(input_field.get_center())
+        self.play(Write(company_name), run_time=1.5)
+
+        self.wait(1)
+
+        # Submit button highlight
+        submit_btn = Rectangle(width=2, height=0.6, color=PASTEL_GREEN, stroke_width=4)
+        submit_btn.move_to(browser.get_center() + UP*0.5)
+        self.play(FadeOut(input_field), FadeIn(submit_btn), run_time=0.5)
+
+        self.wait(0.5)
+
+        # Click animation
+        click_circle = Circle(radius=0.3, color=WHITE, stroke_width=4)
+        click_circle.move_to(submit_btn.get_center())
+        self.play(
+            FadeIn(click_circle, scale=0.5),
+            click_circle.animate.scale(1.5).set_opacity(0),
+            run_time=0.8
+        )
+        self.remove(click_circle)
+
+        # Processing animation
+        self.play(FadeOut(company_name), FadeOut(submit_btn), run_time=0.5)
+
+        processing = Text("Generating Account Plan...", font_size=32, color=PASTEL_ORANGE)
+        processing.move_to(browser.get_center())
+        self.play(FadeIn(processing), run_time=0.8)
+
+        # Loading dots animation
+        dots = Text("...", font_size=32, color=PASTEL_ORANGE)
+        dots.next_to(processing, RIGHT, buff=0.1)
+        self.play(FadeIn(dots), run_time=0.5)
+        self.play(dots.animate.shift(RIGHT*0.2), run_time=0.5)
+        self.play(dots.animate.shift(LEFT*0.2), run_time=0.5)
+
+        self.wait(1)
+
+        # Results appear
+        self.play(FadeOut(processing), FadeOut(dots), run_time=0.5)
+
+        results = VGroup(
+            Text("✓ Company Overview", font_size=24, color=PASTEL_GREEN),
+            Text("✓ Market Analysis", font_size=24, color=PASTEL_GREEN),
+            Text("✓ Strategic Recommendations", font_size=24, color=PASTEL_GREEN),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+        results.move_to(browser.get_center())
+
+        self.play(FadeIn(results), run_time=1.5)
+
+        self.wait(2)
+
+        # Final fade out
+        self.play(FadeOut(results), run_time=1)
+
+        # End screen
+        end_text = VGroup(
+            Text("Project APE", font_size=56, weight=BOLD, color=PASTEL_BLUE),
+            Text("Start planning smarter today", font_size=36, color=WHITE),
+        ).arrange(DOWN, buff=0.5)
+        end_text.move_to(ORIGIN)
+
+        self.play(FadeOut(browser), FadeOut(title), run_time=0.5)
+        self.play(FadeIn(end_text), run_time=1.5)
+
+        self.wait(2)
+
+    # Helper methods from Scene2
+    def create_box(self, text, color):
+        """Create a rounded box with text"""
+        box = RoundedRectangle(
+            width=3.5, height=1.2, corner_radius=0.2,
+            color=color, fill_opacity=0.2, stroke_width=3
+        )
+        label = Text(text, font_size=28, color=WHITE)
+        label.move_to(box.get_center())
+        return VGroup(box, label)
+
+    def create_small_box(self, text, color):
+        """Create a smaller box for data sources"""
+        box = RoundedRectangle(
+            width=2.2, height=0.8, corner_radius=0.15,
+            color=color, fill_opacity=0.2, stroke_width=2
+        )
+        label = Text(text, font_size=20, color=WHITE)
+        label.move_to(box.get_center())
+        return VGroup(box, label)
+
+    def create_sparkles(self, position):
+        """Create AI sparkle effects"""
+        sparkles = VGroup()
+        for _ in range(8):
+            star = Star(n=4, outer_radius=0.15, density=1, color=PASTEL_ORANGE, fill_opacity=0.8)
+            star.move_to(position + np.random.randn(3) * 0.5)
+            sparkles.add(star)
+        return sparkles
+
+    def create_analysis_box(self):
+        """Create the analysis/insights box"""
+        box = RoundedRectangle(
+            width=4, height=1.5, corner_radius=0.2,
+            color=PASTEL_PURPLE, fill_opacity=0.2, stroke_width=3
+        )
+        title = Text("AI Analysis", font_size=24, weight=BOLD, color=PASTEL_PURPLE)
+        title.move_to(box.get_center() + UP*0.4)
+
+        details = VGroup(
+            Text("• Market insights", font_size=18),
+            Text("• Competitor analysis", font_size=18),
+            Text("• Strategic recommendations", font_size=18),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.15)
+        details.next_to(title, DOWN, buff=0.2)
+
+        return VGroup(box, title, details)
+
+    def create_browser_window(self):
+        """Create a simplified browser window"""
+        # Main window
+        window = RoundedRectangle(
+            width=8, height=5, corner_radius=0.2,
+            color=WHITE, fill_opacity=0.1, stroke_width=3
+        )
+
+        # Address bar
+        address_bar = Rectangle(
+            width=7.5, height=0.5,
+            color=GREY, fill_opacity=0.3, stroke_width=2
+        )
+        address_bar.move_to(window.get_top() + DOWN*0.5)
+
+        # URL text
+        url_text = Text("localhost:5000/create", font_size=18, color=GREY)
+        url_text.move_to(address_bar.get_center())
+
+        return VGroup(window, address_bar, url_text)
 
 
 # ===========================
