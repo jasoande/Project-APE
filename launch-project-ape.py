@@ -16,6 +16,7 @@ import subprocess
 import platform
 import time
 import webbrowser
+import os
 from pathlib import Path
 from urllib.request import urlopen
 from urllib.error import URLError
@@ -59,6 +60,24 @@ def is_server_running():
         return False
 
 
+def check_venv_functional(venv_python):
+    """Check if virtual environment has required dependencies installed"""
+    if not venv_python.exists():
+        return False
+
+    try:
+        # Test if Flask is installed (core dashboard dependency)
+        result = subprocess.run(
+            [str(venv_python), "-c", "import flask"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=5
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
 def run_setup():
     """Run setup script to create virtual environment and install dependencies"""
     script_dir = get_script_directory()
@@ -69,17 +88,24 @@ def run_setup():
         return False
 
     print("\n" + "=" * 70)
-    print("🔧 FIRST-TIME SETUP")
+    print("🔧 ENVIRONMENT SETUP")
     print("=" * 70)
     print("Running automated environment setup...")
     print("This will take 2-5 minutes to install dependencies.")
     print()
 
     try:
-        # Run setup script and show output to user
+        # Run setup script in auto-yes mode (pipe "y" to stdin for prompts)
+        # Set AUTO_SETUP env var to tell script to skip prompts
+        env = os.environ.copy()
+        env['AUTO_SETUP'] = '1'
+
         result = subprocess.run(
             ["bash", str(setup_script)],
             cwd=str(script_dir),
+            env=env,
+            input="y\ny\ny\n",  # Auto-answer yes to prompts
+            text=True,
             check=True
         )
 
@@ -110,9 +136,15 @@ def start_server():
         print(f"❌ Error: Dashboard server not found at {server_script}")
         sys.exit(1)
 
-    # Check if venv exists, if not run setup automatically
-    if not venv_python.exists():
-        print("⚠️  Virtual environment not found")
+    # Check if venv exists AND is functional (has dependencies installed)
+    venv_exists = venv_python.exists()
+    venv_functional = check_venv_functional(venv_python)
+
+    if not venv_exists or not venv_functional:
+        if not venv_exists:
+            print("⚠️  Virtual environment not found")
+        else:
+            print("⚠️  Virtual environment incomplete or corrupted")
         print("   Running automatic setup...")
         print()
 
@@ -121,9 +153,11 @@ def start_server():
             print("   Try running manually: ./setup-environment.sh")
             sys.exit(1)
 
-        # Verify venv was created
-        if not venv_python.exists():
-            print(f"❌ Setup completed but venv still not found at {venv_python}")
+        # Verify venv is now functional
+        if not check_venv_functional(venv_python):
+            print(f"❌ Setup completed but venv is still not functional")
+            print(f"   Expected: {venv_python}")
+            print("   Try running manually: ./setup-environment.sh")
             sys.exit(1)
 
     # Start server in background (platform-specific)

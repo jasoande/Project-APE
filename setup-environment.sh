@@ -28,13 +28,20 @@ echo
 echo "NOTE: Project APE pipeline runs in a pre-built container."
 echo "      Only NotebookLM CLI runs on your host machine."
 echo
-read -p "Continue? (y/n) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Setup cancelled."
-    exit 0
+
+# Skip prompt if running in auto-setup mode (called from launcher)
+if [[ -z "$AUTO_SETUP" ]]; then
+    read -p "Continue? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Setup cancelled."
+        exit 0
+    fi
+    echo
+else
+    echo "Running in automatic mode..."
+    echo
 fi
-echo
 
 # Detect OS
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -90,12 +97,22 @@ if [[ "$OS" == "macOS" ]]; then
         echo
         echo "Homebrew must be installed before continuing."
         echo
-        echo "Would you like to install Homebrew now? (Recommended)"
-        echo
-        read -p "Install Homebrew? (y/n) " -n 1 -r
-        echo
 
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # In auto-setup mode, proceed with installation automatically
+        if [[ -n "$AUTO_SETUP" ]]; then
+            echo "Automatic mode: Installing Homebrew..."
+            echo
+            INSTALL_BREW=true
+        else
+            echo "Would you like to install Homebrew now? (Recommended)"
+            echo
+            read -p "Install Homebrew? (y/n) " -n 1 -r
+            echo
+            INSTALL_BREW=false
+            [[ $REPLY =~ ^[Yy]$ ]] && INSTALL_BREW=true
+        fi
+
+        if $INSTALL_BREW; then
             echo
             echo "========================================================================"
             echo "INSTALLING HOMEBREW"
@@ -108,18 +125,22 @@ if [[ "$OS" == "macOS" ]]; then
             echo
             echo "This may take 5-10 minutes and will require your password."
             echo
-            read -p "Continue with Homebrew installation? (y/n) " -n 1 -r
-            echo
 
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            # In auto-setup mode, skip the second confirmation
+            if [[ -z "$AUTO_SETUP" ]]; then
+                read -p "Continue with Homebrew installation? (y/n) " -n 1 -r
                 echo
-                echo -e "${RED}ERROR: Homebrew is required for Project APE on macOS${NC}"
-                echo
-                echo "To install Homebrew manually, run:"
-                echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-                echo
-                echo "Then run this setup script again."
-                exit 1
+
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    echo
+                    echo -e "${RED}ERROR: Homebrew is required for Project APE on macOS${NC}"
+                    echo
+                    echo "To install Homebrew manually, run:"
+                    echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+                    echo
+                    echo "Then run this setup script again."
+                    exit 1
+                fi
             fi
 
             echo
