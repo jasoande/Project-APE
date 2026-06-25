@@ -15,7 +15,6 @@ from pathlib import Path
 from flask import Flask, render_template, jsonify, Response, request
 import logging
 import importlib.util
-from core.auth_manager import AuthManager
 
 # Disable Flask's default logging
 log = logging.getLogger('werkzeug')
@@ -27,6 +26,9 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 PROJECT_ROOT = SCRIPT_DIR.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+# Import core modules AFTER fixing path
+from core.auth_manager import AuthManager
 
 # Load configuration to get proper paths (for container compatibility)
 try:
