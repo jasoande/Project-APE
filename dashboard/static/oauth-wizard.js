@@ -138,7 +138,7 @@ function initOAuthFileUpload() {
 }
 
 /**
- * Handle OAuth credentials file upload
+ * Handle OAuth credentials file upload with progress tracking
  */
 async function handleOAuthFileUpload(file) {
     if (!file || !file.name.endsWith('.json')) {
@@ -146,35 +146,123 @@ async function handleOAuthFileUpload(file) {
         return;
     }
 
+    const progressDiv = document.getElementById('oauth-upload-progress');
+    const progressFill = document.getElementById('oauth-progress-fill');
+    const progressPercent = document.getElementById('oauth-progress-percent');
+    const progressStatus = document.getElementById('oauth-progress-status');
+    const uploadZone = document.getElementById('oauth-upload-zone');
+
+    // Reset progress bar
+    progressFill.style.width = '0%';
+    progressFill.className = 'progress-fill';
+    progressPercent.textContent = '0%';
+    progressStatus.textContent = 'Uploading...';
+    progressDiv.classList.add('visible');
+
     const formData = new FormData();
     formData.append('file', file);
 
-    try {
-        showMessage('info', 'Uploading credentials...');
+    let uploadStartTime = Date.now();
+    let uploadedBytes = 0;
 
-        const response = await fetch('/api/upload-oauth-credentials', {
-            method: 'POST',
-            body: formData
+    try {
+        // Use XMLHttpRequest for progress tracking
+        const xhr = new XMLHttpRequest();
+
+        // Upload progress handler
+        xhr.upload.addEventListener('loadstart', () => {
+            uploadStartTime = Date.now();
         });
 
-        const data = await response.json();
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressFill.style.width = percent + '%';
+                progressPercent.textContent = percent + '%';
 
-        if (data.success) {
-            // Show success state
-            const uploadZone = document.getElementById('oauth-upload-zone');
-            uploadZone.querySelector('.upload-placeholder').style.display = 'none';
-            uploadZone.querySelector('.upload-success').style.display = 'block';
-            document.getElementById('uploaded-filename').textContent = file.name;
-            document.getElementById('upload-next-btn').disabled = false;
+                if (percent < 100) {
+                    const elapsed = (Date.now() - uploadStartTime) / 1000; // seconds
+                    const speed = elapsed > 0 ? e.loaded / elapsed : 0;
 
-            uploadedOAuthFile = file;
-            showMessage('success', '✅ ' + data.message);
-        } else {
-            showMessage('error', '❌ ' + (data.error || 'Failed to upload credentials'));
-        }
+                    const sizeText = formatFileSize(e.loaded) + ' / ' + formatFileSize(e.total);
+                    const speedText = speed > 0 ? formatFileSize(speed) + '/s' : '';
+
+                    progressStatus.textContent = speedText ? `${sizeText} (${speedText})` : sizeText;
+                } else {
+                    progressStatus.textContent = 'Processing...';
+                }
+            }
+        });
+
+        // Success handler
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200) {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+
+                    if (data.success) {
+                        // Update to success state
+                        progressFill.classList.add('success');
+                        progressFill.style.width = '100%';
+                        progressPercent.textContent = '100%';
+                        progressStatus.textContent = 'Upload complete!';
+
+                        // Show success state in upload zone
+                        uploadZone.querySelector('.upload-placeholder').style.display = 'none';
+                        uploadZone.querySelector('.upload-success').style.display = 'block';
+                        document.getElementById('uploaded-filename').textContent = file.name;
+                        document.getElementById('upload-next-btn').disabled = false;
+
+                        uploadedOAuthFile = file;
+                        showMessage('success', '✅ ' + data.message);
+
+                        // Hide progress bar after 2 seconds
+                        setTimeout(() => {
+                            progressDiv.classList.remove('visible');
+                        }, 2000);
+                    } else {
+                        throw new Error(data.error || 'Failed to upload credentials');
+                    }
+                } catch (parseError) {
+                    throw new Error('Invalid response from server');
+                }
+            } else {
+                throw new Error(`Upload failed with status ${xhr.status}`);
+            }
+        });
+
+        // Error handler
+        xhr.addEventListener('error', () => {
+            progressFill.classList.add('error');
+            progressStatus.textContent = 'Network error';
+            showMessage('error', '❌ Upload failed: Network error');
+        });
+
+        // Abort handler
+        xhr.addEventListener('abort', () => {
+            progressFill.classList.add('error');
+            progressStatus.textContent = 'Upload cancelled';
+            showMessage('error', '❌ Upload cancelled');
+        });
+
+        // Send the request
+        xhr.open('POST', '/api/upload-oauth-credentials');
+        xhr.send(formData);
+
     } catch (error) {
+        progressFill.classList.add('error');
+        progressStatus.textContent = 'Upload failed';
         showMessage('error', '❌ Upload failed: ' + error.message);
     }
+}
+
+/**
+ * Format file size for display
+ */
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 /**

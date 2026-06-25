@@ -696,6 +696,59 @@
             padding: 20px;
         }
 
+        /* Upload Progress Bar Styles */
+        .upload-progress {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .upload-progress.visible {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 24px;
+            background: #161b22;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #30363d;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ee0000 0%, #ff4444 100%);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-fill.success {
+            background: linear-gradient(90deg, #3fb950 0%, #56d364 100%);
+        }
+
+        .progress-fill.error {
+            background: linear-gradient(90deg, #f85149 0%, #ff6b6b 100%);
+        }
+
+        .progress-text {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #8b949e;
+        }
+
+        .progress-text span {
+            font-weight: 600;
+        }
+
+        .progress-percent {
+            color: #e6edf3;
+        }
+
+        .progress-status {
+            color: #8b949e;
+        }
+
         /* Theme Toggle */
         .theme-toggle {
             padding: 8px 16px;
@@ -747,6 +800,110 @@
             .form-row {
                 grid-template-columns: repeat(2, 1fr);
             }
+        }
+
+        /* CSV Drag-Drop Zone Styles */
+        .drop-zone {
+            border: 2px dashed #30363d;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            background: rgba(255,255,255,0.02);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .drop-zone:hover {
+            border-color: #ee0000;
+            background: rgba(238,0,0,0.05);
+        }
+
+        .drop-zone.drag-over {
+            border-color: #ee0000;
+            background: rgba(238,0,0,0.1);
+            border-style: solid;
+        }
+
+        .drop-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .drop-zone h3 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: #e6edf3;
+        }
+
+        .drop-zone p {
+            color: #8b949e;
+            margin-bottom: 20px;
+        }
+
+        .btn-browse {
+            background: #238636;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-browse:hover {
+            background: #2ea043;
+            transform: translateY(-1px);
+        }
+
+        .drop-zone-hint {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #6e7681;
+        }
+
+        .file-selected {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .file-selected .file-icon {
+            font-size: 2rem;
+        }
+
+        .file-selected .file-info {
+            flex: 1;
+        }
+
+        .file-selected .file-name {
+            font-weight: 600;
+            color: #e6edf3;
+            margin-bottom: 4px;
+        }
+
+        .file-selected .file-size {
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+
+        .btn-remove {
+            background: rgba(248,81,73,0.2);
+            color: #f85149;
+            border: 1px solid #f85149;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-remove:hover {
+            background: rgba(248,81,73,0.3);
         }
     </style>
 </head>
@@ -1144,6 +1301,16 @@
                             </div>
                         </div>
                     </div>
+                    <div id="oauth-upload-progress" class="upload-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="oauth-progress-fill"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span class="progress-percent" id="oauth-progress-percent">0%</span>
+                            <span> - </span>
+                            <span class="progress-status" id="oauth-progress-status">Uploading...</span>
+                        </div>
+                    </div>
                     <div class="wizard-actions">
                         <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
                         <button class="btn btn-primary" id="upload-next-btn" disabled onclick="nextWizardStep()">Next →</button>
@@ -1267,14 +1434,35 @@
                 <p class="form-help" style="margin-bottom: 20px;">
                     Upload a CSV file with columns: name, folder, industry, subsegments
                 </p>
-                <div class="file-upload">
-                    <input type="file" id="csvFile" accept=".csv" />
-                    <label for="csvFile" class="file-upload-label">
-                        📄 Choose CSV File
-                    </label>
+
+                <!-- CSV Drop Zone -->
+                <div id="csv-drop-zone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <div class="drop-icon">📂</div>
+                        <h3>Drag & Drop CSV File Here</h3>
+                        <p>or click to browse</p>
+                        <input type="file" id="csv-file-input" accept=".csv" style="display: none;" />
+                        <button type="button" class="btn-browse" onclick="document.getElementById('csv-file-input').click()">
+                            Browse Files
+                        </button>
+                        <div class="drop-zone-hint">
+                            Supported format: .csv (Client list)
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Selected file display -->
+                <div id="csv-file-selected" class="file-selected" style="display: none;">
+                    <div class="file-icon">📄</div>
+                    <div class="file-info">
+                        <div class="file-name" id="csv-file-name"></div>
+                        <div class="file-size" id="csv-file-size"></div>
+                    </div>
+                    <button type="button" class="btn-remove" onclick="removeCSVFile()">✕</button>
+                </div>
+
                 <div style="margin-top: 20px;">
-                    <button type="button" class="btn btn-primary" id="importCsvBtn" disabled>
+                    <button type="button" class="btn btn-primary" id="btn-import-csv" disabled>
                         📥 Import Clients
                     </button>
                 </div>

@@ -572,30 +572,120 @@ async function importCsv() {
         return;
     }
 
-    setLoading(true, 'Importing CSV...');
+    const progressDiv = document.getElementById('csv-upload-progress');
+    const progressFill = document.getElementById('csv-progress-fill');
+    const progressPercent = document.getElementById('csv-progress-percent');
+    const progressStatus = document.getElementById('csv-progress-status');
+
+    // Reset and show progress bar
+    progressFill.style.width = '0%';
+    progressFill.className = 'progress-fill';
+    progressPercent.textContent = '0%';
+    progressStatus.textContent = 'Uploading...';
+    progressDiv.classList.add('visible');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    let uploadStartTime = Date.now();
 
     try {
-        const formData = new FormData();
-        formData.append('file', file);
+        // Use XMLHttpRequest for progress tracking
+        const xhr = new XMLHttpRequest();
 
-        const response = await fetch('/api/import-csv', {
-            method: 'POST',
-            body: formData
+        // Upload progress handler
+        xhr.upload.addEventListener('loadstart', () => {
+            uploadStartTime = Date.now();
         });
 
-        const data = await response.json();
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressFill.style.width = percent + '%';
+                progressPercent.textContent = percent + '%';
 
-        if (data.success) {
-            importedClientsPreview = data.clients;
-            showImportPreview(data);
-        } else {
-            showMessage('error', 'Failed to import CSV: ' + data.error);
-        }
+                if (percent < 100) {
+                    const elapsed = (Date.now() - uploadStartTime) / 1000; // seconds
+                    const speed = elapsed > 0 ? e.loaded / elapsed : 0;
+
+                    const sizeText = formatFileSize(e.loaded) + ' / ' + formatFileSize(e.total);
+                    const speedText = speed > 0 ? formatFileSize(speed) + '/s' : '';
+
+                    progressStatus.textContent = speedText ? `${sizeText} (${speedText})` : sizeText;
+                } else {
+                    progressStatus.textContent = 'Processing CSV...';
+                }
+            }
+        });
+
+        // Success handler
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200) {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+
+                    if (data.success) {
+                        // Update to success state
+                        progressFill.classList.add('success');
+                        progressFill.style.width = '100%';
+                        progressPercent.textContent = '100%';
+                        progressStatus.textContent = `Parsed ${data.imported} client(s)`;
+
+                        importedClientsPreview = data.clients;
+                        showImportPreview(data);
+
+                        // Hide progress bar after 2 seconds
+                        setTimeout(() => {
+                            progressDiv.classList.remove('visible');
+                        }, 2000);
+                    } else {
+                        throw new Error(data.error || 'Failed to import CSV');
+                    }
+                } catch (parseError) {
+                    throw new Error('Invalid response from server');
+                }
+            } else {
+                throw new Error(`Upload failed with status ${xhr.status}`);
+            }
+        });
+
+        // Error handler
+        xhr.addEventListener('error', () => {
+            progressFill.classList.add('error');
+            progressStatus.textContent = 'Network error';
+            showMessage('error', '❌ CSV upload failed: Network error');
+            progressDiv.classList.remove('visible');
+        });
+
+        // Abort handler
+        xhr.addEventListener('abort', () => {
+            progressFill.classList.add('error');
+            progressStatus.textContent = 'Upload cancelled';
+            showMessage('error', '❌ CSV upload cancelled');
+            progressDiv.classList.remove('visible');
+        });
+
+        // Send the request
+        xhr.open('POST', '/api/import-csv');
+        xhr.send(formData);
+
     } catch (error) {
+        progressFill.classList.add('error');
+        progressStatus.textContent = 'Upload failed';
         showMessage('error', `Failed to import CSV: ${error.message}`);
-    } finally {
-        setLoading(false);
+        setTimeout(() => {
+            progressDiv.classList.remove('visible');
+        }, 3000);
     }
+}
+
+/**
+ * Format file size for display
+ */
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 function showImportPreview(data) {
