@@ -1518,12 +1518,12 @@ def test_drive_access():
 def system_status():
     """Return system resource status."""
     try:
-        import psutil
         import shutil
 
         disk = shutil.disk_usage('/')
 
         return jsonify({
+            'success': True,
             'venv_active': sys.prefix != sys.base_prefix,
             'venv_path': sys.prefix if sys.prefix != sys.base_prefix else None,
             'disk_free_gb': round(disk.free / (1024**3), 2),
