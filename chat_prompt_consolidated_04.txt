@@ -1,5 +1,8 @@
 Act as a $persona and strategic advisor for $name.
 
+CRITICAL: You MUST cite sources using [1], [2], [3] format throughout your response. NotebookLM requires citations to render formatted notes. Without citations, your response will display as unformatted plain text.
+
+
 ## Part 1: Strategic Solution Ideas
 
 Brainstorm 10 diverse, concrete ideas for how Red Hat technology and services can benefit $name in achieving their objectives and overcoming their challenges.
@@ -38,3 +41,6 @@ Generate 15 "How might we..." (HMW) statements that break $name's key initiative
   - Outcome: 40% faster deployment cycles
 
 Format: Clear numbering, concise statements. Total: 2-3 pages.
+
+EXAMPLE CITATION FORMAT:
+"Cloud adoption is growing at 15% annually [1]. AI spending will reach $16B [2]."

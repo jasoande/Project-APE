@@ -1,0 +1,55 @@
+Act as a $persona and strategic advisor for $name.
+
+IMPORTANT FORMATTING INSTRUCTIONS:
+- Format your response as clean, readable text suitable for NotebookLM notes
+- Use clear section headers (not markdown ## headers)
+- Use simple dashes (-) for bullet points, NOT asterisks (*)
+- For emphasis, use ALL CAPS or underscores, NOT **bold** markdown
+- Use blank lines generously to separate sections
+- Number items clearly: 1. 2. 3. etc.
+- Keep formatting minimal and professional
+
+═══════════════════════════════════════════════════════════════════════
+
+PART 1: STRATEGIC SOLUTION IDEAS
+
+Brainstorm 10 diverse, concrete ideas for how Red Hat technology and services can benefit $name in achieving their objectives and overcoming their challenges.
+
+For each idea, provide:
+
+1. IDEA TITLE - Short, descriptive name
+2. BUSINESS OBJECTIVE ALIGNMENT - Which $name objective(s) does this support?
+3. CUSTOMER CHALLENGE - What specific problem does this solve?
+4. RED HAT SOLUTION - Which RH technology/service is deployed?
+   (Examples: RHEL, OpenShift, Ansible, Red Hat AI, Advanced Cluster Security)
+5. SUCCESS METRICS - How does this influence $name's KPIs?
+6. PARTNER RECOMMENDATION - Which RH IT partner could support implementation?
+7. IMPLEMENTATION COMPLEXITY - Low / Medium / High
+
+Make ideas diverse across:
+- Different business units
+- Various technology domains (infrastructure, automation, AI, security, containers)
+- Range of complexity and timeline
+- Mix of tactical and strategic initiatives
+
+═══════════════════════════════════════════════════════════════════════
+
+PART 2: "HOW MIGHT WE..." INNOVATION WORKSHOP
+
+Generate 15 "How might we..." (HMW) statements that break $name's key initiatives into actionable opportunities.
+
+For each HMW statement:
+- STATEMENT: "How might we help $name [specific opportunity]?"
+- CONCRETE ACTION: One specific project or initiative
+- PRIMARY RED HAT TECHNOLOGY: Which product applies
+- EXPECTED OUTCOME: Business impact
+
+EXAMPLES:
+
+How might we help $name accelerate application modernization?
+  - Action: Migrate legacy apps to containers on OpenShift
+  - Technology: OpenShift Container Platform
+  - Outcome: 40% faster deployment cycles
+
+Format: Clear numbering, concise statements. Total: 2-3 pages.
+Use simple, clean text formatting without markdown syntax.

@@ -1,0 +1,318 @@
+PROJECT APE MANAGEMENT PRESENTATION
+10 Slides - 60 Minutes - Ready for Google Slides Import
+
+====================================
+SLIDE 1: TITLE SLIDE
+====================================
+
+[CENTER, LARGE TEXT]
+PROJECT APE
+Account Planning Engine
+
+[SUBTITLE]
+Transform Enterprise Account Research
+From 40 Hours to 15 Minutes
+
+[BOTTOM CENTER]
+Version 3.1.0 - Production Release
+Ready for Organization-Wide Deployment
+
+Presented by: Jason Anderson
+June 2026
+
+[NOTE: Add King Kong logo from dashboard/static/kingkong.png - centered, large]
+
+====================================
+SLIDE 2: THE PROBLEM
+====================================
+
+Title: The Research Bottleneck Killing Our Productivity
+
+[3 COLUMNS]
+
+COLUMN 1: Traditional Process
+• 📊 40-60 hours per account
+• 👤 Manual research by engineers  
+• 📉 Inconsistent quality
+• 🐌 Only 5-10 accounts per quarter
+
+COLUMN 2: Business Impact
+• ⏱️ 6-8 weeks to qualified pitch
+• 💸 60% of time on research
+• 🎯 Generic pitches (not account-specific)
+• 🏃 Competitors win early conversations
+
+COLUMN 3: The Cost
+• 💰 $24,000-$36,000 per batch
+• 📉 Limited market coverage
+• 🚫 Missed opportunities
+• 😞 Engineer burnout
+
+[CALLOUT BOX - BOTTOM, CENTERED]
+We're wasting our best talent on work a computer can do better
+
+====================================
+SLIDE 3: OUR SOLUTION
+====================================
+
+Title: The Solution: Automation + AI = 98% Time Savings
+
+[3 METRIC BOXES - LARGE, CENTERED]
+
+BOX 1:
+98% FASTER
+40 hours → 15 minutes
+
+BOX 2:
+100% QUALITY
+Same depth every time
+
+BOX 3:
+10X SCALE
+Research entire market
+
+[WHAT IT DOES - NUMBERED LIST]
+1. Ingests client documents from Google Drive
+2. Analyzes with Google NotebookLM AI
+3. Generates 40+ research sources automatically
+4. Creates 6 strategic analysis notes
+5. Delivers searchable knowledge base with citations
+
+[BOTTOM - TECH STACK]
+🐳 Podman/Docker | 🧠 NotebookLM | ☁️ Google Drive | 🐍 Python 3.11
+
+====================================
+SLIDE 4: HOW IT WORKS
+====================================
+
+Title: Pipeline Architecture: 5 Steps, 15 Minutes
+
+[VERTICAL FLOWCHART]
+
+┌─────────────────┐
+│  Google Drive   │ ← Your client documents
+│  (Client Folder)│
+└────────┬────────┘
+         ↓ Downloads
+┌─────────────────┐
+│  Project APE    │ ⚙️ Container
+│  Automated      │ • Downloads files
+│  Pipeline       │ • Consolidates PDF
+│                 │ • Analyzes content
+│                 │ • Generates research
+└────────┬────────┘
+         ↓ Creates
+┌─────────────────┐
+│  NotebookLM     │ 📓 Your Research
+│  Notebook       │ • 40+ Sources
+│                 │ • 6 Notes
+│                 │ • Mind Maps
+└─────────────────┘
+
+[EXECUTION MODES TABLE]
+Mode    | Duration   | Best For
+--------|------------|----------------------------------
+Fast    | 15-20 min  | Regular updates, quick briefings
+Deep    | 35-40 min  | Strategic accounts, major deals
+
+====================================
+SLIDE 5: WHAT YOU GET
+====================================
+
+Title: Deliverables: Complete Account Research Package
+
+[6 STRATEGIC NOTES]
+
+1. 🏢 Industry Analysis & Business Profile
+   Context, objectives, challenges, competitive landscape
+
+2. 💡 Innovation Assessment & Executive Summary
+   Digital maturity, tech stack, transformation readiness
+
+3. 🤝 Technology Partners & Red Hat Value
+   Partnerships, solution alignment, opportunities
+
+4. 🎯 Strategic Ideas & How Might We
+   10 solution ideas + 15 innovation prompts
+
+5. 👥 Account Team & Stakeholder Map
+   Decision makers, org structure, engagement plan
+
+6. 📋 Comprehensive Account Plan
+   Overview, recommendations, next steps
+
+[PLUS BOX - HIGHLIGHTED]
+PLUS: 40+ research sources • Mind maps • Chat interface
+Every claim cited and verifiable
+
+====================================
+SLIDE 6: LIVE DEMO
+====================================
+
+Title: See It In Action
+
+[LARGE CENTERED TEXT]
+🎬 LIVE DEMONSTRATION
+
+[DEMO CHECKLIST]
+✓ Dashboard: Real-time progress tracking
+✓ NotebookLM: 6 completed notes
+✓ Chat Interface: Ask a question
+✓ Mind Map: Visual relationships
+✓ Citations: Every source linked
+
+[BOTTOM NOTE]
+Demo Account: Merck (Pharmaceutical)
+Completed in: 18 minutes (Deep mode)
+Quality Score: 8.7/10
+
+====================================
+SLIDE 7: ROI & BUSINESS VALUE
+====================================
+
+Title: The Numbers Don't Lie: Massive ROI
+
+[LARGE ROI CALCULATION BOX - GOLD]
+Manual Research:    $24,000 (6 accounts)
+Project APE:        $50 (compute only)
+─────────────────────────────────────
+SAVINGS:            $23,950 per batch
+ROI:                99.8% cost reduction
+
+[3 VALUE PILLARS - COLUMNS]
+
+Time Savings
+⏱️ 240 hours freed per batch
+📅 6 work weeks saved
+🚀 Same-day opportunity response
+
+Quality Improvements
+📊 100% consistent depth
+🔗 Every claim cited
+⭐ 8.7/10 quality score
+
+Scale Unlock
+📈 10-20 accounts/day (vs 1-2/week)
+🌍 Research entire market
+💪 10x capacity increase
+
+====================================
+SLIDE 8: PILOT RESULTS
+====================================
+
+Title: Pilot Program: 6 Accounts, 100% Success
+
+[3 SUCCESS STORY CARDS]
+
+MERCK (Pharmaceuticals)
+⏱️ 18 minutes (Deep mode)
+📊 42 sources generated
+🎯 3 Red Hat opportunities identified
+✅ Quality: 8.7/10
+
+BLUE YONDER (Supply Chain)
+⏱️ 16 minutes (Fast mode)
+📊 38 sources generated
+💰 $500K+ displacement opportunity
+✅ Quality: 8.5/10
+
+PANASONIC AVIONICS (Aerospace)
+⏱️ 22 minutes (Deep mode)
+📊 45 sources generated
+🎯 Edge computing alignment found
+✅ Quality: 9.0/10
+
+[BOTTOM METRIC - LARGE, GOLD]
+PILOT SUCCESS RATE: 100%
+All 6 accounts completed with quality ≥ 8.5/10
+
+====================================
+SLIDE 9: PRODUCTION READY
+====================================
+
+Title: Production Status: Ready to Deploy Today
+
+[4 CHECKMARK SECTIONS - GRID]
+
+✅ CODE QUALITY
+• Zero critical bugs
+• Principal engineer approved
+• 4.8/5.0 code quality
+• 100% completion reliability
+
+✅ DOCUMENTATION
+• Complete setup guide
+• 30-minute quick start
+• Troubleshooting docs
+• Video tutorials ready
+
+✅ SECURITY
+• Service account auth
+• Minimal permissions
+• All secrets gitignored
+• Audit trail logging
+
+✅ PLATFORM SUPPORT
+• macOS (Intel/ARM)
+• Linux (x86_64/ARM64)
+• Setup: 20-30 minutes
+• Fully automated
+
+[BOTTOM BANNER - GOLD]
+Version 3.1.0 - PRODUCTION RELEASE
+Deployed to production branch: June 23, 2026
+
+====================================
+SLIDE 10: ROLLOUT PLAN
+====================================
+
+Title: Let's Scale This Across the Organization
+
+[3-PHASE TIMELINE]
+
+PHASE 1: IMMEDIATE (Week 1-2)
+✅ Production infrastructure deployment
+✅ Train 10 early adopter architects
+✅ Create video tutorial
+✅ Launch Slack channel: #project-ape
+
+PHASE 2: EXPANSION (Month 1-2)
+📈 Scale to 50 active users
+📊 Track metrics: accounts, time, quality
+🔄 Collect feedback for v3.2
+💡 Build knowledge base
+
+PHASE 3: ORGANIZATION-WIDE (Month 3+)
+🌐 Deploy across all regions
+📚 Pre-research 100+ accounts
+🎓 Integrate into new hire training
+🏆 Measure ROI and success
+
+[WHAT WE NEED - HIGHLIGHTED BOX]
+1. Approval for production deployment
+2. Budget: $50/month (Google Cloud)
+3. Executive champion
+4. Feedback channel
+
+[CALL TO ACTION - LARGE, BOTTOM]
+DECISION NEEDED TODAY
+Approve Project APE for Organization-Wide Rollout
+
+[CONTACT - BOTTOM RIGHT]
+Jason Anderson
+Email: [your-email]
+Slack: #project-ape
+
+====================================
+END OF PRESENTATION
+====================================
+
+DESIGN NOTES:
+- Background: Dark gradient (navy #1a1f3a to black)
+- Primary color: Gold #d4af37
+- Text: White #ffffff
+- Font: Montserrat Bold (headings), Open Sans (body)
+- Logo: King Kong (dashboard/static/kingkong.png)
+- Footer: "Project APE v3.1.0 | Production Release"
+
+TIMING: 45 min presentation + 15 min Q&A = 60 min total

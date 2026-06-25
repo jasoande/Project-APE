@@ -104,25 +104,45 @@ def _convert_image_worker(args):
 
 
 def _convert_office_worker(args):
-    """Worker function for Office-to-PDF conversion."""
+    """
+    Worker function for Office-to-PDF conversion.
+
+    IMPORTANT: Never modifies original files on Drive.
+    Creates a temporary copy, converts it, then cleans up.
+    """
     file_path, temp_dir, client_id = args
 
     try:
-        temp_pdf = Path(temp_dir) / f"{file_path.stem}.pdf"
+        import shutil
+
+        # Step 1: Copy original file to temp dir (never modify Drive cache)
+        temp_copy = Path(temp_dir) / file_path.name
+        shutil.copy2(file_path, temp_copy)
+
+        # Step 2: Convert the COPY to PDF
+        temp_pdf = Path(temp_dir) / f"{file_path.stem}-pdf.pdf"
 
         cmd = [
             'soffice',
             '--headless',
             '--convert-to', 'pdf',
             '--outdir', temp_dir,
-            str(file_path)
+            str(temp_copy)
         ]
 
         result = subprocess.run(cmd, capture_output=True, timeout=60)
 
-        if result.returncode == 0 and temp_pdf.exists():
+        # LibreOffice creates {filename}.pdf, rename to our format
+        libreoffice_output = Path(temp_dir) / f"{file_path.stem}.pdf"
+        if result.returncode == 0 and libreoffice_output.exists():
+            libreoffice_output.rename(temp_pdf)
+            # Step 3: Clean up the temporary copy
+            temp_copy.unlink()
             return temp_pdf
 
+        # Clean up on failure
+        if temp_copy.exists():
+            temp_copy.unlink()
         return None
 
     except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:

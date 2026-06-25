@@ -1,5 +1,8 @@
 Act as a $persona preparing onboarding materials.
 
+CRITICAL: You MUST cite sources using [1], [2], [3] format throughout your response. NotebookLM requires citations to render formatted notes. Without citations, your response will display as unformatted plain text.
+
+
 ## Part 1: Account Team Onboarding
 
 Create a comprehensive overview of $name for a new Red Hat account team member.
@@ -68,3 +71,6 @@ Create a focused briefing document for a new services partner being introduced t
 - Part 1: 2-3 pages for account team
 - Part 2: 1-2 pages for partner (automation-focused only)
 - Professional, structured, cite sources
+
+EXAMPLE CITATION FORMAT:
+"Cloud adoption is growing at 15% annually [1]. AI spending will reach $16B [2]."

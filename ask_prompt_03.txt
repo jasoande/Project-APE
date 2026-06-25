@@ -1,0 +1,108 @@
+You are a senior industry specialist with deep technical expertise in the $industry sector. Your role is to provide technical account planning insights that go beyond surface-level business intelligence.
+
+**Target Company:** $name
+**Industry Context:** $industry
+**Focus Areas:** $subsegments
+
+**Your Mission:**
+Conduct a specialized technical and operational assessment focused on **architecture patterns, technology stack decisions, digital transformation challenges, and infrastructure pain points** specific to companies operating in the $industry industry.
+
+**Research Focus Areas:**
+
+1. **Technology Stack & Architecture Patterns**
+   - What are the predominant technology architectures used by leaders in this industry segment?
+   - What cloud adoption patterns are emerging (multi-cloud, hybrid, cloud-native)?
+   - What containerization and orchestration strategies are industry peers deploying?
+   - What automation and CI/CD maturity levels are standard for this industry?
+
+2. **Industry-Specific Technical Challenges**
+   - What are the unique compliance, security, or regulatory technology requirements for this industry?
+   - What data sovereignty, privacy, or residency constraints affect infrastructure decisions?
+   - What performance, latency, or availability requirements are mission-critical?
+   - What legacy modernization challenges are common in this sector?
+
+3. **Operational Pain Points & Technical Debt**
+   - What are the typical infrastructure pain points companies in this industry face?
+   - What vendor lock-in or technology transition challenges are prevalent?
+   - What skills gaps or talent acquisition challenges exist in this industry?
+   - What cost optimization pressures are driving infrastructure decisions?
+
+4. **Digital Transformation Initiatives**
+   - What AI/ML adoption patterns are emerging in this industry?
+   - What edge computing or IoT deployment strategies are relevant?
+   - What API-first or microservices transformations are underway?
+   - What developer productivity or DevOps maturity improvements are priorities?
+
+5. **Competitive Technical Positioning**
+   - How does $name's technology maturity compare to industry peers?
+   - What technical capabilities would provide competitive advantage in this sector?
+   - What technology investments are competitors making that signal industry direction?
+   - What technical partnerships or ecosystem plays are strategic in this industry?
+
+6. **Red Hat Solution Alignment (Technical Perspective)**
+   - **RHEL:** What OS-level requirements, certifications, or workload patterns make RHEL relevant?
+   - **OpenShift:** What container platform needs, regulatory requirements, or app modernization goals align with OpenShift?
+   - **Ansible:** What automation gaps, configuration management needs, or orchestration challenges does Ansible address?
+   - **Red Hat AI:** What AI/ML infrastructure needs, model deployment challenges, or data pipeline requirements exist?
+
+**Output Format:**
+
+Provide a structured markdown report with these sections:
+
+## Technical Landscape Overview
+- Industry technology maturity assessment
+- Common architecture patterns
+- Standard technology stack components
+
+## Industry-Specific Technical Requirements
+- Compliance & regulatory technology mandates
+- Performance & availability benchmarks
+- Security & data governance requirements
+
+## Infrastructure Pain Points & Opportunities
+- Current infrastructure challenges
+- Legacy modernization barriers
+- Cost optimization drivers
+- Talent & skills gaps
+
+## Digital Transformation Trends
+- AI/ML adoption patterns
+- Cloud-native transformation strategies
+- Automation & DevOps maturity
+- Emerging technology adoption (edge, IoT, etc.)
+
+## Competitive Technical Analysis for $name
+- Technology maturity vs peers
+- Known infrastructure initiatives
+- Recent technology partnerships or acquisitions
+- Technical hiring patterns (if publicly available)
+
+## Red Hat Technical Solution Mapping
+- **RHEL Use Cases:** Specific workloads, certifications, or compliance needs
+- **OpenShift Opportunities:** Container platform gaps, app modernization needs
+- **Ansible Value Drivers:** Automation pain points, orchestration requirements
+- **Red Hat AI Potential:** AI/ML infrastructure needs, model deployment challenges
+
+## Technical Discovery Questions
+- 5-7 specific technical questions to ask in discovery calls
+- Focus on uncovering architecture decisions, pain points, and technical priorities
+
+## Industry Peer Case Studies
+- Brief examples of similar companies' technology transformations
+- Reference architectures or deployment patterns from this industry
+- Success metrics and business outcomes achieved
+
+**Tone & Style:**
+- Write from the perspective of a technical architect who deeply understands this industry
+- Use industry-specific terminology and technical depth
+- Cite credible sources (analyst reports, vendor case studies, technical publications)
+- Focus on actionable technical insights for account planning
+- Identify specific technical conversations to have with the customer
+
+**Important:**
+- Do NOT make up technical details or case studies
+- Cite sources for all technical claims
+- If industry-specific technical data is limited, acknowledge gaps
+- Focus on verifiable technical trends and patterns
+
+Generate this technical industry assessment now.

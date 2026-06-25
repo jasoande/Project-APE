@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Project APE - Error</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Red Hat Text", "Roboto", Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0d14 0%, #1a1f2e 50%, #0f1419 100%);
+            color: #e6edf3;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,0,0,0.3);
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.6);
+        }
+
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .monkey-logo {
+            border: 3px solid #ee0000;
+            box-shadow: 0 8px 24px rgba(238,0,0,0.6), 0 0 20px rgba(238,0,0,0.3);
+            border-radius: 8px;
+            padding: 6px;
+        }
+
+        .icon {
+            font-size: 80px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            color: #ff6b6b;
+        }
+
+        .error-code {
+            color: #8b949e;
+            font-size: 1rem;
+            margin-bottom: 30px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .message {
+            color: #e6edf3;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: #ee0000;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #cc0000;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(238,0,0,0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #e6edf3;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='kingkong.png') }}" class="monkey-logo" style="width: 80px; height: 80px; object-fit: cover;">
+            <div class="icon">⚠️</div>
+        </div>
+        <h1>{{ error }}</h1>
+        <p class="error-code">ERROR</p>
+
+        <div class="message">
+            {{ message }}
+        </div>
+
+        <div class="actions">
+            <a href="/configure" class="btn btn-primary">Go to Configuration</a>
+            <a href="/" class="btn btn-secondary">Go to Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>

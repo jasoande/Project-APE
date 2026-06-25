@@ -4,22 +4,53 @@
     <meta charset="utf-8">
     <title>Project APE - Multi-Process Mode</title>
     <style>
+        /* CSS Variables for theming */
+        :root {
+            --bg-primary: #0f1419;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #0d1117;
+            --bg-card: #161b22;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #c0c8d0;
+            --accent-red: #ee0000;
+            --border-primary: #30363d;
+            --border-secondary: rgba(255,255,255,0.1);
+            --shadow-color: rgba(0,0,0,0.6);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #ffffff;
+            --bg-card: #ffffff;
+            --text-primary: #24292f;
+            --text-secondary: #57606a;
+            --text-muted: #656d76;
+            --accent-red: #cf222e;
+            --border-primary: #d0d7de;
+            --border-secondary: rgba(0,0,0,0.1);
+            --shadow-color: rgba(0,0,0,0.1);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Red Hat Text", "Roboto", Arial, sans-serif;
-            background: #0f1419;
-            color: #e6edf3;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, #0a0d14 0%, #1a1f2e 50%, #0f1419 100%);
-            border-bottom: 3px solid #ee0000;
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+            border-bottom: 3px solid var(--accent-red);
             padding: 50px 60px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            box-shadow: 0 8px 24px var(--shadow-color);
             position: relative;
             min-height: 180px;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
         .header::after {
             content: '';
@@ -101,6 +132,40 @@
             display: flex;
             justify-content: flex-end;
             align-items: center;
+            gap: 15px;
+        }
+        .nav-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: #e6edf3;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: var(--accent-red);
+            box-shadow: 0 4px 12px rgba(238,0,0,0.2);
+        }
+        .theme-toggle {
+            padding: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-secondary);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.2rem;
+        }
+        .theme-toggle:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-red);
         }
 
         /* Stats Bar */
@@ -182,15 +247,15 @@
             gap: 20px;
         }
         .card {
-            background: #161b22;
-            border: 1px solid #30363d;
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
             border-radius: 10px;
             padding: 20px;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px var(--shadow-color);
         }
         .card:hover {
-            border-color: #ee0000;
+            border-color: var(--accent-red);
             box-shadow: 0 4px 16px rgba(238,0,0,0.2);
             transform: translateY(-2px);
         }
@@ -327,12 +392,196 @@
             background: #30363d;
         }
 
+        /* Log Section */
+        .logs-section {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 30px;
+        }
+        .logs-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px 10px 0 0;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .logs-section-header:hover {
+            background: #1c2128;
+        }
+        .logs-section-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .logs-toggle {
+            font-size: 1.2rem;
+            transition: transform 0.3s;
+        }
+        .logs-section.expanded .logs-toggle {
+            transform: rotate(180deg);
+        }
+        .logs-content-wrapper {
+            display: none;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            padding: 20px;
+        }
+        .logs-section.expanded .logs-content-wrapper {
+            display: block;
+        }
+        .logs-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .log-viewer {
+            background: #0a0d14;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            height: 500px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            padding: 0;
+        }
+        .log-content {
+            padding: 16px;
+            color: #e6edf3;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .log-viewer::-webkit-scrollbar {
+            width: 12px;
+        }
+        .log-viewer::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.3);
+            border-radius: 0 8px 8px 0;
+        }
+        .log-viewer::-webkit-scrollbar-thumb {
+            background: rgba(238,0,0,0.5);
+            border-radius: 6px;
+        }
+        .log-viewer::-webkit-scrollbar-thumb:hover {
+            background: rgba(238,0,0,0.7);
+        }
+        .log-viewer.auto-scroll {
+            border-color: rgba(0,208,132,0.5);
+        }
+        .log-viewer.paused {
+            border-color: rgba(255,185,0,0.5);
+        }
+        .log-line-error {
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+        .log-line-warning {
+            color: #ffb900;
+        }
+        .log-line-success {
+            color: #00d084;
+        }
+        .log-line-info {
+            color: #93c5fd;
+        }
+        .log-select {
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+            padding: 8px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #e6edf3;
+            font-size: 0.9rem;
+        }
+        .log-select:focus {
+            outline: none;
+            border-color: #ee0000;
+        }
+        .log-btn {
+            padding: 8px 16px;
+            background: #21262d;
+            color: #e6edf3;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .log-btn:hover {
+            background: #30363d;
+        }
+        .log-info {
+            color: #8b949e;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+
         /* Footer */
         .footer {
             text-align: center;
             padding: 30px;
-            color: #8b949e;
+            color: var(--text-secondary);
             font-size: 0.85rem;
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+                min-height: auto;
+            }
+            .header-top {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .logo-section {
+                flex-direction: column;
+                text-align: center;
+            }
+            .header-right {
+                flex-direction: column;
+                width: 100%;
+            }
+            .timer-box {
+                width: 100%;
+            }
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 0 15px;
+            }
+            .logs-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .log-select {
+                max-width: 100%;
+            }
+        }
+
+        /* Tablet Breakpoint */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .header {
+                padding: 30px;
+            }
         }
     </style>
 </head>
@@ -349,6 +598,10 @@
                 </div>
             </div>
             <div class="header-right">
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                    <span id="themeIcon">🌙</span>
+                </button>
+                <a href="/configure" class="nav-btn">⚙️ Configure Clients</a>
                 <div class="timer-box">
                     <div class="timer-label">EXECUTION TIME</div>
                     <div class="timer-value" id="execution-time">00m 00s</div>
@@ -397,6 +650,40 @@
         </div>
     </div>
 
+    <!-- Logs Section -->
+    <div class="logs-section" id="logsSection">
+        <div class="logs-section-header" onclick="toggleLogs()">
+            <h2>📋 Real-Time Logs</h2>
+            <span class="logs-toggle">▼</span>
+        </div>
+        <div class="logs-content-wrapper">
+            <div class="logs-controls">
+                <select class="log-select" id="logSelector">
+                    <option value="overall">📊 Overall Logs (All Components)</option>
+                </select>
+                <button type="button" class="log-btn" id="pauseLogsBtn">
+                    ⏸️ Pause
+                </button>
+                <button type="button" class="log-btn" id="clearLogsBtn">
+                    🗑️ Clear
+                </button>
+                <button type="button" class="log-btn" id="downloadLogsBtn">
+                    📥 Download
+                </button>
+            </div>
+
+            <div class="log-viewer auto-scroll" id="logViewer">
+                <div class="log-content" id="logContent">
+                    <!-- Logs will stream here -->
+                </div>
+            </div>
+
+            <div class="log-info">
+                📡 Logs update in real-time. Green border = auto-scrolling, Orange border = paused. Select a log source from the dropdown above.
+            </div>
+        </div>
+    </div>
+
     <div class="footer">
         Auto-refreshing every 2 seconds • <span id="lastUpdate">Never updated</span>
     </div>
@@ -405,7 +692,6 @@
         // Cache for graceful server shutdown
         let lastSuccessfulData = null;
         let allClientsComplete = false;
-        let firstFetchDone = false;
 
         function updateDashboard() {
             fetch('/status')
@@ -424,87 +710,24 @@
                     document.getElementById('stat-complete').textContent = data.complete;
                     document.getElementById('stat-failed').textContent = data.failed;
 
-                    // CRITICAL: On first fetch, check if server run_id differs from localStorage
-                    // If different, it's a NEW run and we must clear all cached state
-                    if (!firstFetchDone && data.run_id) {
-                        firstFetchDone = true;
-                        const storedRunId = localStorage.getItem(PIPELINE_RUN_ID_KEY);
-
-                        if (storedRunId && storedRunId !== data.run_id) {
-                            console.log(`NEW RUN DETECTED! Clearing stale cache. Old: ${storedRunId}, New: ${data.run_id}`);
-                            // Clear ALL localStorage state from old run
-                            localStorage.removeItem('ape_dashboard_timer_start');
-                            localStorage.removeItem('ape_dashboard_timer_stopped');
-                            localStorage.removeItem('ape_dashboard_run_id');
-                            currentRunId = null;
-                            startTime = null;
-                            timerStopped = false;
-                            timerInitialized = false;
-                        }
-                    }
-
-                    // Detect new run by checking run_id
-                    if (data.run_id && currentRunId !== data.run_id) {
-                        console.log(`Run ID changed! Old: ${currentRunId}, New: ${data.run_id}`);
-                        currentRunId = data.run_id;
-                        localStorage.setItem(PIPELINE_RUN_ID_KEY, currentRunId);
-
-                        // Use server-provided start_time for the new run
-                        const serverStartTime = data.clients.length > 0 && data.clients[0].start_time
-                            ? data.clients[0].start_time * 1000  // Convert seconds to milliseconds
-                            : Date.now();
-
-                        startTime = serverStartTime;
-                        localStorage.setItem(TIMER_KEY, startTime);
-                        localStorage.setItem(TIMER_STOPPED_KEY, 'false');
-                        timerStopped = false;
-                        timerInitialized = false;
-                        console.log('Timer reset for new run with server start_time:', new Date(serverStartTime).toLocaleTimeString());
-
-                        // Clear cached data for new run
-                        lastSuccessfulData = null;
-                        allClientsComplete = false;
-                        completionTime = null;
-                    }
-
-                    // Detect if this is a new pipeline run by checking status file timestamps
-                    const hasRunningClients = data.clients.some(c => c.status === 'RUNNING' || c.status === 'PENDING' || c.status === 'QUEUED');
+                    // Detect if pipeline is complete BEFORE initializing timer
                     const allComplete = data.total > 0 && (data.complete + data.failed) === data.total;
                     allClientsComplete = allComplete;  // Store for use in error handler
 
-                    // ALWAYS sync with server start_time if available and different from current
-                    const serverStartTime = data.clients.length > 0 && data.clients[0].start_time
-                        ? data.clients[0].start_time * 1000  // Convert seconds to milliseconds
-                        : null;
-
-                    if (serverStartTime) {
-                        const currentStartTime = startTime ? parseInt(startTime, 10) : null;
-
-                        // If server start_time differs from localStorage, trust the server
-                        if (!currentStartTime || Math.abs(currentStartTime - serverStartTime) > 5000) {
-                            console.log('Syncing timer with server start_time. Old:', currentStartTime ? new Date(currentStartTime).toLocaleTimeString() : 'none', 'New:', new Date(serverStartTime).toLocaleTimeString());
-                            startTime = serverStartTime;
-                            localStorage.setItem(TIMER_KEY, startTime);
-                            timerInitialized = true;
-                            updateTimer(); // Update display immediately
-                        } else if (!timerInitialized && hasRunningClients) {
-                            // Timer matches server, just mark as initialized
-                            timerInitialized = true;
-                        }
-                    } else if (!timerInitialized && hasRunningClients) {
-                        // No server start_time available, use old fallback logic
-                        initializeTimer(true);
-                    }
-
-                    // Stop timer when all clients are complete or failed
-                    if (allComplete && !timerStopped) {
+                    // Stop timer and prepare to stop auto-refresh when pipeline completes
+                    if (allComplete) {
+                        // Stop the execution timer immediately
                         stopTimer();
 
                         // Record completion time for auto-refresh delay
                         if (!completionTime) {
                             completionTime = Date.now();
-                            console.log('Pipeline complete - will stop refreshing in 5 minutes');
+                            console.log('Pipeline complete - timer stopped, will stop refreshing in 5 minutes');
                         }
+                    } else {
+                        // Only initialize/update timer if pipeline is NOT complete
+                        initializeTimer(data);
+                        updateTimer(); // Update display immediately
                     }
 
                     // Stop auto-refresh 5 minutes after completion
@@ -529,9 +752,26 @@
                     const grid = document.getElementById('clients-grid');
                     if (data.clients.length === 0) {
                         grid.innerHTML = `
-                            <div style="text-align: center; color: #8b949e; padding: 60px 20px; grid-column: 1 / -1;">
-                                <div style="font-size: 1.5rem; margin-bottom: 10px;">⏳ Waiting for processes...</div>
-                                <div style="font-size: 0.9rem; opacity: 0.7;">No client status files found yet</div>
+                            <div style="text-align: center; padding: 60px 20px; grid-column: 1 / -1;">
+                                <div style="background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 40px; max-width: 600px; margin: 0 auto;">
+                                    <div style="font-size: 2rem; margin-bottom: 20px;">🚀</div>
+                                    <div style="font-size: 1.5rem; color: #e6edf3; margin-bottom: 15px; font-weight: 600;">Ready to Launch</div>
+                                    <div style="font-size: 1rem; color: #8b949e; margin-bottom: 25px; line-height: 1.6;">
+                                        No workflow is currently running.<br>
+                                        Configure your clients and start a workflow to begin.
+                                    </div>
+                                    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                                        <a href="/configure" style="background: #238636; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.95rem; display: inline-block; transition: all 0.2s;">
+                                            ⚙️ Configure Clients
+                                        </a>
+                                        <a href="/launch" style="background: #ee0000; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.95rem; display: inline-block; transition: all 0.2s;">
+                                            ▶️ Start Workflow
+                                        </a>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #6e7681; margin-top: 20px; line-height: 1.5;">
+                                        Or run from terminal: <code style="background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px; color: #ee0000;">./run-workflow.sh fast</code>
+                                    </div>
+                                </div>
                             </div>
                         `;
                     } else {
@@ -648,63 +888,57 @@
         // Start auto-refresh immediately
         startAutoRefresh();
 
-        // Execution timer with localStorage persistence
-        const TIMER_KEY = 'ape_dashboard_timer_start';
-        const TIMER_STOPPED_KEY = 'ape_dashboard_timer_stopped';
-        const PIPELINE_RUN_ID_KEY = 'ape_dashboard_run_id';
-
-        // Generate unique run ID based on status files' last update
-        let currentRunId = localStorage.getItem(PIPELINE_RUN_ID_KEY);
-
-        // Get or initialize timer start time
-        let startTime = localStorage.getItem(TIMER_KEY);
-        let timerStopped = localStorage.getItem(TIMER_STOPPED_KEY) === 'true';
-
-        // Reset timer if this is a new pipeline run (detected by checking if clients are in PENDING/RUNNING state)
-        // This will be validated on first data fetch
-        let timerInitialized = false;
-
+        // Execution timer - persists across page refreshes
+        let startTime = null;  // Will be set from status file data
         let timerInterval;
+        let timerStopped = false;  // Track if timer was explicitly stopped
 
-        function initializeTimer(isNewRun) {
-            if (timerInitialized) return;
+        function startTimer() {
+            // Only start timer interval if not already running and not stopped
+            if (!timerInterval && !timerStopped) {
+                timerInterval = setInterval(updateTimer, 1000);
+                console.log('Execution timer started');
+            }
+        }
 
-            if (!startTime) {
-                // No saved time - fresh start
-                startTime = Date.now();
-                localStorage.setItem(TIMER_KEY, startTime);
-                localStorage.setItem(TIMER_STOPPED_KEY, 'false');
-                timerStopped = false;
-                console.log('Timer started for new pipeline run');
-            } else if (isNewRun) {
-                // Saved time exists but files are very fresh
-                // Check if saved time is recent (within 2 minutes) - if so, resume
-                const savedAge = (Date.now() - parseInt(startTime, 10)) / 1000;
-                if (savedAge < 120) {
-                    // Recent saved time - resume (page refresh during active run)
-                    startTime = parseInt(startTime, 10);
-                    console.log('Timer resumed from localStorage (page refresh)');
-                } else {
-                    // Old saved time but fresh files - new run, reset timer
-                    startTime = Date.now();
-                    localStorage.setItem(TIMER_KEY, startTime);
-                    localStorage.setItem(TIMER_STOPPED_KEY, 'false');
-                    timerStopped = false;
-                    console.log('Timer reset for new pipeline run (old timer cleared)');
-                }
-            } else {
-                // Resume from saved time
-                startTime = parseInt(startTime, 10);
-                console.log('Timer resumed from localStorage');
+        function initializeTimer(data) {
+            // Don't re-enable timer if it was explicitly stopped
+            if (timerStopped) {
+                return;
             }
 
-            timerInitialized = true;
+            // Always update start time from status files (handles page refresh)
+            let earliestStartTime = null;
+
+            if (data && data.clients && data.clients.length > 0) {
+                data.clients.forEach(client => {
+                    if (client.start_time) {
+                        const clientStartTime = client.start_time * 1000;  // Convert to milliseconds
+                        if (!earliestStartTime || clientStartTime < earliestStartTime) {
+                            earliestStartTime = clientStartTime;
+                        }
+                    }
+                });
+            }
+
+            if (earliestStartTime) {
+                startTime = earliestStartTime;
+                console.log('Timer synchronized from status file start_time:', new Date(startTime));
+                // Start the timer interval now that we have a start time
+                startTimer();
+            }
+            // If no start_time in status (pipeline not started), timer shows 00m 00s
         }
 
         function updateTimer() {
-            if (timerStopped) return;
+            if (!startTime) {
+                document.getElementById('execution-time').textContent = '00m 00s';
+                return;
+            }
 
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            // Calculate elapsed time (stops incrementing when timerStopped is true)
+            const now = timerStopped && completionTime ? completionTime : Date.now();
+            const elapsed = Math.floor((now - startTime) / 1000);
             const minutes = Math.floor(elapsed / 60);
             const seconds = elapsed % 60;
             document.getElementById('execution-time').textContent =
@@ -712,29 +946,164 @@
         }
 
         function stopTimer() {
-            if (timerStopped) return;
-
-            timerStopped = true;
-            localStorage.setItem(TIMER_STOPPED_KEY, 'true');
             if (timerInterval) {
                 clearInterval(timerInterval);
+                timerInterval = null;
+                timerStopped = true;  // Mark as stopped to prevent re-enabling
+
+                // Do one final update to freeze the timer at completion time
+                updateTimer();
+
+                console.log('Execution timer stopped');
             }
-            console.log('Timer stopped at completion');
         }
 
-        function resetTimer() {
-            // Called when starting new pipeline run
-            localStorage.removeItem(TIMER_KEY);
-            localStorage.removeItem(TIMER_STOPPED_KEY);
-            localStorage.removeItem(PIPELINE_RUN_ID_KEY);
-            startTime = Date.now();
-            localStorage.setItem(TIMER_KEY, startTime);
-            timerStopped = false;
-            timerInitialized = false;
-            console.log('Timer reset for new run');
+        // Timer interval will be started by initializeTimer() when first status data arrives
+
+        // ========================================================================
+        // Theme Toggle
+        // ========================================================================
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const themeIcon = document.getElementById('themeIcon');
+
+            if (savedTheme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                if (themeIcon) themeIcon.textContent = '☀️';
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                if (themeIcon) themeIcon.textContent = '🌙';
+            }
         }
 
-        timerInterval = setInterval(updateTimer, 1000);
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const themeIcon = document.getElementById('themeIcon');
+
+            if (currentTheme === 'light') {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+                if (themeIcon) themeIcon.textContent = '🌙';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                if (themeIcon) themeIcon.textContent = '☀️';
+            }
+        }
+
+        // Initialize theme on page load
+        initTheme();
+
+        // Add event listener for theme toggle button
+        const themeToggleBtn = document.getElementById('themeToggle');
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', toggleTheme);
+        }
+
+        // ========================================================================
+        // Logs Section
+        // ========================================================================
+
+        function toggleLogs() {
+            const logsSection = document.getElementById('logsSection');
+            logsSection.classList.toggle('expanded');
+
+            // Start streaming logs when expanded
+            if (logsSection.classList.contains('expanded') && !logStreamEventSource) {
+                startLogStream();
+            }
+        }
+
+        let logStreamEventSource = null;
+        let logsPaused = false;
+        let logsAutoScroll = true;
+
+        function startLogStream() {
+            const logSelector = document.getElementById('logSelector');
+            const logFile = logSelector.value;
+
+            // Close existing stream
+            if (logStreamEventSource) {
+                logStreamEventSource.close();
+            }
+
+            // Open new stream
+            logStreamEventSource = new EventSource(`/stream-logs?log=${logFile}`);
+
+            logStreamEventSource.onmessage = function(event) {
+                if (!logsPaused) {
+                    const logContent = document.getElementById('logContent');
+                    const logViewer = document.getElementById('logViewer');
+
+                    // Append new log line
+                    logContent.textContent += event.data + '\n';
+
+                    // Auto-scroll if enabled
+                    if (logsAutoScroll) {
+                        logViewer.scrollTop = logViewer.scrollHeight;
+                    }
+                }
+            };
+
+            logStreamEventSource.onerror = function(error) {
+                console.error('Log stream error:', error);
+            };
+        }
+
+        // Log controls
+        document.addEventListener('DOMContentLoaded', function() {
+            const pauseBtn = document.getElementById('pauseLogsBtn');
+            const clearBtn = document.getElementById('clearLogsBtn');
+            const downloadBtn = document.getElementById('downloadLogsBtn');
+            const logSelector = document.getElementById('logSelector');
+            const logViewer = document.getElementById('logViewer');
+
+            if (pauseBtn) {
+                pauseBtn.addEventListener('click', function() {
+                    logsPaused = !logsPaused;
+                    logsAutoScroll = !logsPaused;
+
+                    if (logsPaused) {
+                        pauseBtn.textContent = '▶️ Resume';
+                        logViewer.classList.remove('auto-scroll');
+                        logViewer.classList.add('paused');
+                    } else {
+                        pauseBtn.textContent = '⏸️ Pause';
+                        logViewer.classList.add('auto-scroll');
+                        logViewer.classList.remove('paused');
+                    }
+                });
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    document.getElementById('logContent').textContent = '';
+                });
+            }
+
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', function() {
+                    const logContent = document.getElementById('logContent').textContent;
+                    const blob = new Blob([logContent], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `project-ape-logs-${Date.now()}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            }
+
+            if (logSelector) {
+                logSelector.addEventListener('change', function() {
+                    document.getElementById('logContent').textContent = '';
+                    if (logStreamEventSource) {
+                        startLogStream();
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
