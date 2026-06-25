@@ -180,6 +180,45 @@
             border-color: rgba(255,0,0,0.3);
             color: #ff6b6b;
         }
+
+        .auth-error {
+            background: rgba(255,149,0,0.15);
+            border: 2px solid #ff9500;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .auth-error h3 {
+            color: #ff9500;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+
+        .auth-error ol {
+            margin: 15px 0 15px 20px;
+            color: #e6edf3;
+        }
+
+        .auth-error li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .auth-error code {
+            background: rgba(0,0,0,0.4);
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #00d084;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .auth-error .warning-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -195,30 +234,30 @@
 
             <div class="info-row">
                 <span class="info-label">Execution Mode:</span>
-                <span class="info-value mode-{{ workflow.mode }}">{{ workflow.mode.upper() }}</span>
+                <span class="info-value mode-{{ workflow.mode if workflow.mode else 'fast' }}">{{ workflow.mode.upper() if workflow.mode else 'FAST' }}</span>
             </div>
 
             <div class="info-row">
                 <span class="info-label">Number of Clients:</span>
-                <span class="info-value">{{ workflow.client_count }}</span>
+                <span class="info-value">{{ workflow.client_count if workflow.client_count is not none else 0 }}</span>
             </div>
 
             <div class="info-row">
                 <span class="info-label">Estimated Time:</span>
-                <span class="info-value">{{ workflow.time_range }}</span>
+                <span class="info-value">{{ workflow.time_range if workflow.time_range else 'Calculating...' }}</span>
             </div>
 
             <div class="info-row">
                 <span class="info-label">Dashboard URL:</span>
-                <span class="info-value">{{ workflow.dashboard_url }}</span>
+                <span class="info-value">{{ workflow.dashboard_url if workflow.dashboard_url else 'http://localhost:8765' }}</span>
             </div>
 
-            {% if workflow.client_details %}
+            {% if workflow.client_details and workflow.client_details|length > 0 %}
             <div class="clients-list">
                 <strong>Clients:</strong>
                 {% for client in workflow.client_details %}
                 <div class="client-item">
-                    <span class="client-name">• {{ client.name }}</span>
+                    <span class="client-name">• {{ client.name if client.name else 'Unknown Client' }}</span>
                     {% if client.industry %}
                     <div class="client-industry">{{ client.industry }}</div>
                     {% endif %}
@@ -248,8 +287,43 @@
             },
             body: JSON.stringify({{ workflow | tojson | safe }})
         })
-        .then(response => response.json())
+        .then(response => {
+            // Check if this is an auth error (401)
+            if (response.status === 401) {
+                return response.json().then(data => {
+                    // Stop the countdown and redirect
+                    clearInterval(window.countdownInterval);
+
+                    // Hide spinner and countdown
+                    document.querySelector('.spinner').style.display = 'none';
+                    document.querySelector('.redirect-message').style.display = 'none';
+
+                    // Display auth error prominently
+                    const container = document.querySelector('.container');
+                    const authErrorHTML = `
+                        <div class="auth-error">
+                            <h3><span class="warning-icon">⚠️</span>Authentication Required</h3>
+                            <p style="margin-bottom: 15px;">${data.error}: You need to authenticate with NotebookLM before launching workflows.</p>
+                            <ol>
+                                <li>Open a terminal and run: <code>notebooklm login</code></li>
+                                <li>For container mode, also run: <code>./setup-credentials.sh</code></li>
+                                <li>Return to this page and try launching again</li>
+                            </ol>
+                            <p style="margin-top: 15px; color: #8b949e;">
+                                <a href="/" style="color: #00d084; text-decoration: underline;">← Back to Configuration</a>
+                            </p>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', authErrorHTML);
+
+                    throw new Error('Authentication required');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
+            if (!data) return; // Auth error already handled
+
             const statusEl = document.getElementById('status-message');
             if (data.success) {
                 statusEl.textContent = '✓ Workflow started successfully! Containers are launching...';
@@ -262,17 +336,20 @@
             }
         })
         .catch(error => {
-            const statusEl = document.getElementById('status-message');
-            statusEl.textContent = '✗ Error: ' + error.message;
-            statusEl.classList.add('error');
-            statusEl.style.display = 'block';
+            // Only show generic error if it's not an auth error
+            if (error.message !== 'Authentication required') {
+                const statusEl = document.getElementById('status-message');
+                statusEl.textContent = '✗ Error: ' + error.message;
+                statusEl.classList.add('error');
+                statusEl.style.display = 'block';
+            }
         });
 
         // Countdown timer with redirect
         let seconds = 5;
         const countdownEl = document.getElementById('countdown');
 
-        const countdownInterval = setInterval(() => {
+        window.countdownInterval = setInterval(() => {
             seconds--;
             if (seconds > 0) {
                 countdownEl.textContent = seconds;

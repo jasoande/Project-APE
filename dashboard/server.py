@@ -15,6 +15,7 @@ from pathlib import Path
 from flask import Flask, render_template, jsonify, Response, request
 import logging
 import importlib.util
+from core.auth_manager import AuthManager
 
 # Disable Flask's default logging
 log = logging.getLogger('werkzeug')
@@ -649,8 +650,30 @@ def start_workflow():
                 'error': 'Invalid workflow data'
             }), 400
 
+        # CRITICAL: Validate authentication BEFORE starting workflow
+        auth_manager = AuthManager()
+        if not auth_manager.is_authenticated():
+            return jsonify({
+                'success': False,
+                'error': 'Authentication Required',
+                'auth_error': True,
+                'instructions': [
+                    'You need to authenticate with NotebookLM before launching workflows.',
+                    'Please run the following commands in your terminal:',
+                    '',
+                    '1. Authenticate with NotebookLM:',
+                    '   notebooklm login',
+                    '',
+                    '2. For container mode, update credentials:',
+                    '   ./setup-credentials.sh',
+                    '',
+                    'Then return to this page and try launching again.'
+                ]
+            }), 401
+
         # Mark that first configuration is complete
         # This prevents the configuration UI from appearing on next launch
+        from datetime import datetime
         first_config_marker = Path.home() / '.ape_first_config_done'
         if not first_config_marker.exists():
             first_config_marker.write_text(json.dumps({
@@ -659,13 +682,24 @@ def start_workflow():
             }, indent=2))
 
         def run_workflow():
-            """Background thread to execute launch_ape.sh"""
+            """Background thread to execute workflow launcher"""
             try:
                 # Parse command into parts
                 cmd = workflow['command'].split()
 
                 print(f"[WORKFLOW] Starting workflow: {' '.join(cmd)}", file=sys.stderr)
                 print(f"[WORKFLOW] Working directory: {PROJECT_ROOT}", file=sys.stderr)
+
+                # Check if this is run-workflow.sh (local mode) - needs bash execution
+                if cmd[0] == './run-workflow.sh':
+                    # Make sure script is executable
+                    script_path = PROJECT_ROOT / 'run-workflow.sh'
+                    if script_path.exists():
+                        import os
+                        os.chmod(script_path, 0o755)
+
+                    # Execute with bash to handle shebang and virtual env activation
+                    cmd = ['/bin/bash'] + cmd
 
                 # Execute in project root directory
                 result = subprocess.run(
@@ -735,11 +769,22 @@ def shutdown():
 
 def run_server(port=8765, debug=False):
     """Run the Flask server."""
+    import signal
+    import sys
+
     print(f"\n📊 Dashboard server starting...")
     print(f"   URL: http://localhost:{port}")
     print(f"   Refresh: Every 2 seconds")
     print(f"   Logs: Real-time streaming")
     print(f"\n   Press Ctrl+C to stop\n")
+
+    # Signal handler for graceful shutdown
+    def signal_handler(sig, frame):
+        print("\n⏰ Dashboard server received shutdown signal")
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
     # Bind to 0.0.0.0 for container compatibility (allows external access)
     app.run(host='0.0.0.0', port=port, debug=debug, threaded=True)
