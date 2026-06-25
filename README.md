@@ -4,7 +4,7 @@
 
 ✨ **95% browser-accessible** - No terminal needed for daily operations
 
-[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/yourusername/project-ape)
+[![Version](https://img.shields.io/badge/version-3.2.2-blue.svg)](https://github.com/yourusername/project-ape)
 [![Python](https://img.shields.io/badge/python-3.11+-green.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
 
@@ -787,7 +787,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ---
 
-**Version**: 3.2.0  
+**Version**: 3.2.2  
 **Last Updated**: June 25, 2026  
 **Author**: Jason Anderson
 

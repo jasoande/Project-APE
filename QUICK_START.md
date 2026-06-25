@@ -577,7 +577,7 @@ For advanced features (error recovery, better quality validation):
 
 ---
 
-**Version:** 3.2.0  
+**Version:** 3.2.2  
 **Last Updated:** June 25, 2026  
 **Author:** Jason Anderson
 
