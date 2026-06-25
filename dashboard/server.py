@@ -875,6 +875,33 @@ def notebooklm_login():
 
                 if result.returncode == 0:
                     print(f"[AUTH] NotebookLM login completed successfully", file=sys.stderr)
+
+                    # CRITICAL: Automatically sync credentials to container volume
+                    # After successful login, run setup-credentials.sh to update the
+                    # project-ape-credentials volume so container workflows can access them
+                    setup_script = PROJECT_ROOT / 'setup-credentials.sh'
+                    if setup_script.exists():
+                        print(f"[AUTH] Syncing credentials to container volume...", file=sys.stderr)
+                        try:
+                            sync_result = subprocess.run(
+                                ['/bin/bash', str(setup_script)],
+                                cwd=str(PROJECT_ROOT),
+                                capture_output=True,
+                                text=True,
+                                timeout=60,
+                                input='y\n'  # Auto-confirm overwrite if prompted
+                            )
+
+                            if sync_result.returncode == 0:
+                                print(f"[AUTH] ✅ Credentials synced to container successfully", file=sys.stderr)
+                            else:
+                                print(f"[AUTH] ⚠️ Credential sync failed: {sync_result.stderr}", file=sys.stderr)
+                                print(f"[AUTH] You may need to run manually: ./setup-credentials.sh", file=sys.stderr)
+                        except Exception as e:
+                            print(f"[AUTH] ⚠️ Error syncing credentials: {e}", file=sys.stderr)
+                            print(f"[AUTH] You may need to run manually: ./setup-credentials.sh", file=sys.stderr)
+                    else:
+                        print(f"[AUTH] ⚠️ setup-credentials.sh not found, skipping container sync", file=sys.stderr)
                 else:
                     print(f"[AUTH] NotebookLM login failed: {result.stderr}", file=sys.stderr)
 
@@ -894,6 +921,10 @@ def notebooklm_login():
                 'A browser window should open automatically for Google login.',
                 'If no browser opens, run this command in your terminal:',
                 '  notebooklm login',
+                '',
+                'After login completes:',
+                '✅ Credentials will automatically sync to container',
+                '✅ You can launch workflows immediately',
                 '',
                 'The authentication status will update automatically once login is complete.'
             ]
