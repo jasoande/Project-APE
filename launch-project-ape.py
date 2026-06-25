@@ -135,8 +135,8 @@ def run_setup():
         if result.returncode == 0:
             print("\n✅ Setup completed successfully!")
             print()
-            # Give the venv a moment to settle (filesystem sync)
-            time.sleep(1)
+            # Give the venv a moment to settle (filesystem sync, especially important on VMs)
+            time.sleep(3)
             return True
         else:
             print("\n❌ Setup failed")
@@ -178,8 +178,13 @@ def start_server():
             print("   Try running manually: ./setup-environment.sh")
             sys.exit(1)
 
-        # Verify venv is now functional
-        if not check_venv_functional(venv_python, debug=True):
+        # Verify venv is now functional (retry a few times for VM/network filesystem delays)
+        for attempt in range(3):
+            if check_venv_functional(venv_python, debug=(attempt == 2)):
+                break
+            if attempt < 2:
+                time.sleep(2)
+        else:
             print(f"❌ Setup completed but venv is still not functional")
             print(f"   Expected: {venv_python}")
             print("\n💡 Troubleshooting:")
