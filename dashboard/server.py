@@ -918,13 +918,14 @@ def notebooklm_login():
                     if setup_script.exists():
                         print(f"[AUTH] Syncing credentials to container volume...", file=sys.stderr)
                         try:
+                            # Use shell pipe to auto-confirm overwrite
                             sync_result = subprocess.run(
-                                ['/bin/bash', str(setup_script)],
+                                f"echo 'y' | /bin/bash {setup_script}",
+                                shell=True,
                                 cwd=str(PROJECT_ROOT),
                                 capture_output=True,
                                 text=True,
-                                timeout=60,
-                                input='y\n'  # Auto-confirm overwrite if prompted
+                                timeout=60
                             )
 
                             if sync_result.returncode == 0:
