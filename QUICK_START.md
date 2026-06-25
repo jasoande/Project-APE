@@ -36,7 +36,7 @@ http://localhost:8765/configure
 - Green/red status indicators
 - "Setup Environment" button
 
-![Configuration Page](docs/screenshots/configure-page.png)
+![Configuration Page](Docs/screenshots/configure-page.png)
 
 ---
 
@@ -59,7 +59,7 @@ http://localhost:8765/configure
 
 **Success indicator:** Green checkmark ✅ next to "Environment Setup"
 
-![Setup Environment](docs/screenshots/setup-environment.png)
+![Setup Environment](Docs/screenshots/setup-environment.png)
 
 **Time required:** 2-5 minutes depending on internet speed
 
@@ -83,7 +83,7 @@ http://localhost:8765/configure
 
 **Success indicator:** Green checkmark ✅ next to "NotebookLM Status"
 
-![Auth Status](docs/screenshots/auth-status.png)
+![Auth Status](Docs/screenshots/auth-status.png)
 
 **Troubleshooting:**
 - If authentication fails, click the button again
@@ -165,7 +165,7 @@ Click **"Google Drive Setup"** to launch the wizard:
 
 **Time:** 1 minute
 
-![OAuth Wizard](docs/screenshots/oauth-wizard.png)
+![OAuth Wizard](Docs/screenshots/oauth-wizard.png)
 
 #### Step 5: Upload and Authenticate
 
@@ -297,7 +297,7 @@ Select: **Fast**
 - **Fast mode:** 15-20 minutes total (all clients in parallel)
 - **Deep mode:** 45-60 minutes total (all clients in parallel)
 
-![Dashboard Monitoring](docs/screenshots/dashboard-monitoring.png)
+![Dashboard Monitoring](Docs/screenshots/dashboard-monitoring.png)
 
 ---
 
@@ -349,7 +349,7 @@ Each client shows:
 ✅ **NotebookLM links work** (click to open research)  
 ✅ **Research content visible** in NotebookLM  
 
-![Completed Workflow](docs/screenshots/completed-workflow.png)
+![Completed Workflow](Docs/screenshots/completed-workflow.png)
 
 ### Access Your Research
 

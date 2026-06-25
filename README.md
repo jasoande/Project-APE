@@ -73,7 +73,7 @@ Double-click `launch-project-ape.command` in Finder (macOS) or run the launcher 
 
 Your browser automatically opens to: `http://localhost:8765/configure`
 
-![Configuration Page](docs/screenshots/configure-page.png)
+![Configuration Page](Docs/screenshots/configure-page.png)
 
 ### Step 2: Setup Environment (2-5 minutes)
 
@@ -84,7 +84,7 @@ Your browser automatically opens to: `http://localhost:8765/configure`
    - Required dependencies
 3. Wait for green checkmark: ✅ **Environment Ready**
 
-![Setup Environment](docs/screenshots/setup-environment.png)
+![Setup Environment](Docs/screenshots/setup-environment.png)
 
 ### Step 3: Authenticate NotebookLM (1 minute)
 
@@ -93,7 +93,7 @@ Your browser automatically opens to: `http://localhost:8765/configure`
 3. Grant NotebookLM permissions
 4. Return to dashboard → See ✅ **Authenticated**
 
-![Auth Status](docs/screenshots/auth-status.png)
+![Auth Status](Docs/screenshots/auth-status.png)
 
 ### Step 4: Setup Google Drive Access (5 minutes, one-time)
 
@@ -105,7 +105,7 @@ Click **"Google Drive Setup"** to launch the OAuth wizard:
 4. **Step 4**: Create OAuth credentials → Download JSON
 5. **Step 5**: Upload JSON file → Authenticate
 
-![OAuth Wizard](docs/screenshots/oauth-wizard.png)
+![OAuth Wizard](Docs/screenshots/oauth-wizard.png)
 
 **That's it!** Drive access configured. You'll never need to repeat this.
 
@@ -127,7 +127,7 @@ Click **"➕ Add Client"** to add more.
 3. Click **"🚀 Start Workflow"**
 4. Dashboard automatically switches to monitoring view
 
-![Dashboard](docs/screenshots/dashboard-monitoring.png)
+![Dashboard](Docs/screenshots/dashboard-monitoring.png)
 
 ### What Success Looks Like
 
@@ -137,7 +137,7 @@ Click **"➕ Add Client"** to add more.
 ✅ **NotebookLM links** are clickable → Opens your research  
 ✅ **Status shows** "COMPLETE" with green indicator  
 
-![Completed Workflow](docs/screenshots/completed-workflow.png)
+![Completed Workflow](Docs/screenshots/completed-workflow.png)
 
 **Total time from zero to first results: 15-30 minutes**
 
