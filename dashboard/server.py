@@ -866,8 +866,19 @@ def notebooklm_login():
             try:
                 # Run notebooklm login in background
                 # This will open a browser window for OAuth
+
+                # Use full path to notebooklm in virtual environment
+                # The venv may not be activated in the Flask server's environment
+                venv_notebooklm = Path.home() / '.project-ape-venv' / 'bin' / 'notebooklm'
+
+                if venv_notebooklm.exists():
+                    notebooklm_cmd = str(venv_notebooklm)
+                else:
+                    # Fallback to PATH (if venv is activated)
+                    notebooklm_cmd = 'notebooklm'
+
                 result = subprocess.run(
-                    ['notebooklm', 'login'],
+                    [notebooklm_cmd, 'login'],
                     capture_output=True,
                     text=True,
                     timeout=300  # 5 minute timeout
@@ -878,8 +889,20 @@ def notebooklm_login():
 
                     # STEP 1: Setup Google Cloud Application Default Credentials
                     print(f"[AUTH] Setting up Google Cloud ADC...", file=sys.stderr)
+
+                    # Detect Linux headless environment for xvfb
+                    import platform
+                    is_linux = platform.system() == 'Linux'
+                    has_display = os.environ.get('DISPLAY') is not None
+
+                    # On Linux without DISPLAY, use xvfb-run for gcloud browser auth
+                    if is_linux and not has_display:
+                        adc_cmd = ['xvfb-run', '-a', 'gcloud', 'auth', 'application-default', 'login']
+                    else:
+                        adc_cmd = ['gcloud', 'auth', 'application-default', 'login']
+
                     adc_result = subprocess.run(
-                        ['gcloud', 'auth', 'application-default', 'login'],
+                        adc_cmd,
                         capture_output=True,
                         text=True,
                         timeout=300
