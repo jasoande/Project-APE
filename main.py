@@ -121,7 +121,7 @@ class ProcessManager:
             logger.warning("   Could not open browser automatically")
             logger.info(f"   Please open: {dashboard_url}")
 
-    def start_client_process(self, client_id: str, mode: str) -> subprocess.Popen:
+    def start_client_process(self, client_id: str, mode: str, refresh: bool = False) -> subprocess.Popen:
         """Start a single client process."""
         log_file = LOGS_DIR / f"{client_id}.log"
         status_file = STATUS_DIR / f"{client_id}.json"
@@ -132,15 +132,21 @@ class ProcessManager:
         # Open log file
         log_handle = open(log_file, 'w')
 
+        # Build command
+        cmd = [
+            sys.executable,
+            str(SCRIPT_DIR / "core" / "client_pipeline.py"),
+            client_id,
+            "--mode", mode,
+            "--status-file", str(status_file)
+        ]
+
+        if refresh:
+            cmd.append("--refresh")
+
         # Start process
         process = subprocess.Popen(
-            [
-                sys.executable,
-                str(SCRIPT_DIR / "core" / "client_pipeline.py"),
-                client_id,
-                "--mode", mode,
-                "--status-file", str(status_file)
-            ],
+            cmd,
             stdout=log_handle,
             stderr=subprocess.STDOUT,
             cwd=str(SCRIPT_DIR)
@@ -252,6 +258,11 @@ def main():
         action="store_true",
         help="Disable dashboard server"
     )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Force refresh Google Drive cache (ignore TTL)"
+    )
 
     args = parser.parse_args()
 
@@ -309,9 +320,11 @@ def main():
         for i, client_id in enumerate(clients):
             logger.info(f"\n🚀 Starting: {getattr(config, f'{client_id}_name', client_id)}")
             logger.info(f"   Mode: {args.mode.upper()}")
+            if args.refresh:
+                logger.info(f"   🔄 Force Refresh: ENABLED")
             logger.info(f"   Log: {client_id}.log")
 
-            process = manager.start_client_process(client_id, args.mode)
+            process = manager.start_client_process(client_id, args.mode, args.refresh)
             manager.client_processes.append(process)
 
             # Stagger launches to prevent simultaneous starts
@@ -338,14 +351,18 @@ def main():
 
         if not args.no_dashboard:
             logger.info(f"\n📊 Dashboard: http://localhost:{DASHBOARD_PORT}")
-            logger.info("   Dashboard will remain running for review")
-            logger.info("   Press Ctrl+C to stop")
+            logger.info("   Dashboard will remain running for 5 minutes after completion")
+            logger.info("   Press Ctrl+C to stop immediately")
 
-            # Keep dashboard running
+            # Keep dashboard running for 5 minutes after completion
+            # This gives users time to review results before container shuts down
             try:
-                while True:
-                    time.sleep(60)
+                shutdown_delay = 300  # 5 minutes
+                logger.info(f"   ⏰ Auto-shutdown in {shutdown_delay//60} minutes...")
+                time.sleep(shutdown_delay)
+                logger.info("\n⏰ Auto-shutdown timer expired. Stopping container...")
             except KeyboardInterrupt:
+                logger.info("\n⌨️  Ctrl+C detected. Stopping immediately...")
                 pass
 
         # Cleanup
