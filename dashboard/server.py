@@ -746,7 +746,7 @@ def start_workflow():
         }), 500
 
 
-@app.route('/api/run-setup', methods=['POST'])
+@app.route('/api/run-setup', methods=['GET', 'POST'])
 def run_setup():
     """
     Execute setup-environment.sh script with real-time output streaming.
