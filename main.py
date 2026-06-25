@@ -238,7 +238,7 @@ def print_banner():
     print("  PROJECT APE - ACCOUNT PLANNING ENGINE")
     print("  AI-Powered Enterprise Account Planning Automation")
     print("="*70)
-    print(f"  Version: 3.2.1 - Critical Auth Retry Fix")
+    print(f"  Version: 3.2.2 - Auth Retry & Lock Contention Fix")
     print(f"  Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*70 + "\n")
 
@@ -319,9 +319,6 @@ def main():
     run_id = str(int(time.time()))
     manager = ProcessManager(run_id=run_id)
     manager.start_time = time.time()
-
-    # Make manager available to signal handler
-    nonlocal global_manager
     global_manager = manager
 
     logger.info(f"\n🆔 Run ID: {run_id}")
