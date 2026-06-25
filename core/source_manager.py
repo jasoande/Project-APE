@@ -61,6 +61,106 @@ class SourceManager:
             logger.error(f"[{self.client_id}] Error adding source: {e}")
             return False
 
+    def delete_source(self, source_id: str) -> bool:
+        """
+        Delete a source from the notebook.
+
+        Args:
+            source_id: Source ID to delete
+
+        Returns:
+            True if successful
+        """
+        try:
+            logger.info(f"[{self.client_id}] Deleting source: {source_id}")
+
+            result = subprocess.run(
+                ["notebooklm", "source", "delete", source_id, "-n", self.notebook_id, "--yes"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode == 0:
+                logger.info(f"[{self.client_id}] ✅ Deleted source: {source_id}")
+                return True
+            else:
+                logger.error(f"[{self.client_id}] Failed to delete source: {result.stderr}")
+                return False
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Error deleting source: {e}")
+            return False
+
+    def delete_old_consolidated_pdfs(self, client_name: str) -> int:
+        """
+        Delete all old consolidated PDFs from the notebook.
+
+        Args:
+            client_name: Client name to match in consolidated PDF filenames
+
+        Returns:
+            Number of sources deleted
+        """
+        deleted_count = 0
+        try:
+            sources = self.list_sources()
+
+            for source in sources:
+                title = source.get('title', '')
+                source_id = source.get('id', '')
+
+                # Match pattern: {ClientName}-Consolidated-{timestamp}.pdf
+                if f"{client_name}-Consolidated-" in title and title.endswith('.pdf'):
+                    if self.delete_source(source_id):
+                        deleted_count += 1
+
+            if deleted_count > 0:
+                logger.info(f"[{self.client_id}] 🗑️  Deleted {deleted_count} old consolidated PDF(s)")
+
+            return deleted_count
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Error deleting old consolidated PDFs: {e}")
+            return deleted_count
+
+    def add_drive_url_source(self, file_id: str, file_name: str, mime_type: str) -> bool:
+        """
+        Add a Google Drive file as a source by URL.
+
+        Args:
+            file_id: Google Drive file ID
+            file_name: Display name for the source
+            mime_type: MIME type of the file
+
+        Returns:
+            True if successful
+        """
+        try:
+            # Construct Google Drive URL
+            drive_url = f"https://drive.google.com/file/d/{file_id}/view"
+
+            logger.info(f"[{self.client_id}] Adding Drive source: {file_name}")
+
+            result = subprocess.run(
+                ["notebooklm", "source", "add", drive_url, "--type", "url",
+                 "--title", file_name, "-n", self.notebook_id],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            if result.returncode == 0:
+                logger.info(f"[{self.client_id}] ✅ Added Drive source: {file_name}")
+                return True
+            else:
+                logger.error(f"[{self.client_id}] Failed to add Drive source: {result.stderr}")
+                return False
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Error adding Drive source: {e}")
+            return False
+
     def add_research_with_import(self, query_file: Path, mode: str = "deep",
                                   client_name: str = None, client_industry: str = None,
                                   client_subsegments: str = None) -> Dict:
@@ -112,30 +212,45 @@ class SourceManager:
                     try:
                         # Deep mode uses --mode deep with retry logic
                         if mode == "deep":
+                            # Build command - only import sources on first attempt to avoid duplicates
+                            cmd = [
+                                "notebooklm", "source", "add-research",
+                                "--mode", "deep",  # Use actual deep mode
+                                "--prompt-file", tmp_path,
+                                "-n", self.notebook_id,
+                            ]
+
+                            # Only import sources on FIRST attempt to prevent duplicate imports on retry
+                            if attempt == 0:
+                                cmd.append("--import-all")
+
+                            cmd.append("--timeout")
+                            cmd.append("1200")  # 20 minutes for deep mode
+
                             result = subprocess.run(
-                                [
-                                    "notebooklm", "source", "add-research",
-                                    "--mode", "deep",  # Use actual deep mode
-                                    "--prompt-file", tmp_path,
-                                    "-n", self.notebook_id,
-                                    "--import-all",
-                                    "--timeout", "1200"  # 20 minutes for deep mode
-                                ],
+                                cmd,
                                 capture_output=True,
                                 text=True,
                                 timeout=1500  # 25 minutes total (20 min + 5 min buffer)
                             )
                         else:
                             # Fast mode: standard fast research
+                            cmd = [
+                                "notebooklm", "source", "add-research",
+                                "--mode", "fast",
+                                "--prompt-file", tmp_path,
+                                "-n", self.notebook_id,
+                            ]
+
+                            # Only import sources on FIRST attempt to prevent duplicate imports on retry
+                            if attempt == 0:
+                                cmd.append("--import-all")
+
+                            cmd.append("--timeout")
+                            cmd.append("600")
+
                             result = subprocess.run(
-                                [
-                                    "notebooklm", "source", "add-research",
-                                    "--mode", "fast",
-                                    "--prompt-file", tmp_path,
-                                    "-n", self.notebook_id,
-                                    "--import-all",
-                                    "--timeout", "600"
-                                ],
+                                cmd,
                                 capture_output=True,
                                 text=True,
                                 timeout=700
