@@ -69,9 +69,16 @@ Project APE (Account Planning Engine) automates comprehensive account research b
 
 ### Step 1: Launch the Dashboard (30 seconds)
 
-Double-click `launch-project-ape.command` in Finder (macOS) or run the launcher script.
+**Choose your launcher based on your operating system:**
+
+- **Windows**: Double-click `launch-project-ape.bat` (or `launch-project-ape.ps1`)
+- **Linux**: Run `./launch-project-ape.sh` or `python3 launch-project-ape.py`
+- **macOS**: Double-click `launch-project-ape.command` in Finder (or use new cross-platform launcher)
+- **All platforms**: Run `python3 launch-project-ape.py` (universal launcher)
 
 Your browser automatically opens to: `http://localhost:8765/configure`
+
+📖 **See [CROSS_PLATFORM_LAUNCHER.md](CROSS_PLATFORM_LAUNCHER.md) for detailed launcher documentation**
 
 ![Configuration Page](Docs/screenshots/configure-page.png)
 
@@ -239,11 +246,17 @@ For detailed step-by-step instructions, see **[QUICK_START.md](QUICK_START.md)**
 **Everything you need to get started:**
 
 ### Required
-- **macOS or Linux** system (Intel/Apple Silicon/ARM64)
+- **Windows, Linux, or macOS** system (Intel/Apple Silicon/ARM64)
+- **Python 3.10+** (Python 3.11+ recommended)
 - **Google Account** with access to:
   - Google Drive (for client documents)
   - Google NotebookLM (free at notebooklm.google.com)
 - **10 minutes** for initial setup
+
+### Cross-Platform Support
+✅ **Windows**: Full support with native launchers (.bat, .ps1, .py)
+✅ **Linux**: Full support with shell and Python launchers
+✅ **macOS**: Full support with all launcher types
 
 ### Optional
 - Gemini API key (for advanced AI features)
