@@ -1,0 +1,58 @@
+09:15:41 | INFO | [panasonic_avionics] ========================================
+09:15:41 | INFO | [panasonic_avionics] Starting pipeline for Panasonic Avionics Corporation
+09:15:41 | INFO | [panasonic_avionics] Mode: FAST
+09:15:41 | INFO | [panasonic_avionics] ========================================
+09:15:41 | INFO | [panasonic_avionics] ⏱️  Anti-collision delay: 7.3s
+09:15:49 | INFO | [panasonic_avionics] Checking authentication status...
+09:15:50 | INFO | [panasonic_avionics] ✅ Already authenticated
+09:15:50 | INFO | [panasonic_avionics] Generated notebook name: DEV_Panasonic_Avionics-TEST
+09:15:50 | INFO | [panasonic_avionics] Checking for existing notebook: DEV_Panasonic_Avionics-TEST
+09:15:51 | INFO | [panasonic_avionics] No existing notebook found
+09:15:51 | INFO | [panasonic_avionics] Checking for existing notebook: DEV_Panasonic_Avionics-TEST
+09:15:52 | INFO | [panasonic_avionics] No existing notebook found
+09:15:52 | INFO | [panasonic_avionics] Creating new notebook: DEV_Panasonic_Avionics-TEST
+09:15:54 | INFO | [panasonic_avionics] ✅ Created notebook: b3c21ac1-85f2-4142-ac44-27d3cba6efbc
+09:15:54 | INFO | [panasonic_avionics] Set notebook context: b3c21ac1-85f2-4142-ac44-27d3cba6efbc
+09:15:54 | INFO | [panasonic_avionics] Consolidating all files to PDF...
+09:15:54 | INFO | [panasonic_avionics] Fast parallel PDF consolidation starting...
+09:15:54 | INFO | [panasonic_avionics] Found: 1 text, 0 images, 18 office, 3 PDFs
+09:15:54 | INFO | [panasonic_avionics] Converting 19 files in parallel...
+09:15:59 | INFO | [panasonic_avionics] Converted 11 files, merging...
+09:15:59 | INFO | [panasonic_avionics] ✅ Created: Panasonic Avionics Corporation-One.pdf
+09:15:59 | INFO | [panasonic_avionics] ✅ Consolidated PDF: Panasonic Avionics Corporation-One.pdf
+09:15:59 | INFO | [panasonic_avionics] Uploading consolidated PDF...
+09:15:59 | INFO | [panasonic_avionics] Adding source: Panasonic Avionics Corporation-One.pdf
+09:16:01 | INFO | [panasonic_avionics] ✅ Added source: Panasonic Avionics Corporation-One.pdf
+09:16:01 | INFO | [panasonic_avionics] Running 2 research prompts...
+09:16:04 | INFO | [panasonic_avionics] Research prompt: ask_prompt_01.txt
+09:16:04 | INFO | [panasonic_avionics] Running research: ask_prompt_01.txt (fast mode)
+09:16:30 | INFO | [panasonic_avionics] ✅ Research complete, imported 10 sources
+09:16:30 | INFO | [panasonic_avionics] ✅ Imported 10 sources
+09:16:45 | INFO | [panasonic_avionics] Research prompt: ask_prompt_02.txt
+09:16:45 | INFO | [panasonic_avionics] Running research: ask_prompt_02.txt (fast mode)
+09:17:17 | INFO | [panasonic_avionics] ✅ Research complete, imported 9 sources
+09:17:17 | INFO | [panasonic_avionics] ✅ Imported 9 sources
+09:17:27 | INFO | [panasonic_avionics] Waiting for source imports to complete...
+09:17:37 | INFO | [panasonic_avionics] Deduplicating sources...
+09:17:37 | INFO | [panasonic_avionics] Deduplicating sources...
+09:17:38 | INFO | [panasonic_avionics] ✅ Removed 0 duplicate sources
+09:17:38 | INFO | [panasonic_avionics] ✅ Removed 0 duplicates
+09:17:38 | INFO | [panasonic_avionics] Running 6 chat prompts...
+09:17:38 | INFO | [panasonic_avionics] ⏱️  Chat 01 anti-collision jitter: 13.1s
+09:17:51 | INFO | [panasonic_avionics] Chat prompt: chat_prompt_consolidated_01.txt
+09:19:09 | INFO | [panasonic_avionics] ✅ Created note: chat_prompt_consolidated_01
+09:19:13 | INFO | [panasonic_avionics] Chat prompt: chat_prompt_consolidated_02.txt
+09:20:20 | INFO | [panasonic_avionics] ✅ Created note: chat_prompt_consolidated_02
+09:20:25 | INFO | [panasonic_avionics] Chat prompt: chat_prompt_consolidated_03.txt
+09:22:06 | INFO | [panasonic_avionics] ✅ Created note: chat_prompt_consolidated_03
+09:22:11 | INFO | [panasonic_avionics] Chat prompt: chat_prompt_consolidated_04.txt
+09:23:22 | INFO | [panasonic_avionics] ✅ Created note: chat_prompt_consolidated_04
+09:23:28 | INFO | [panasonic_avionics] Chat prompt: chat_prompt_consolidated_05.txt
+09:24:40 | INFO | [panasonic_avionics] ✅ Created note: chat_prompt_consolidated_05
+09:24:44 | INFO | [panasonic_avionics] Chat prompt: chat_prompt_consolidated_06.txt
+09:26:31 | INFO | [panasonic_avionics] ✅ Created note: chat_prompt_consolidated_06
+09:26:34 | INFO | [panasonic_avionics] Generating mind map...
+09:26:41 | INFO | [panasonic_avionics] ✅ Mind map generated
+09:26:43 | INFO | [panasonic_avionics] Quality score breakdown: 8.0/10
+09:26:43 | INFO | [panasonic_avionics] ✅ Pipeline completed successfully!
+09:26:43 | INFO | [panasonic_avionics] 📊 Quality Score: 8.0/10

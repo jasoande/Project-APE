@@ -80,12 +80,10 @@ class DriveManager:
     SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
     # Google Workspace export formats
+    # Export all to PDF for NotebookLM compatibility
     EXPORT_FORMATS = {
         'application/vnd.google-apps.document': ('application/pdf', '.pdf'),
-        'application/vnd.google-apps.spreadsheet': (
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            '.xlsx'
-        ),
+        'application/vnd.google-apps.spreadsheet': ('application/pdf', '.pdf'),
         'application/vnd.google-apps.presentation': ('application/pdf', '.pdf'),
     }
 
@@ -98,6 +96,7 @@ class DriveManager:
         client_id: str,
         folder_spec: str,
         cache_enabled: bool = True,
+        force_refresh: bool = False,
         config: Optional[Dict] = None
     ):
         """
@@ -107,11 +106,13 @@ class DriveManager:
             client_id: Client identifier for logging
             folder_spec: Google Drive folder URL or ID
             cache_enabled: Enable file caching
+            force_refresh: Force refresh, bypass cache even if valid
             config: Optional configuration dict (DRIVE_CONFIG from vars.py)
         """
         self.client_id = client_id
         self.folder_spec = folder_spec
         self.cache_enabled = cache_enabled
+        self.force_refresh = force_refresh
         self.config = config or {}
 
         self.folder_id = None
@@ -144,14 +145,18 @@ class DriveManager:
         if not self.authenticate():
             raise DriveAuthenticationError("Failed to authenticate with Google Drive")
 
-        # Check cache
-        if self.cache_enabled and self._should_use_cache(self.folder_id):
+        # Check cache (skip if force_refresh)
+        if self.cache_enabled and not self.force_refresh and self._should_use_cache(self.folder_id):
             cache_dir = self._get_cache_dir(self.folder_id)
             logger.info(f"[{self.client_id}] ✅ Using cached Drive files")
             logger.info(f"[{self.client_id}]    Cache: {cache_dir}")
             self.temp_dir = cache_dir
             self.using_cache = True
             return Path(cache_dir)
+
+        # Log if cache was bypassed due to force_refresh
+        if self.force_refresh and self.cache_enabled:
+            logger.info(f"[{self.client_id}] 🔄 Force refresh enabled - bypassing cache")
 
         # Download files
         if self.cache_enabled:
@@ -356,6 +361,43 @@ class DriveManager:
                 continue
 
         return downloaded
+
+    def list_files_metadata(self) -> List[Dict]:
+        """
+        List all files in the configured folder without downloading.
+
+        Returns:
+            List of dicts with keys: id, name, mimeType, size, modifiedTime
+        """
+        # Parse folder ID if not already done
+        if not self.folder_id:
+            self.folder_id = self._parse_folder_spec(self.folder_spec)
+
+        if not self.service:
+            self.authenticate()
+
+        logger.info(f"[{self.client_id}] 📋 Listing files in Drive folder...")
+        logger.info(f"[{self.client_id}]    Folder ID: {self.folder_id}")
+
+        files = self._list_folder_files(self.folder_id)
+
+        # Filter out files over size limit
+        filtered_files = []
+        for file_info in files:
+            file_name = file_info['name']
+            file_size_mb = int(file_info.get('size', 0)) / (1024 * 1024)
+
+            if file_size_mb > self.max_file_size_mb:
+                logger.warning(
+                    f"[{self.client_id}]    ⚠️  Skipping {file_name} "
+                    f"({file_size_mb:.1f}MB > {self.max_file_size_mb}MB limit)"
+                )
+                continue
+
+            filtered_files.append(file_info)
+
+        logger.info(f"[{self.client_id}] ✅ Found {len(filtered_files)} files")
+        return filtered_files
 
     def _list_folder_files(self, folder_id: str) -> List[Dict]:
         """

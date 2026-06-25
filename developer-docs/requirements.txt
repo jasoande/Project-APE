@@ -19,9 +19,12 @@ flask>=3.0.0
 werkzeug>=3.0.0
 
 # ==============================================================================
-# PDF & IMAGE PROCESSING (Required)
+# PDF & IMAGE PROCESSING (Optional - Only for Gemini Agent Mode)
 # ==============================================================================
 # PDF consolidation and image-to-PDF conversion
+# Note: Only used when GEMINI_API_KEY is set and Gemini agent mode is enabled
+# Standard execution (default) does NOT use these - it adds individual files
+# You can remove these if you never use Gemini agent orchestration mode
 pypdf>=4.0.0
 Pillow>=10.0.0
 
@@ -30,4 +33,14 @@ Pillow>=10.0.0
 # ==============================================================================
 # Load environment variables from .env file
 python-dotenv>=1.0.0
+
+# ==============================================================================
+# UPDATE SYSTEM (No Additional Dependencies Required)
+# ==============================================================================
+# Phase 1: Force Refresh - Uses existing google-api-python-client
+# Phase 2: UpdateManager - Uses only Python standard library (pathlib, typing, etc.)
+# Phase 3: Not implemented
+#
+# All update functionality uses existing dependencies above.
+# No additional packages needed.
 

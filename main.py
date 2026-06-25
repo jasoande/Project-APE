@@ -9,6 +9,11 @@ Features:
 - Flask dashboard with real-time updates
 - Complete pipeline with PDF consolidation and research
 - Dual-mode execution (Fast/Deep)
+
+IMPORTANT: This script requires the Project APE virtual environment.
+Use one of these methods to run:
+  1. ./run-workflow.sh fast              (recommended)
+  2. source ~/.project-ape-venv/bin/activate && python3 main.py fast
 """
 
 import subprocess
@@ -121,7 +126,7 @@ class ProcessManager:
             logger.warning("   Could not open browser automatically")
             logger.info(f"   Please open: {dashboard_url}")
 
-    def start_client_process(self, client_id: str, mode: str) -> subprocess.Popen:
+    def start_client_process(self, client_id: str, mode: str, refresh: bool = False) -> subprocess.Popen:
         """Start a single client process."""
         log_file = LOGS_DIR / f"{client_id}.log"
         status_file = STATUS_DIR / f"{client_id}.json"
@@ -132,15 +137,21 @@ class ProcessManager:
         # Open log file
         log_handle = open(log_file, 'w')
 
+        # Build command
+        cmd = [
+            sys.executable,
+            str(SCRIPT_DIR / "core" / "client_pipeline.py"),
+            client_id,
+            "--mode", mode,
+            "--status-file", str(status_file)
+        ]
+
+        if refresh:
+            cmd.append("--refresh")
+
         # Start process
         process = subprocess.Popen(
-            [
-                sys.executable,
-                str(SCRIPT_DIR / "core" / "client_pipeline.py"),
-                client_id,
-                "--mode", mode,
-                "--status-file", str(status_file)
-            ],
+            cmd,
             stdout=log_handle,
             stderr=subprocess.STDOUT,
             cwd=str(SCRIPT_DIR)
@@ -206,11 +217,13 @@ class ProcessManager:
                 if process.poll() is None:
                     process.kill()
 
-        # Terminate dashboard
+        # Terminate dashboard with proper signal handling
         if self.dashboard_process and self.dashboard_process.poll() is None:
+            logger.info("   Stopping dashboard server...")
             self.dashboard_process.terminate()
-            time.sleep(1)
+            time.sleep(2)  # Give Flask time to shut down gracefully
             if self.dashboard_process.poll() is None:
+                logger.warning("   Dashboard didn't stop gracefully, forcing...")
                 self.dashboard_process.kill()
 
         logger.info("   ✅ Cleanup complete")
@@ -225,13 +238,29 @@ def print_banner():
     print("  PROJECT APE - ACCOUNT PLANNING ENGINE")
     print("  AI-Powered Enterprise Account Planning Automation")
     print("="*70)
-    print(f"  Version: 3.2.1 - Critical Auth Retry Fix")
+    print(f"  Version: 3.2.2 - Auth Retry & Lock Contention Fix")
     print(f"  Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*70 + "\n")
 
 
 def main():
     """Main orchestrator entry point."""
+    # Global manager for signal handler
+    global_manager = None
+
+    # Signal handler for graceful shutdown
+    def signal_handler(sig, frame):
+        logger.warning(f"\n⚠️  Received signal {sig}")
+        if global_manager:
+            logger.info("Initiating graceful shutdown...")
+            global_manager.cleanup()
+        import os
+        os._exit(1)
+
+    # Register signal handlers
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
     parser = argparse.ArgumentParser(
         description="Project APE - Account Planning Engine",
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -251,6 +280,11 @@ def main():
         "--no-dashboard",
         action="store_true",
         help="Disable dashboard server"
+    )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Force refresh Google Drive cache (ignore TTL)"
     )
 
     args = parser.parse_args()
@@ -285,6 +319,7 @@ def main():
     run_id = str(int(time.time()))
     manager = ProcessManager(run_id=run_id)
     manager.start_time = time.time()
+    global_manager = manager
 
     logger.info(f"\n🆔 Run ID: {run_id}")
 
@@ -309,9 +344,11 @@ def main():
         for i, client_id in enumerate(clients):
             logger.info(f"\n🚀 Starting: {getattr(config, f'{client_id}_name', client_id)}")
             logger.info(f"   Mode: {args.mode.upper()}")
+            if args.refresh:
+                logger.info(f"   🔄 Force Refresh: ENABLED")
             logger.info(f"   Log: {client_id}.log")
 
-            process = manager.start_client_process(client_id, args.mode)
+            process = manager.start_client_process(client_id, args.mode, args.refresh)
             manager.client_processes.append(process)
 
             # Stagger launches to prevent simultaneous starts
@@ -338,21 +375,46 @@ def main():
 
         if not args.no_dashboard:
             logger.info(f"\n📊 Dashboard: http://localhost:{DASHBOARD_PORT}")
-            logger.info("   Dashboard will remain running for review")
-            logger.info("   Press Ctrl+C to stop")
+            logger.info("   Dashboard will remain running for 5 minutes after completion")
+            logger.info("   Press Ctrl+C to stop immediately")
 
-            # Keep dashboard running
+            # Keep dashboard running for 5 minutes after completion
+            # This gives users time to review results before container shuts down
             try:
-                while True:
-                    time.sleep(60)
+                shutdown_delay = 300  # 5 minutes
+                logger.info(f"   ⏰ Auto-shutdown in {shutdown_delay//60} minutes...")
+                time.sleep(shutdown_delay)
+                logger.info("\n⏰ Auto-shutdown timer expired. Stopping container...")
             except KeyboardInterrupt:
+                logger.info("\n⌨️  Ctrl+C detected. Stopping immediately...")
                 pass
 
         # Cleanup
         manager.cleanup()
 
-        # Exit code
-        sys.exit(0 if results['failed'] == 0 else 1)
+        # Additional step: Try to trigger dashboard shutdown via API
+        # This is a belt-and-suspenders approach to ensure dashboard stops
+        if not args.no_dashboard:
+            try:
+                import urllib.request
+                logger.info("   Requesting dashboard shutdown via API...")
+                req = urllib.request.Request(
+                    f"http://localhost:{DASHBOARD_PORT}/api/shutdown",
+                    method='POST'
+                )
+                urllib.request.urlopen(req, timeout=2)
+            except Exception as e:
+                # Ignore errors - dashboard might already be down
+                logger.debug(f"   Dashboard API call failed (expected): {e}")
+
+        # Exit with proper code
+        # Use os._exit() to ensure immediate termination without running cleanup handlers
+        # This ensures the container actually stops instead of hanging
+        exit_code = 0 if results['failed'] == 0 else 1
+        logger.info(f"\n👋 Exiting with code {exit_code}")
+
+        import os
+        os._exit(exit_code)
 
     except Exception as e:
         logger.error(f"\n❌ Fatal error: {e}")

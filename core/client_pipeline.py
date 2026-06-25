@@ -23,6 +23,7 @@ from core.notebook_manager import NotebookManager
 from core.source_manager import SourceManager
 from core.pdf_consolidator_fast import FastPDFConsolidator
 from core.drive_manager import DriveManager
+from core.update_manager import UpdateManager
 # from core.research_queue import ResearchQueue  # Removed - no longer using queue lock
 
 # Gemini Agent (optional - enabled via config)
@@ -38,7 +39,7 @@ logger = logging.getLogger(__name__)
 class ClientPipeline:
     """Executes complete pipeline for a single client."""
 
-    def __init__(self, client_id: str, config, status_file: Path, mode: str = "fast"):
+    def __init__(self, client_id: str, config, status_file: Path, mode: str = "fast", force_refresh: bool = False):
         """
         Initialize client pipeline.
 
@@ -47,11 +48,13 @@ class ClientPipeline:
             config: Configuration module
             status_file: Path to status JSON file
             mode: Execution mode (fast or deep)
+            force_refresh: Force refresh of Google Drive cache
         """
         self.client_id = client_id
         self.config = config
         self.status_file = status_file
         self.mode = mode
+        self.force_refresh = force_refresh
 
         # Get client details from config
         self.client_name = getattr(config, f"{client_id}_name", client_id)
@@ -98,6 +101,7 @@ class ClientPipeline:
                 client_id=self.client_id,
                 folder_spec=folder_spec,
                 cache_enabled=drive_config.get('cache_enabled', True),
+                force_refresh=self.force_refresh,
                 config=drive_config
             ) as temp_dir:
                 # DriveManager returns temp/cache directory - use it directly
@@ -223,42 +227,54 @@ class ClientPipeline:
 
             self.update_status("Notebook ready", 15, notebook_id=self.notebook_id)
 
-            # Check if consolidated PDF already exists (from previous run)
-            # If it exists, skip PDF consolidation but ALWAYS run research for fresh web data
-            consolidated_pdf_path = self.client_folder / f"{self.client_name}-One.pdf"
-            pdf_exists = consolidated_pdf_path.exists()
-
-            if pdf_exists:
-                logger.info(f"[{self.client_id}] ✅ Found existing PDF: {consolidated_pdf_path.name}")
-                logger.info(f"[{self.client_id}] Skipping PDF consolidation, but will run fresh research")
-
             # Initialize source manager now that we have notebook_id
             self.source_manager = SourceManager(self.client_id, self.notebook_id)
 
-            # Step 3: PDF Consolidation (skip if exists)
-            if pdf_exists:
-                consolidated_pdf = consolidated_pdf_path
-                logger.info(f"[{self.client_id}] Using existing PDF: {consolidated_pdf.name}")
-            else:
-                consolidated_pdf = self._consolidate_pdfs()
-                self.update_status("PDF consolidation complete", 25)
+            # Step 3: Consolidate to PDF and Upload (with change detection)
+            logger.info(f"[{self.client_id}] Checking if consolidation needed...")
+            self.update_status("Checking for file changes...", 23)
 
-            # Step 4: Upload Consolidated PDF (always upload for reliability)
-            if consolidated_pdf:
-                logger.info(f"[{self.client_id}] Uploading PDF to notebook (existing: {is_existing})")
-                self._upload_pdf(consolidated_pdf)
-                self.update_status("Sources uploaded", 30)
-            else:
-                logger.warning(f"[{self.client_id}] No consolidated PDF to upload")
-                self.update_status("No PDF to upload", 30)
+            needs_update, newest_file_time = self._check_consolidation_needed()
 
-            # Step 5: ALWAYS Run Ask Prompts (Research) for fresh web data
+            if needs_update:
+                logger.info(f"[{self.client_id}] 🔄 Files changed - consolidating to PDF...")
+                self.update_status("Consolidating files to PDF...", 25)
+
+                # Delete old consolidated PDFs first
+                self.source_manager.delete_old_consolidated_pdfs(self.client_name)
+
+                # Consolidate all files to single PDF
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+                consolidated_filename = f"{self.client_name}-Consolidated-{timestamp}.pdf"
+
+                consolidated_pdf = self._consolidate_pdfs(consolidated_filename)
+
+                if consolidated_pdf and consolidated_pdf.exists():
+                    # Upload consolidated PDF
+                    logger.info(f"[{self.client_id}] Uploading consolidated PDF...")
+                    self.update_status("Uploading consolidated PDF...", 28)
+
+                    if self.source_manager.add_file_source(consolidated_pdf):
+                        logger.info(f"[{self.client_id}] ✅ Uploaded: {consolidated_filename}")
+                        # Save timestamp for future comparison
+                        self._save_consolidation_timestamp(newest_file_time)
+                    else:
+                        logger.warning(f"[{self.client_id}] ⚠️  Failed to upload consolidated PDF")
+                else:
+                    logger.warning(f"[{self.client_id}] ⚠️  PDF consolidation failed")
+            else:
+                logger.info(f"[{self.client_id}] ✅ No file changes detected - skipping consolidation")
+
+            self.update_status("Sources added", 30)
+
+            # Step 4: ALWAYS Run Ask Prompts (Research) for fresh web data
             # Deep mode deduplicates after EACH prompt (inside _run_ask_prompts)
             # Fast mode deduplicates once at the end (below)
             self._run_ask_prompts()
             self.update_status("Research complete", 60)
 
-            # Step 6: Deduplicate Sources (Fast mode only - deep mode already did it)
+            # Step 5: Deduplicate Sources (Fast mode only - deep mode already did it)
             if self.mode == "fast":
                 # Fast mode: Deduplicate once (no wait - NotebookLM processes async)
                 logger.info(f"[{self.client_id}] Deduplicating sources...")
@@ -270,14 +286,14 @@ class ClientPipeline:
                 logger.info(f"[{self.client_id}] Sources already deduplicated (deep mode)")
                 self.update_status("Sources deduplicated", 65)
 
-            # Step 7: Run Chat Prompts - Sequential with Notes
+            # Step 6: Run Chat Prompts - Sequential with Notes
             self._run_chat_prompts()
             self.update_status("Chat prompts complete", 95)
 
-            # Step 8: Generate Mind Map
+            # Step 7: Generate Mind Map
             self._generate_mindmap()
 
-            # Step 9: Calculate Quality Score
+            # Step 8: Calculate Quality Score
             quality_score = self._calculate_quality_score()
 
             self.update_status("Mind map generated", 100, status="COMPLETE", quality_score=quality_score)
@@ -496,8 +512,16 @@ class ClientPipeline:
 
         return industry, subsegments
 
-    def _consolidate_pdfs(self) -> Optional[Path]:
-        """Consolidate all files into {Client}-One.pdf - converts everything to PDF first"""
+    def _consolidate_pdfs(self, output_filename: str = None) -> Optional[Path]:
+        """
+        Consolidate all files into single PDF - converts everything to PDF first.
+
+        Args:
+            output_filename: Optional custom filename (default: {Client}-One.pdf)
+
+        Returns:
+            Path to consolidated PDF
+        """
         if not self.client_folder.exists():
             logger.warning(f"[{self.client_id}] Client folder not found: {self.client_folder}")
             return None
@@ -506,6 +530,9 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] Consolidating all files to PDF...")
             self.update_status("Converting files to PDF...", 20)
 
+            # Use custom filename or default
+            pdf_filename = output_filename or f"{self.client_name}-One.pdf"
+
             # Use FastPDFConsolidator which converts ALL file types to PDF
             # Handles: PDFs, text files, images, office docs (xlsx, docx, pptx)
             # Write consolidated PDF to logs directory (writable in containers)
@@ -513,7 +540,7 @@ class ClientPipeline:
             with FastPDFConsolidator(
                 self.client_id,
                 self.client_folder,
-                f"{self.client_name}-One.pdf",
+                pdf_filename,
                 output_dir=logs_dir
             ) as consolidator:
                 consolidated = consolidator.consolidate()
@@ -528,6 +555,119 @@ class ClientPipeline:
         except Exception as e:
             logger.error(f"[{self.client_id}] PDF consolidation failed: {e}")
             return None
+
+    def _check_consolidation_needed(self) -> tuple[bool, str]:
+        """
+        Check if files have changed since last consolidation using Drive API timestamps.
+
+        Returns:
+            Tuple of (needs_update: bool, newest_drive_time: str)
+        """
+        from datetime import datetime
+        import json
+
+        try:
+            # Get timestamp file path from logs directory (mounted in containers)
+            logs_dir = Path(self.config.LOGS_DIR if hasattr(self.config, 'LOGS_DIR') else './logs')
+            timestamp_file = logs_dir / '.consolidation_timestamps' / f"{self.client_id}.json"
+
+            # Get Drive folder spec
+            client_folder_spec = getattr(self.config, f"{self.client_id}_folder", "")
+            if not client_folder_spec:
+                logger.warning(f"[{self.client_id}] No Drive folder configured")
+                return True, datetime.now().isoformat()
+
+            # List files from Drive API to get actual modifiedTime
+            drive_config = getattr(self.config, 'DRIVE_CONFIG', {})
+            drive_manager = DriveManager(
+                client_id=self.client_id,
+                folder_spec=client_folder_spec,
+                cache_enabled=False,
+                force_refresh=False,
+                config=drive_config
+            )
+
+            files_metadata = drive_manager.list_files_metadata()
+
+            if not files_metadata:
+                logger.warning(f"[{self.client_id}] No files found in Drive")
+                return False, datetime.now().isoformat()
+
+            # Find newest file modification time from Drive API
+            newest_drive_time = None
+            for file_info in files_metadata:
+                modified_time_str = file_info.get('modifiedTime')
+                if modified_time_str:
+                    # Parse Drive API timestamp (RFC 3339 format)
+                    file_time = datetime.fromisoformat(modified_time_str.replace('Z', '+00:00'))
+                    if newest_drive_time is None or file_time > newest_drive_time:
+                        newest_drive_time = file_time
+
+            if newest_drive_time is None:
+                logger.warning(f"[{self.client_id}] Could not determine file timestamps")
+                return True, datetime.now().isoformat()
+
+            # Check if we have a previous timestamp
+            if not timestamp_file.exists():
+                logger.info(f"[{self.client_id}] No previous consolidation timestamp - will consolidate")
+                return True, newest_drive_time.isoformat()
+
+            # Read previous timestamp
+            with open(timestamp_file, 'r') as f:
+                data = json.load(f)
+                last_consolidation = datetime.fromisoformat(data['last_consolidation'])
+
+            # Compare (make both timezone-aware for comparison)
+            if last_consolidation.tzinfo is None:
+                # Assume local timezone if no timezone info
+                from datetime import timezone
+                last_consolidation = last_consolidation.replace(tzinfo=timezone.utc)
+
+            if newest_drive_time > last_consolidation:
+                logger.info(f"[{self.client_id}] Files changed since last consolidation")
+                logger.info(f"[{self.client_id}]    Last: {last_consolidation.strftime('%Y-%m-%d %H:%M:%S')}")
+                logger.info(f"[{self.client_id}]    Newest: {newest_drive_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                return True, newest_drive_time.isoformat()
+            else:
+                logger.info(f"[{self.client_id}] ✅ No changes since last consolidation - skipping")
+                return False, newest_drive_time.isoformat()
+
+        except Exception as e:
+            logger.warning(f"[{self.client_id}] Error checking timestamps: {e} - will consolidate")
+            return True, datetime.now().isoformat()
+
+    def _save_consolidation_timestamp(self, timestamp: str):
+        """
+        Save consolidation timestamp for future comparison.
+
+        Args:
+            timestamp: ISO format timestamp string
+        """
+        import json
+        from datetime import datetime
+
+        try:
+            # Save to logs directory (mounted in containers)
+            logs_dir = Path(self.config.LOGS_DIR if hasattr(self.config, 'LOGS_DIR') else './logs')
+            timestamp_dir = logs_dir / '.consolidation_timestamps'
+            timestamp_dir.mkdir(parents=True, exist_ok=True)
+
+            timestamp_file = timestamp_dir / f"{self.client_id}.json"
+
+            data = {
+                'client_id': self.client_id,
+                'client_name': self.client_name,
+                'last_consolidation': timestamp,
+                'updated_at': datetime.now().isoformat()
+            }
+
+            with open(timestamp_file, 'w') as f:
+                json.dump(data, f, indent=2)
+
+            logger.info(f"[{self.client_id}] 💾 Saved consolidation timestamp: {timestamp_file}")
+
+        except Exception as e:
+            logger.warning(f"[{self.client_id}] Failed to save timestamp: {e}")
 
     def _upload_pdf(self, pdf_path: Path):
         """Upload consolidated PDF to notebook."""
@@ -936,8 +1076,22 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] ✅ Found notebook: {self.notebook_id}")
 
             # Set notebook context
-            self.notebook_manager.set_notebook_context(self.notebook_id)
+            self.notebook_manager.set_context(self.notebook_id)
             self.source_manager = SourceManager(self.client_id, self.notebook_id)
+
+            # Step 3.5: Check for new files from Google Drive
+            self.update_status("Checking for new files...", 17)
+            update_mgr = UpdateManager(self.client_id, self.config)
+            update_results = update_mgr.update_client_sources(
+                notebook_name=notebook_name,
+                force_drive_refresh=True,
+                re_run_research=False  # We'll run research separately
+            )
+
+            if update_results.get("new_sources_added", 0) > 0:
+                logger.info(f"[{self.client_id}] ✅ Added {update_results['new_sources_added']} new files")
+            else:
+                logger.info(f"[{self.client_id}] ℹ️  No new files detected")
 
             # Step 4: Run Fresh Research (always get latest web data)
             self.update_status("Running fresh research...", 20)
@@ -983,6 +1137,7 @@ def main():
     parser.add_argument("client_id", help="Client identifier")
     parser.add_argument("--mode", choices=["fast", "deep", "update"], default="fast")
     parser.add_argument("--status-file", type=Path, required=True)
+    parser.add_argument("--refresh", action="store_true", help="Force refresh Google Drive cache")
     args = parser.parse_args()
 
     # Setup logging
@@ -999,7 +1154,7 @@ def main():
     spec.loader.exec_module(config)
 
     # Run pipeline
-    pipeline = ClientPipeline(args.client_id, config, args.status_file, args.mode)
+    pipeline = ClientPipeline(args.client_id, config, args.status_file, args.mode, args.refresh)
     success = pipeline.execute()
 
     sys.exit(0 if success else 1)

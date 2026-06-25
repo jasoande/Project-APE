@@ -8,6 +8,8 @@ Manages NotebookLM authentication with session persistence
 import subprocess
 import logging
 import time
+import json
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -26,37 +28,76 @@ class AuthManager:
         self.last_check = 0
         self.check_interval = 60  # 1 minute - check frequently during long runs
 
-    def is_authenticated(self) -> bool:
+    def is_authenticated(self, max_retries: int = 3) -> bool:
         """
         Check if currently authenticated with NotebookLM.
+
+        Uses file-based check instead of launching browser to avoid
+        profile lock contention when multiple clients check simultaneously.
+
+        Args:
+            max_retries: Maximum number of retry attempts for file access failures
 
         Returns:
             True if authenticated, False otherwise
         """
-        try:
-            # Try to list notebooks - this will fail if not authenticated
-            # Using 'list' instead of 'status' as status command doesn't exist in all versions
-            result = subprocess.run(
-                ["notebooklm", "list"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+        import random
 
-            # If list command succeeds (even with 0 notebooks), we're authenticated
-            if result.returncode == 0:
+        # Path to NotebookLM credentials
+        storage_file = Path.home() / '.notebooklm' / 'profiles' / self.profile / 'storage_state.json'
+
+        for attempt in range(max_retries):
+            try:
+                # Check if credentials file exists
+                if not storage_file.exists():
+                    logger.debug(f"Auth check: credentials file not found at {storage_file}")
+                    return False
+
+                # Try to read and validate credentials file
+                with open(storage_file, 'r') as f:
+                    try:
+                        data = json.load(f)
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Auth check: invalid JSON in credentials file: {e}")
+                        return False
+
+                # Check if credentials have required structure
+                # NotebookLM stores cookies/tokens in the storage_state.json file
+                # If the file is valid JSON and not empty, assume credentials are present
+                if not data:
+                    logger.debug("Auth check: credentials file is empty")
+                    return False
+
+                # Check for cookies (indicates valid browser session)
+                if 'cookies' not in data or not isinstance(data['cookies'], list):
+                    logger.debug("Auth check: no cookies found in credentials")
+                    return False
+
+                if len(data['cookies']) == 0:
+                    logger.debug("Auth check: cookie list is empty")
+                    return False
+
+                # Credentials exist and appear valid
+                logger.debug(f"Auth check: valid credentials found ({len(data['cookies'])} cookies)")
                 return True
 
-            # Check if error message indicates auth issue
-            error_output = result.stderr.lower()
-            if "not authenticated" in error_output or "login" in error_output:
+            except (OSError, IOError) as e:
+                # File access error - might be transient (lock, permission issue)
+                if attempt < max_retries - 1:
+                    delay = (2 ** attempt) + random.uniform(0, 1)
+                    logger.warning(f"Auth check file access error, retrying in {delay:.1f}s: {e}")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"Auth check failed after retries: {e}")
+                    return False
+            except Exception as e:
+                # Unexpected error
+                logger.error(f"Unexpected error during auth check: {type(e).__name__}: {e}")
                 return False
 
-            return False
-
-        except Exception as e:
-            logger.error(f"Auth check failed: {e}")
-            return False
+        # All retries exhausted (shouldn't reach here)
+        return False
 
     def ensure_authenticated(self, client_id: str = None, force_check: bool = False) -> bool:
         """
@@ -69,6 +110,8 @@ class AuthManager:
         Returns:
             True if authenticated (or successfully logged in), False otherwise
         """
+        import random
+
         prefix = f"[{client_id}] " if client_id else ""
 
         # Check if we need to verify auth
@@ -76,6 +119,13 @@ class AuthManager:
         if not force_check and now - self.last_check < self.check_interval:
             # Recently checked, assume still valid
             return True
+
+        # Add small random delay to spread out auth checks from multiple clients
+        # This prevents browser profile lock contention
+        if client_id:
+            delay = random.uniform(0, 3)
+            logger.info(f"{prefix}Auth check anti-collision delay: {delay:.1f}s")
+            time.sleep(delay)
 
         logger.info(f"{prefix}Checking authentication status...")
 

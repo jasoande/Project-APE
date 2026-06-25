@@ -40,6 +40,8 @@ docs_generated/
 *.pptx
 *.docx
 
+developer-docs/
+
 # Client data (NEVER commit)
 client_data/
 Venella_2026/
@@ -52,16 +54,17 @@ Panasonic/
 Panasonic_Avionics/
 Panasonic_Canada/
 Hershey Entertainment/
-developer-docs/
 
 # Credentials (NEVER commit)
 .notebooklm/
 credentials.json
 token.json
 vars.py
+jasoande-3aec1043e544.json
 .env
 service-account-key.json
-jasoande-3aec1043e544.json
+
+
 # OS
 .DS_Store
 Thumbs.db
@@ -74,3 +77,4 @@ temp/
 
 # Claude Code
 .claude/
+.env
