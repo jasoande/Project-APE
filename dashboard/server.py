@@ -876,7 +876,42 @@ def notebooklm_login():
                 if result.returncode == 0:
                     print(f"[AUTH] NotebookLM login completed successfully", file=sys.stderr)
 
-                    # CRITICAL: Automatically sync credentials to container volume
+                    # STEP 1: Setup Google Cloud Application Default Credentials
+                    print(f"[AUTH] Setting up Google Cloud ADC...", file=sys.stderr)
+                    adc_result = subprocess.run(
+                        ['gcloud', 'auth', 'application-default', 'login'],
+                        capture_output=True,
+                        text=True,
+                        timeout=300
+                    )
+
+                    if adc_result.returncode == 0:
+                        print(f"[AUTH] ✅ Application Default Credentials configured", file=sys.stderr)
+                    else:
+                        print(f"[AUTH] ⚠️  ADC setup failed: {adc_result.stderr}", file=sys.stderr)
+
+                    # STEP 2: Set quota project
+                    project_result = subprocess.run(
+                        ['gcloud', 'config', 'get-value', 'project'],
+                        capture_output=True,
+                        text=True,
+                        timeout=10
+                    )
+                    project_name = project_result.stdout.strip()
+
+                    if project_name and project_name != '(unset)':
+                        print(f"[AUTH] Setting quota project: {project_name}...", file=sys.stderr)
+                        subprocess.run(
+                            ['gcloud', 'auth', 'application-default', 'set-quota-project', project_name],
+                            capture_output=True,
+                            text=True,
+                            timeout=30
+                        )
+                        print(f"[AUTH] ✅ Quota project set: {project_name}", file=sys.stderr)
+                    else:
+                        print(f"[AUTH] ⚠️  No GCP project set. Run: gcloud config set project YOUR_PROJECT", file=sys.stderr)
+
+                    # STEP 3: Sync credentials to container volume
                     # After successful login, run setup-credentials.sh to update the
                     # project-ape-credentials volume so container workflows can access them
                     setup_script = PROJECT_ROOT / 'setup-credentials.sh'
