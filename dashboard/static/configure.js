@@ -547,135 +547,177 @@ async function downloadConfiguration() {
 // ========================================================================
 
 function initCsvImport() {
-    const fileInput = document.getElementById('csvFile');
-    const importBtn = document.getElementById('importCsvBtn');
+    // Initialize drag-and-drop zone
+    initCSVDropZone();
 
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            importBtn.disabled = false;
-        } else {
-            importBtn.disabled = true;
-        }
-    });
+    // Initialize import button
+    const importBtn = document.getElementById('btn-import-csv');
+    if (importBtn) {
+        importBtn.addEventListener('click', importCsv);
+    }
 
-    importBtn.addEventListener('click', importCsv);
+    // Initialize preview buttons
     document.getElementById('confirmImportBtn').addEventListener('click', confirmImport);
     document.getElementById('cancelImportBtn').addEventListener('click', cancelImport);
 }
 
+// Initialize CSV drag-and-drop
+function initCSVDropZone() {
+    const dropZone = document.getElementById('csv-drop-zone');
+    const fileInput = document.getElementById('csv-file-input');
+
+    if (!dropZone || !fileInput) return;
+
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    // Highlight drop zone on drag over
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('drag-over');
+        }, false);
+    });
+
+    // Handle dropped files
+    dropZone.addEventListener('drop', handleCSVDrop, false);
+
+    // Handle click to browse
+    dropZone.addEventListener('click', (e) => {
+        // Don't trigger if clicking the browse button itself
+        if (e.target.classList.contains('btn-browse')) return;
+        fileInput.click();
+    });
+
+    // Handle file input change
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleCSVFile(e.target.files[0]);
+        }
+    });
+}
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function handleCSVDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+
+    if (files.length === 0) return;
+
+    const file = files[0];
+
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        showMessage('error', 'Please upload a CSV file (.csv)');
+        return;
+    }
+
+    handleCSVFile(file);
+}
+
+function handleCSVFile(file) {
+    // Validate file
+    const validation = validateCSVFile(file);
+    if (!validation.valid) {
+        showMessage('error', 'File validation failed:\n' + validation.errors.join('\n'));
+        return;
+    }
+
+    // Display selected file
+    document.getElementById('csv-drop-zone').style.display = 'none';
+    document.getElementById('csv-file-selected').style.display = 'flex';
+    document.getElementById('csv-file-name').textContent = file.name;
+    document.getElementById('csv-file-size').textContent = formatFileSize(file.size);
+
+    // Store file for later upload
+    window.selectedCSVFile = file;
+
+    // Enable import button
+    const importBtn = document.getElementById('btn-import-csv');
+    if (importBtn) {
+        importBtn.disabled = false;
+    }
+}
+
+function removeCSVFile() {
+    document.getElementById('csv-drop-zone').style.display = 'block';
+    document.getElementById('csv-file-selected').style.display = 'none';
+    document.getElementById('csv-file-input').value = '';
+    window.selectedCSVFile = null;
+    const importBtn = document.getElementById('btn-import-csv');
+    if (importBtn) {
+        importBtn.disabled = true;
+    }
+}
+
+function validateCSVFile(file) {
+    const errors = [];
+
+    // Check file extension
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        errors.push('File must be a CSV (.csv)');
+    }
+
+    // Check file size
+    if (file.size === 0) {
+        errors.push('File is empty');
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        errors.push('File too large (max 10MB)');
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors: errors
+    };
+}
+
 async function importCsv() {
-    const fileInput = document.getElementById('csvFile');
-    const file = fileInput.files[0];
+    // Use the file stored by drag-drop handler
+    const file = window.selectedCSVFile;
 
     if (!file) {
         showMessage('error', 'Please select a CSV file first.');
         return;
     }
 
-    const progressDiv = document.getElementById('csv-upload-progress');
-    const progressFill = document.getElementById('csv-progress-fill');
-    const progressPercent = document.getElementById('csv-progress-percent');
-    const progressStatus = document.getElementById('csv-progress-status');
-
-    // Reset and show progress bar
-    progressFill.style.width = '0%';
-    progressFill.className = 'progress-fill';
-    progressPercent.textContent = '0%';
-    progressStatus.textContent = 'Uploading...';
-    progressDiv.classList.add('visible');
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    let uploadStartTime = Date.now();
+    setLoading(true, 'Importing CSV...');
 
     try {
-        // Use XMLHttpRequest for progress tracking
-        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append('file', file);
 
-        // Upload progress handler
-        xhr.upload.addEventListener('loadstart', () => {
-            uploadStartTime = Date.now();
+        const response = await fetch('/api/import-csv', {
+            method: 'POST',
+            body: formData
         });
 
-        xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                progressFill.style.width = percent + '%';
-                progressPercent.textContent = percent + '%';
+        const data = await response.json();
 
-                if (percent < 100) {
-                    const elapsed = (Date.now() - uploadStartTime) / 1000; // seconds
-                    const speed = elapsed > 0 ? e.loaded / elapsed : 0;
-
-                    const sizeText = formatFileSize(e.loaded) + ' / ' + formatFileSize(e.total);
-                    const speedText = speed > 0 ? formatFileSize(speed) + '/s' : '';
-
-                    progressStatus.textContent = speedText ? `${sizeText} (${speedText})` : sizeText;
-                } else {
-                    progressStatus.textContent = 'Processing CSV...';
-                }
-            }
-        });
-
-        // Success handler
-        xhr.addEventListener('load', () => {
-            if (xhr.status === 200) {
-                try {
-                    const data = JSON.parse(xhr.responseText);
-
-                    if (data.success) {
-                        // Update to success state
-                        progressFill.classList.add('success');
-                        progressFill.style.width = '100%';
-                        progressPercent.textContent = '100%';
-                        progressStatus.textContent = `Parsed ${data.imported} client(s)`;
-
-                        importedClientsPreview = data.clients;
-                        showImportPreview(data);
-
-                        // Hide progress bar after 2 seconds
-                        setTimeout(() => {
-                            progressDiv.classList.remove('visible');
-                        }, 2000);
-                    } else {
-                        throw new Error(data.error || 'Failed to import CSV');
-                    }
-                } catch (parseError) {
-                    throw new Error('Invalid response from server');
-                }
-            } else {
-                throw new Error(`Upload failed with status ${xhr.status}`);
-            }
-        });
-
-        // Error handler
-        xhr.addEventListener('error', () => {
-            progressFill.classList.add('error');
-            progressStatus.textContent = 'Network error';
-            showMessage('error', '❌ CSV upload failed: Network error');
-            progressDiv.classList.remove('visible');
-        });
-
-        // Abort handler
-        xhr.addEventListener('abort', () => {
-            progressFill.classList.add('error');
-            progressStatus.textContent = 'Upload cancelled';
-            showMessage('error', '❌ CSV upload cancelled');
-            progressDiv.classList.remove('visible');
-        });
-
-        // Send the request
-        xhr.open('POST', '/api/import-csv');
-        xhr.send(formData);
-
+        if (data.success) {
+            importedClientsPreview = data.clients;
+            showImportPreview(data);
+            showMessage('success', `✅ CSV parsed successfully! Found ${data.imported} client(s).`);
+        } else {
+            showMessage('error', 'Failed to import CSV: ' + data.error);
+        }
     } catch (error) {
-        progressFill.classList.add('error');
-        progressStatus.textContent = 'Upload failed';
         showMessage('error', `Failed to import CSV: ${error.message}`);
-        setTimeout(() => {
-            progressDiv.classList.remove('visible');
-        }, 3000);
+    } finally {
+        setLoading(false);
     }
 }
 
