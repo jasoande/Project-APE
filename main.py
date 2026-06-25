@@ -9,6 +9,11 @@ Features:
 - Flask dashboard with real-time updates
 - Complete pipeline with PDF consolidation and research
 - Dual-mode execution (Fast/Deep)
+
+IMPORTANT: This script requires the Project APE virtual environment.
+Use one of these methods to run:
+  1. ./run-workflow.sh fast              (recommended)
+  2. source ~/.project-ape-venv/bin/activate && python3 main.py fast
 """
 
 import subprocess
@@ -212,11 +217,13 @@ class ProcessManager:
                 if process.poll() is None:
                     process.kill()
 
-        # Terminate dashboard
+        # Terminate dashboard with proper signal handling
         if self.dashboard_process and self.dashboard_process.poll() is None:
+            logger.info("   Stopping dashboard server...")
             self.dashboard_process.terminate()
-            time.sleep(1)
+            time.sleep(2)  # Give Flask time to shut down gracefully
             if self.dashboard_process.poll() is None:
+                logger.warning("   Dashboard didn't stop gracefully, forcing...")
                 self.dashboard_process.kill()
 
         logger.info("   ✅ Cleanup complete")
@@ -238,6 +245,22 @@ def print_banner():
 
 def main():
     """Main orchestrator entry point."""
+    # Global manager for signal handler
+    global_manager = None
+
+    # Signal handler for graceful shutdown
+    def signal_handler(sig, frame):
+        logger.warning(f"\n⚠️  Received signal {sig}")
+        if global_manager:
+            logger.info("Initiating graceful shutdown...")
+            global_manager.cleanup()
+        import os
+        os._exit(1)
+
+    # Register signal handlers
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
     parser = argparse.ArgumentParser(
         description="Project APE - Account Planning Engine",
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -296,6 +319,10 @@ def main():
     run_id = str(int(time.time()))
     manager = ProcessManager(run_id=run_id)
     manager.start_time = time.time()
+
+    # Make manager available to signal handler
+    nonlocal global_manager
+    global_manager = manager
 
     logger.info(f"\n🆔 Run ID: {run_id}")
 
@@ -368,8 +395,29 @@ def main():
         # Cleanup
         manager.cleanup()
 
-        # Exit code
-        sys.exit(0 if results['failed'] == 0 else 1)
+        # Additional step: Try to trigger dashboard shutdown via API
+        # This is a belt-and-suspenders approach to ensure dashboard stops
+        if not args.no_dashboard:
+            try:
+                import urllib.request
+                logger.info("   Requesting dashboard shutdown via API...")
+                req = urllib.request.Request(
+                    f"http://localhost:{DASHBOARD_PORT}/api/shutdown",
+                    method='POST'
+                )
+                urllib.request.urlopen(req, timeout=2)
+            except Exception as e:
+                # Ignore errors - dashboard might already be down
+                logger.debug(f"   Dashboard API call failed (expected): {e}")
+
+        # Exit with proper code
+        # Use os._exit() to ensure immediate termination without running cleanup handlers
+        # This ensures the container actually stops instead of hanging
+        exit_code = 0 if results['failed'] == 0 else 1
+        logger.info(f"\n👋 Exiting with code {exit_code}")
+
+        import os
+        os._exit(exit_code)
 
     except Exception as e:
         logger.error(f"\n❌ Fatal error: {e}")

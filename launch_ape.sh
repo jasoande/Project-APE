@@ -246,8 +246,12 @@ run_container() {
     # IMPORTANT: Set HOME=/home/apeuser so NotebookLM CLI finds credentials
     # Mount code for development (core/, dashboard/, main.py)
     # Note: No -it flags so container exits cleanly when pipeline completes
+    # --stop-timeout: Force kill if container doesn't stop within 10 seconds
+    # --stop-signal: Use SIGTERM for graceful shutdown
     $runtime run --rm \
         --name project-ape \
+        --stop-timeout 10 \
+        --stop-signal SIGTERM \
         ${userns_flag} \
         -p ${DASHBOARD_PORT}:8765 \
         -e HOME=/home/apeuser \
@@ -264,6 +268,9 @@ run_container() {
         ${cache_mount} \
         "${image}" \
         ${cmd}
+
+    # Container has exited
+    log_info "Container stopped successfully"
 }
 
 ################################################################################
