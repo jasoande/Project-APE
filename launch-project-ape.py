@@ -69,17 +69,32 @@ def check_venv_functional(venv_python, debug=False):
 
     try:
         # Test if Flask is installed (core dashboard dependency)
+        # Suppress warnings by setting PYTHONWARNINGS=ignore
+        env = os.environ.copy()
+        env['PYTHONWARNINGS'] = 'ignore'
+
         result = subprocess.run(
             [str(venv_python), "-c", "import flask"],
             stdout=subprocess.PIPE if debug else subprocess.DEVNULL,
             stderr=subprocess.PIPE if debug else subprocess.DEVNULL,
-            timeout=5
+            env=env,
+            timeout=5,
+            text=True
         )
-        if debug and result.returncode != 0:
-            print(f"   Debug: Flask import failed")
-            if result.stderr:
-                print(f"   Error: {result.stderr.decode()}")
+        if debug:
+            if result.returncode != 0:
+                print(f"   Debug: Flask import failed (return code: {result.returncode})")
+                if result.stderr:
+                    print(f"   Stderr: {result.stderr}")
+                if result.stdout:
+                    print(f"   Stdout: {result.stdout}")
+            else:
+                print(f"   Debug: Flask import succeeded ✓")
         return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        if debug:
+            print(f"   Debug: Timeout during Flask import check")
+        return False
     except Exception as e:
         if debug:
             print(f"   Debug: Exception during check: {e}")
