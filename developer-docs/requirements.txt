@@ -1,33 +1,46 @@
 # Project APE - Python Dependencies
-# Requires Python 3.10+
+# Requires Python 3.11+
 
-# Google API dependencies (required for NotebookLM authentication)
+# ==============================================================================
+# GOOGLE DRIVE INTEGRATION (Required)
+# ==============================================================================
+# Core Google Drive API for downloading client documents
 google-api-python-client>=2.140.0
 google-api-core>=2.19.0
 google-auth>=2.30.0
-requests-oauthlib>=2.0.0
 google-auth-oauthlib>=1.1.0
 google-auth-httplib2>=0.1.1
 
-# Gemini AI SDK (for industry detection and subsegment generation)
-google-genai>=1.0.0
-
-# Anthropic Claude SDK (optional - for industry auto-detection via Vertex AI)
-anthropic[vertex]>=0.109.0
-
-# Web Framework
+# ==============================================================================
+# WEB DASHBOARD (Required)
+# ==============================================================================
+# Flask web server for real-time progress monitoring
 flask>=3.0.0
 werkzeug>=3.0.0
 
-# PDF Processing
+# ==============================================================================
+# PDF & IMAGE PROCESSING (Optional - Only for Gemini Agent Mode)
+# ==============================================================================
+# PDF consolidation and image-to-PDF conversion
+# Note: Only used when GEMINI_API_KEY is set and Gemini agent mode is enabled
+# Standard execution (default) does NOT use these - it adds individual files
+# You can remove these if you never use Gemini agent orchestration mode
 pypdf>=4.0.0
-reportlab>=4.0.0
 Pillow>=10.0.0
 
-# NotebookLM Python SDK
-notebooklm-py>=0.7.1
-
-# Utilities
-requests>=2.31.0
-python-dateutil>=2.8.0
+# ==============================================================================
+# CONFIGURATION MANAGEMENT (Required)
+# ==============================================================================
+# Load environment variables from .env file
 python-dotenv>=1.0.0
+
+# ==============================================================================
+# UPDATE SYSTEM (No Additional Dependencies Required)
+# ==============================================================================
+# Phase 1: Force Refresh - Uses existing google-api-python-client
+# Phase 2: UpdateManager - Uses only Python standard library (pathlib, typing, etc.)
+# Phase 3: Not implemented
+#
+# All update functionality uses existing dependencies above.
+# No additional packages needed.
+
