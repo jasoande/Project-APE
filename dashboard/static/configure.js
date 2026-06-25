@@ -1357,6 +1357,329 @@ window.addEventListener('DOMContentLoaded', () => {
     // Initialize auth status polling
     initAuthStatusPolling();
 
+    // Drive sources buttons
+    document.getElementById('refreshSourcesBtn').addEventListener('click', showRefreshOptionsModal);
+    document.getElementById('viewCacheStatsBtn').addEventListener('click', showCacheStats);
+    document.getElementById('clearCacheBtn').addEventListener('click', clearCache);
+
+    // Modal close buttons
+    document.getElementById('closeCacheStatsBtn').addEventListener('click', () => {
+        document.getElementById('cacheStatsModal').style.display = 'none';
+    });
+    document.getElementById('closeRefreshOptionsBtn').addEventListener('click', () => {
+        document.getElementById('refreshOptionsModal').style.display = 'none';
+    });
+    document.getElementById('cancelRefreshBtn').addEventListener('click', () => {
+        document.getElementById('refreshOptionsModal').style.display = 'none';
+    });
+    document.getElementById('startRefreshBtn').addEventListener('click', startRefreshSources);
+
+    // Initialize cache stats
+    loadCacheStats();
+
     // Initial preview
     updatePreview();
 });
+
+// ========================================================================
+// Google Drive Sources Management
+// ========================================================================
+
+async function loadCacheStats() {
+    try {
+        const response = await fetch('/api/cache-stats');
+        const data = await response.json();
+
+        if (data.success) {
+            // Update summary badge
+            const cacheStatusBadge = document.getElementById('cacheStatusBadge');
+            const totalCacheSize = document.getElementById('totalCacheSize');
+            const totalCacheFiles = document.getElementById('totalCacheFiles');
+
+            if (data.total_files > 0) {
+                cacheStatusBadge.innerHTML = `
+                    <span style="font-size: 1.2rem;">✅</span>
+                    <span style="font-weight: 600; color: #86efac;">${data.stats.filter(s => s.cached).length} Cached</span>
+                `;
+                cacheStatusBadge.style.background = 'rgba(34,197,94,0.1)';
+                cacheStatusBadge.style.borderColor = '#22c55e';
+            } else {
+                cacheStatusBadge.innerHTML = `
+                    <span style="font-size: 1.2rem;">💾</span>
+                    <span style="font-weight: 600; color: #c0c8d0;">No Cache</span>
+                `;
+            }
+
+            totalCacheSize.textContent = `${data.total_size_mb} MB`;
+            totalCacheFiles.textContent = data.total_files;
+
+            // Store stats for use in modals
+            window.cacheStats = data.stats;
+        }
+    } catch (error) {
+        console.error('Failed to load cache stats:', error);
+    }
+}
+
+async function showCacheStats() {
+    try {
+        const response = await fetch('/api/cache-stats');
+        const data = await response.json();
+
+        if (data.success) {
+            const modal = document.getElementById('cacheStatsModal');
+            const content = document.getElementById('cacheStatsContent');
+
+            // Build stats table
+            let html = `
+                <div style="margin-bottom: 20px; padding: 16px; background: rgba(59,130,246,0.05); border: 1px solid #3b82f6; border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                        <div>
+                            <div style="color: #8b949e; font-size: 0.85rem; margin-bottom: 4px;">Total Cache Size</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">${data.total_size_mb} MB</div>
+                        </div>
+                        <div>
+                            <div style="color: #8b949e; font-size: 0.85rem; margin-bottom: 4px;">Total Files</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">${data.total_files}</div>
+                        </div>
+                        <div>
+                            <div style="color: #8b949e; font-size: 0.85rem; margin-bottom: 4px;">Cached Clients</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #fff;">${data.stats.filter(s => s.cached).length}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (data.stats.length === 0) {
+                html += `<div style="text-align: center; padding: 40px; color: #8b949e;">No clients configured</div>`;
+            } else {
+                data.stats.forEach(stat => {
+                    const bgColor = stat.cached ? 'rgba(34,197,94,0.05)' : 'rgba(139,148,158,0.05)';
+                    const borderColor = stat.cached ? '#22c55e' : '#8b949e';
+                    const statusIcon = stat.type === 'local' ? '📁' : (stat.cached ? '✅' : '❌');
+                    const statusText = stat.type === 'local' ? 'Local Folder' : (stat.cached ? 'Cached' : 'Not Cached');
+
+                    html += `
+                        <div style="margin-bottom: 12px; padding: 16px; background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 1.1rem; color: #fff; margin-bottom: 4px;">${stat.client_name}</div>
+                                    <div style="font-size: 0.85rem; color: #8b949e;">${stat.client_id}</div>
+                                </div>
+                                <div style="padding: 4px 12px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid ${borderColor};">
+                                    <span style="margin-right: 6px;">${statusIcon}</span>
+                                    <span style="font-weight: 600; font-size: 0.85rem;">${statusText}</span>
+                                </div>
+                            </div>
+                    `;
+
+                    if (stat.cached && stat.type === 'drive') {
+                        html += `
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                                <div>
+                                    <div style="color: #8b949e; font-size: 0.8rem;">Cache Size</div>
+                                    <div style="font-weight: 600; color: #e6edf3;">${stat.size_mb} MB</div>
+                                </div>
+                                <div>
+                                    <div style="color: #8b949e; font-size: 0.8rem;">Files</div>
+                                    <div style="font-weight: 600; color: #e6edf3;">${stat.file_count}</div>
+                                </div>
+                                <div>
+                                    <div style="color: #8b949e; font-size: 0.8rem;">Last Refresh</div>
+                                    <div style="font-weight: 600; color: #e6edf3;">${stat.age}</div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (stat.error) {
+                        html += `<div style="color: #fca5a5; font-size: 0.85rem;">Error: ${stat.error}</div>`;
+                    }
+
+                    html += `</div>`;
+                });
+            }
+
+            content.innerHTML = html;
+            modal.style.display = 'block';
+        }
+    } catch (error) {
+        showMessage('error', `Failed to load cache stats: ${error.message}`);
+    }
+}
+
+async function showRefreshOptionsModal() {
+    const modal = document.getElementById('refreshOptionsModal');
+    const clientList = document.getElementById('clientSelectionList');
+
+    // Get list of clients with Drive folders
+    const driveClients = clients.filter(c =>
+        c.folder && (c.folder.includes('drive.google.com') || c.folder.startsWith('drive://'))
+    );
+
+    if (driveClients.length === 0) {
+        showMessage('warning', 'No clients with Google Drive folders configured');
+        return;
+    }
+
+    // Build client selection checkboxes
+    let html = `
+        <div style="margin-bottom: 12px; padding: 12px; background: rgba(59,130,246,0.05); border: 1px solid #3b82f6; border-radius: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="selectAllClients" style="width: 18px; height: 18px; cursor: pointer;" checked />
+                <span style="font-weight: 600; color: #93c5fd;">Select All Clients</span>
+            </label>
+        </div>
+    `;
+
+    driveClients.forEach(client => {
+        html += `
+            <label style="display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
+                   onmouseover="this.style.background='rgba(255,255,255,0.05)'"
+                   onmouseout="this.style.background='transparent'">
+                <input type="checkbox" class="client-checkbox" data-client-id="${client.id}" style="width: 18px; height: 18px; cursor: pointer;" checked />
+                <span style="flex: 1; font-weight: 600; color: #e6edf3;">${client.name}</span>
+                <span style="color: #8b949e; font-size: 0.85rem;">${client.id}</span>
+            </label>
+        `;
+    });
+
+    clientList.innerHTML = html;
+
+    // Add select all functionality
+    document.getElementById('selectAllClients').addEventListener('change', (e) => {
+        document.querySelectorAll('.client-checkbox').forEach(cb => {
+            cb.checked = e.target.checked;
+        });
+    });
+
+    modal.style.display = 'block';
+}
+
+async function startRefreshSources() {
+    const selectedClients = Array.from(document.querySelectorAll('.client-checkbox:checked'))
+        .map(cb => cb.dataset.clientId);
+
+    if (selectedClients.length === 0) {
+        showMessage('warning', 'Please select at least one client to refresh');
+        return;
+    }
+
+    // Close modal
+    document.getElementById('refreshOptionsModal').style.display = 'none';
+
+    // Show progress panel
+    const progressPanel = document.getElementById('refreshProgressPanel');
+    const progressContent = document.getElementById('refreshProgressContent');
+    progressPanel.style.display = 'block';
+    progressContent.textContent = '';
+
+    // Disable refresh button during operation
+    const refreshBtn = document.getElementById('refreshSourcesBtn');
+    const originalBtnText = refreshBtn.textContent;
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '🔄 Refreshing...';
+
+    try {
+        const response = await fetch('/api/refresh-sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clients: selectedClients })
+        });
+
+        // Stream progress updates
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.substring(6));
+
+                        // Format message with colors
+                        let colorClass = '';
+                        let icon = '';
+                        if (data.type === 'error') {
+                            colorClass = 'color: #fca5a5';
+                            icon = '❌';
+                        } else if (data.type === 'success') {
+                            colorClass = 'color: #86efac';
+                            icon = '✅';
+                        } else if (data.type === 'warning') {
+                            colorClass = 'color: #fdba74';
+                            icon = '⚠️';
+                        } else if (data.type === 'info') {
+                            colorClass = 'color: #93c5fd';
+                            icon = 'ℹ️';
+                        }
+
+                        if (data.message) {
+                            progressContent.textContent += `${data.message}\n`;
+                        }
+
+                        // Scroll to bottom
+                        progressContent.scrollTop = progressContent.scrollHeight;
+
+                        // Handle completion
+                        if (data.type === 'complete') {
+                            if (data.success) {
+                                showMessage('success', `✅ Refresh complete! Updated ${data.total_files} files across ${data.successful} client(s)`);
+                            } else {
+                                showMessage('warning', `⚠️ Refresh completed with ${data.failed} error(s)`);
+                            }
+
+                            // Reload cache stats
+                            await loadCacheStats();
+                        }
+                    } catch (e) {
+                        // Skip invalid JSON
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        showMessage('error', `Refresh failed: ${error.message}`);
+        progressContent.textContent += `\n❌ Error: ${error.message}\n`;
+    } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = originalBtnText;
+    }
+}
+
+async function clearCache() {
+    if (!confirm('Are you sure you want to clear ALL cached Drive files?\n\nThis will delete all downloaded files from the cache. They will be re-downloaded on the next workflow run.')) {
+        return;
+    }
+
+    const clearBtn = document.getElementById('clearCacheBtn');
+    const originalText = clearBtn.textContent;
+    clearBtn.disabled = true;
+    clearBtn.textContent = '🗑️ Clearing...';
+
+    try {
+        const response = await fetch('/api/clear-cache', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}) // Clear all clients
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showMessage('success', `✅ ${data.message} (${data.cleared_size_mb} MB freed)`);
+            await loadCacheStats();
+        } else {
+            showMessage('error', `Failed to clear cache: ${data.error}`);
+        }
+    } catch (error) {
+        showMessage('error', `Failed to clear cache: ${error.message}`);
+    } finally {
+        clearBtn.disabled = false;
+        clearBtn.textContent = originalText;
+    }
+}
