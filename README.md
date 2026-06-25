@@ -72,13 +72,17 @@ Project APE (Account Planning Engine) automates comprehensive account research b
 **Choose your launcher based on your operating system:**
 
 - **Windows**: Double-click `launch-project-ape.bat` (or `launch-project-ape.ps1`)
-- **Linux**: Run `./launch-project-ape.sh` or `python3 launch-project-ape.py`
+- **Linux**: 
+  - **GUI**: Run `./install-linux-launcher.sh` first (one-time), then double-click desktop icon
+  - **Terminal**: Run `./launch-project-ape.sh` or `python3 launch-project-ape.py`
 - **macOS**: Double-click `launch-project-ape.command` in Finder (or use new cross-platform launcher)
 - **All platforms**: Run `python3 launch-project-ape.py` (universal launcher)
 
 Your browser automatically opens to: `http://localhost:8765/configure`
 
 📖 **See [CROSS_PLATFORM_LAUNCHER.md](CROSS_PLATFORM_LAUNCHER.md) for detailed launcher documentation**
+
+**Linux Users Note**: Most Linux file managers open scripts in a text editor by default. Use the desktop launcher installer for true double-click support.
 
 ![Configuration Page](Docs/screenshots/configure-page.png)
 

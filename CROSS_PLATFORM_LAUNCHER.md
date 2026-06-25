@@ -60,8 +60,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 **File**: `launch-project-ape.sh`
 
 - 🐧 Linux and Unix systems
-- ✅ Double-click from file manager (if configured for shell scripts)
 - ✅ Standard bash script
+- ⚠️ Terminal-only by default (see Linux Desktop Launcher below)
 
 **Usage**:
 ```bash
@@ -71,6 +71,27 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # Or with explicit bash
 bash launch-project-ape.sh
 ```
+
+### 5. **Linux Desktop Launcher** (GUI Solution)
+**Files**: `project-ape-launcher.desktop` + `install-linux-launcher.sh`
+
+- 🐧 Linux with desktop environment (GNOME, KDE, XFCE, etc.)
+- ✅ Creates proper desktop icon and/or app menu entry
+- ✅ True double-click support
+- ✅ Follows freedesktop.org standards
+
+**Installation**:
+```bash
+./install-linux-launcher.sh
+# Then choose:
+# 1 = Desktop icon only
+# 2 = Application menu only  
+# 3 = Both desktop icon and app menu
+```
+
+**After installation**:
+- **Desktop icon**: Double-click "Project APE" icon on desktop
+- **App menu**: Search for "Project APE" in application launcher
 
 ### 5. **macOS Command Launcher** (Legacy)
 **File**: `launch-project-ape.command`
@@ -104,20 +125,29 @@ bash launch-project-ape.sh
 
 ### Linux Users
 
-**Option A - Shell script**:
+**Option A - Desktop Icon** (Recommended for GUI users):
+```bash
+./install-linux-launcher.sh
+```
+Then choose option 1 (Desktop), 2 (App Menu), or 3 (Both)
+- Creates a proper desktop launcher
+- Double-click to run from Desktop or App Menu
+- Works on GNOME, KDE, XFCE, and most desktop environments
+
+**Option B - Terminal**:
 ```bash
 ./launch-project-ape.sh
-```
-
-**Option B - Direct Python**:
-```bash
+# or
 python3 launch-project-ape.py
 ```
 
-**Option C - Double-click** (if file manager supports):
-1. Make script executable: `chmod +x launch-project-ape.sh`
-2. Double-click in file manager
-3. Select "Run" or "Execute" when prompted
+**Option C - Configure File Manager** (for double-click scripts):
+
+Most Linux file managers default to opening scripts in a text editor when double-clicked. To change this:
+
+- **GNOME (Nautilus)**: Files → Preferences → Behavior → Executable Text Files → Select "Run them"
+- **KDE (Dolphin)**: Settings → Configure Dolphin → General → Confirmations → Enable execution prompts
+- **XFCE (Thunar)**: Edit → Preferences → Advanced → Execute shell scripts when opened
 
 ### macOS Users
 
@@ -217,6 +247,41 @@ Make script executable:
 ```bash
 chmod +x launch-project-ape.py
 chmod +x launch-project-ape.sh
+```
+
+### "Double-clicking opens text editor instead of running" (Linux)
+
+**Problem**: Linux file managers default to opening executable scripts in a text editor when double-clicked.
+
+**Solution 1 - Install Desktop Launcher** (Recommended):
+```bash
+./install-linux-launcher.sh
+```
+This creates a proper `.desktop` file that your file manager recognizes as an application.
+
+**Solution 2 - Configure File Manager**:
+
+- **GNOME Files (Nautilus)**:
+  1. Open Files (Nautilus)
+  2. Click hamburger menu → Preferences
+  3. Go to "Behavior" tab
+  4. Under "Executable Text Files" select "Run them" or "Ask what to do"
+
+- **KDE Dolphin**:
+  1. Settings → Configure Dolphin
+  2. General → Confirmations
+  3. Enable "Confirm execution of files"
+  4. Dolphin will now ask "Execute" or "Open" when clicking scripts
+
+- **XFCE Thunar**:
+  1. Edit → Preferences
+  2. Advanced tab
+  3. Check "Execute shell scripts when they are opened"
+
+**Solution 3 - Use Terminal**:
+```bash
+cd /path/to/project-ape
+./launch-project-ape.sh
 ```
 
 ### PowerShell script blocked (Windows)
