@@ -961,6 +961,11 @@ let logsAutoScroll = true;
 let logsPaused = false;
 
 async function initLogsTab() {
+    // Only exists on dashboard page, not configure page
+    if (!document.getElementById('logSelector')) {
+        return;
+    }
+
     // Load available logs
     await loadAvailableLogs();
 
@@ -994,11 +999,16 @@ async function initLogsTab() {
 
 async function loadAvailableLogs() {
     try {
+        const selector = document.getElementById('logSelector');
+        // logSelector only exists on dashboard page, not configure page
+        if (!selector) {
+            return;
+        }
+
         const response = await fetch('/api/available-logs');
         const data = await response.json();
 
         if (data.success && data.logs) {
-            const selector = document.getElementById('logSelector');
             const currentValue = selector.value;
             selector.innerHTML = '';
 
