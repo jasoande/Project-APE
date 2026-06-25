@@ -432,6 +432,89 @@
     </div>
 
     <div class="container">
+        <!-- Admin Tools Section (Top of Page) -->
+        <div class="settings-section" style="margin-bottom: 30px;">
+            <h3>🔧 System Tools</h3>
+            <p class="form-help" style="margin-bottom: 20px;">
+                Administrative tools for managing the Project APE environment
+            </p>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 30px;">
+                <button type="button" class="btn btn-secondary" id="setupEnvBtn">
+                    🔧 Setup Environment
+                </button>
+                <span class="form-help" style="margin: 0;">
+                    Initializes Python virtual environment and installs dependencies
+                </span>
+            </div>
+
+            <!-- NotebookLM Authentication Section -->
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                    <div>
+                        <h4 style="font-size: 1rem; font-weight: 600; color: #e6edf3; margin-bottom: 8px;">
+                            🔐 NotebookLM Authentication
+                        </h4>
+                        <p class="form-help" style="margin: 0;">
+                            Authenticate with NotebookLM to create notebooks and sources
+                        </p>
+                    </div>
+                    <div id="authStatusBadge" style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 6px; background: rgba(220,38,38,0.1); border: 1px solid #dc2626;">
+                        <span style="font-size: 1.2rem;">❌</span>
+                        <span style="font-weight: 600; color: #fca5a5;">Not Authenticated</span>
+                    </div>
+                </div>
+
+                <div id="authStatusDetails" style="margin-bottom: 16px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; font-size: 0.9rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="color: #8b949e; margin-bottom: 4px;">
+                                <strong>Profile:</strong> <span id="authProfile">default</span>
+                            </div>
+                            <div style="color: #8b949e;">
+                                <strong>Last checked:</strong> <span id="authLastChecked">Never</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-primary" id="loginNotebookLMBtn">
+                        🔐 Login to NotebookLM
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="refreshAuthStatusBtn">
+                        🔄 Check Status
+                    </button>
+                    <button type="button" class="btn btn-danger" id="logoutNotebookLMBtn" style="display: none;">
+                        🚪 Logout
+                    </button>
+                </div>
+
+                <!-- Login Instructions Panel (hidden by default) -->
+                <div id="loginInstructions" style="display: none; padding: 16px; background: rgba(59,130,246,0.05); border: 1px solid #3b82f6; border-radius: 6px;">
+                    <div style="font-weight: 600; color: #93c5fd; margin-bottom: 12px;">
+                        📋 Login Instructions
+                    </div>
+                    <div id="loginInstructionsContent" style="color: #c0c8d0; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; font-family: 'Monaco', 'Menlo', 'Consolas', monospace;">
+                        <!-- Instructions will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Setup Output Panel (Hidden by default) -->
+            <div id="setupOutputPanel" style="display: none; margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="font-size: 1rem; font-weight: 600; color: #e6edf3;">Setup Output</h4>
+                    <button type="button" class="btn btn-secondary" id="clearSetupOutputBtn" style="padding: 6px 12px; font-size: 0.85rem;">
+                        🗑️ Clear
+                    </button>
+                </div>
+                <div class="preview-code" style="max-height: 400px;">
+                    <pre id="setupOutput" style="color: #e6edf3; margin: 0;"></pre>
+                </div>
+                <div id="setupStatus" style="margin-top: 10px; padding: 12px; border-radius: 6px; display: none;"></div>
+            </div>
+        </div>
+
         <!-- Messages -->
         <div id="successMessage" class="message message-success"></div>
         <div id="errorMessage" class="message message-error"></div>

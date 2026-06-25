@@ -740,6 +740,535 @@ def start_workflow():
         }), 500
 
 
+@app.route('/api/run-setup', methods=['POST'])
+def run_setup():
+    """
+    Execute setup-environment.sh script with real-time output streaming.
+    Returns progress updates via Server-Sent Events (SSE).
+    """
+    import subprocess
+    import select
+    import fcntl
+    import os
+
+    def generate_setup_output():
+        """Generator that streams setup script output in real-time."""
+        setup_script = PROJECT_ROOT / 'setup-environment.sh'
+
+        # Verify script exists
+        if not setup_script.exists():
+            yield f"data: {{\"type\": \"error\", \"message\": \"Setup script not found at {setup_script}\"}}\n\n"
+            return
+
+        # Make script executable
+        try:
+            os.chmod(setup_script, 0o755)
+        except Exception as e:
+            yield f"data: {{\"type\": \"error\", \"message\": \"Failed to make script executable: {str(e)}\"}}\n\n"
+            return
+
+        yield f"data: {{\"type\": \"info\", \"message\": \"Starting environment setup...\"}}\n\n"
+
+        try:
+            # Execute script with non-interactive input (auto-confirm with 'y')
+            # Use 'yes' command to automatically answer prompts
+            process = subprocess.Popen(
+                ['/bin/bash', '-c', f'yes | {setup_script}'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                cwd=PROJECT_ROOT,
+                universal_newlines=True
+            )
+
+            # Stream output line by line
+            for line in iter(process.stdout.readline, ''):
+                if line:
+                    # Clean up ANSI color codes for web display
+                    clean_line = re.sub(r'\x1b\[[0-9;]*m', '', line.rstrip())
+
+                    # Detect message type based on content
+                    msg_type = 'output'
+                    if '✅' in line or 'SUCCESS' in line.upper() or 'COMPLETE' in line.upper():
+                        msg_type = 'success'
+                    elif '❌' in line or 'ERROR' in line.upper() or 'FAILED' in line.upper():
+                        msg_type = 'error'
+                    elif '⚠️' in line or 'WARNING' in line.upper():
+                        msg_type = 'warning'
+
+                    # Send as SSE event
+                    yield f"data: {{\"type\": \"{msg_type}\", \"message\": {json.dumps(clean_line)}}}\n\n"
+
+            # Wait for completion
+            return_code = process.wait(timeout=300)  # 5 minute timeout
+
+            if return_code == 0:
+                yield f"data: {{\"type\": \"success\", \"message\": \"✅ Environment setup completed successfully!\"}}\n\n"
+                yield f"data: {{\"type\": \"complete\", \"success\": true}}\n\n"
+            else:
+                yield f"data: {{\"type\": \"error\", \"message\": \"❌ Setup failed with exit code {return_code}\"}}\n\n"
+                yield f"data: {{\"type\": \"complete\", \"success\": false}}\n\n"
+
+        except subprocess.TimeoutExpired:
+            process.kill()
+            yield f"data: {{\"type\": \"error\", \"message\": \"❌ Setup timed out after 5 minutes\"}}\n\n"
+            yield f"data: {{\"type\": \"complete\", \"success\": false}}\n\n"
+        except Exception as e:
+            yield f"data: {{\"type\": \"error\", \"message\": \"❌ Setup failed: {str(e)}\"}}\n\n"
+            yield f"data: {{\"type\": \"complete\", \"success\": false}}\n\n"
+
+    return Response(generate_setup_output(), mimetype='text/event-stream')
+
+
+@app.route('/api/check-auth-status', methods=['GET'])
+def check_auth_status():
+    """
+    Check NotebookLM authentication status.
+    Returns authentication state without exposing credentials.
+    """
+    try:
+        auth_manager = AuthManager()
+        is_authenticated = auth_manager.is_authenticated()
+
+        return jsonify({
+            'success': True,
+            'authenticated': is_authenticated,
+            'profile': 'default',
+            'checked_at': time.time()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'authenticated': False
+        }), 500
+
+
+@app.route('/api/notebooklm-login', methods=['POST'])
+def notebooklm_login():
+    """
+    Trigger NotebookLM login flow.
+    Attempts to run 'notebooklm login' command which opens browser for OAuth.
+    """
+    import subprocess
+    import threading
+
+    try:
+        def run_login():
+            """Background thread to execute login command"""
+            try:
+                # Run notebooklm login in background
+                # This will open a browser window for OAuth
+                result = subprocess.run(
+                    ['notebooklm', 'login'],
+                    capture_output=True,
+                    text=True,
+                    timeout=300  # 5 minute timeout
+                )
+
+                if result.returncode == 0:
+                    print(f"[AUTH] NotebookLM login completed successfully", file=sys.stderr)
+                else:
+                    print(f"[AUTH] NotebookLM login failed: {result.stderr}", file=sys.stderr)
+
+            except subprocess.TimeoutExpired:
+                print(f"[AUTH] NotebookLM login timed out", file=sys.stderr)
+            except Exception as e:
+                print(f"[AUTH] Error running notebooklm login: {e}", file=sys.stderr)
+
+        # Start login in background thread
+        thread = threading.Thread(target=run_login, daemon=True)
+        thread.start()
+
+        return jsonify({
+            'success': True,
+            'message': 'Login flow initiated. A browser window should open for authentication.',
+            'instructions': [
+                'A browser window should open automatically for Google login.',
+                'If no browser opens, run this command in your terminal:',
+                '  notebooklm login',
+                '',
+                'The authentication status will update automatically once login is complete.'
+            ]
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'fallback_instructions': [
+                'Automatic login failed. Please run this command manually in your terminal:',
+                '  notebooklm login',
+                '',
+                'For a fresh login, run:',
+                '  notebooklm auth logout',
+                '  notebooklm login'
+            ]
+        }), 500
+
+
+@app.route('/api/notebooklm-logout', methods=['POST'])
+def notebooklm_logout():
+    """
+    Trigger NotebookLM logout.
+    Clears saved authentication credentials.
+    """
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ['notebooklm', 'auth', 'logout'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if result.returncode == 0:
+            return jsonify({
+                'success': True,
+                'message': 'Successfully logged out of NotebookLM'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Logout failed: {result.stderr}'
+            }), 500
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/refresh-sources', methods=['POST'])
+def refresh_sources():
+    """
+    Refresh cached Google Drive sources without running full workflow.
+
+    Request JSON:
+    {
+        "clients": ["merck", "blue_yonder"] // Optional: specific clients, or omit for all
+    }
+
+    Returns Server-Sent Events stream with progress updates.
+    """
+    import importlib.util
+    from pathlib import Path
+
+    def generate_refresh_progress():
+        """Generator that streams refresh progress via SSE."""
+        try:
+            # Load vars.py configuration
+            vars_path = PROJECT_ROOT / "vars.py"
+            if not vars_path.exists():
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Configuration file (vars.py) not found'})}\n\n"
+                return
+
+            spec = importlib.util.spec_from_file_location("config", vars_path)
+            config = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(config)
+
+            # Get list of clients to refresh
+            request_data = request.get_json() or {}
+            selected_clients = request_data.get('clients', [])
+
+            # If no clients specified, refresh all configured clients
+            all_clients = getattr(config, 'clients', [])
+            if not selected_clients:
+                selected_clients = all_clients
+
+            # Validate selected clients exist in config
+            invalid_clients = [c for c in selected_clients if c not in all_clients]
+            if invalid_clients:
+                yield f"data: {json.dumps({'type': 'error', 'message': f'Invalid clients: {', '.join(invalid_clients)}'})}\n\n"
+                return
+
+            total_clients = len(selected_clients)
+            if total_clients == 0:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'No clients configured to refresh'})}\n\n"
+                return
+
+            yield f"data: {json.dumps({'type': 'info', 'message': f'Starting refresh for {total_clients} client(s)...'})}\n\n"
+
+            # Import DriveManager
+            from core.drive_manager import DriveManager
+
+            drive_config = getattr(config, 'DRIVE_CONFIG', {})
+
+            # Track results
+            total_files_updated = 0
+            errors = []
+
+            # Refresh each client
+            for idx, client_id in enumerate(selected_clients, 1):
+                try:
+                    client_name = getattr(config, f"{client_id}_name", client_id)
+                    folder_url = getattr(config, f"{client_id}_folder", None)
+
+                    if not folder_url:
+                        error_msg = f"No Drive folder configured for {client_name}"
+                        errors.append(error_msg)
+                        yield f"data: {json.dumps({'type': 'warning', 'message': f'⚠️  {error_msg}'})}\n\n"
+                        continue
+
+                    # Check if folder is a Drive URL (skip local folders)
+                    if not ('drive.google.com' in folder_url or folder_url.startswith('drive://')):
+                        yield f"data: {json.dumps({'type': 'info', 'message': f'⏭️  Skipping {client_name} (local folder)'})}\n\n"
+                        continue
+
+                    yield f"data: {json.dumps({'type': 'progress', 'current': idx, 'total': total_clients, 'client': client_name})}\n\n"
+                    yield f"data: {json.dumps({'type': 'info', 'message': f'🔄 Refreshing {client_name} ({idx}/{total_clients})...'})}\n\n"
+
+                    # Use DriveManager with force_refresh=True to bypass cache
+                    with DriveManager(
+                        client_id=client_id,
+                        folder_spec=folder_url,
+                        cache_enabled=True,
+                        force_refresh=True,  # Force download even if cache exists
+                        config=drive_config
+                    ) as folder_path:
+                        # Count files in refreshed cache
+                        file_count = len([f for f in Path(folder_path).iterdir() if f.is_file() and f.name != 'metadata.json'])
+                        total_files_updated += file_count
+
+                        yield f"data: {json.dumps({'type': 'success', 'message': f'✅ {client_name}: {file_count} files refreshed'})}\n\n"
+
+                except Exception as e:
+                    error_msg = f"{client_name}: {str(e)}"
+                    errors.append(error_msg)
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'❌ {error_msg}'})}\n\n"
+
+            # Send completion summary
+            success_count = total_clients - len(errors)
+            summary = {
+                'type': 'complete',
+                'success': len(errors) == 0,
+                'total_clients': total_clients,
+                'successful': success_count,
+                'failed': len(errors),
+                'total_files': total_files_updated,
+                'errors': errors
+            }
+
+            yield f"data: {json.dumps(summary)}\n\n"
+
+            if len(errors) == 0:
+                yield f"data: {json.dumps({'type': 'success', 'message': f'✅ Refresh complete! Updated {total_files_updated} files across {total_clients} client(s)'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'warning', 'message': f'⚠️  Refresh completed with {len(errors)} error(s)'})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Refresh failed: {str(e)}'})}\n\n"
+
+    return Response(generate_refresh_progress(), mimetype='text/event-stream')
+
+
+@app.route('/api/cache-stats', methods=['GET'])
+def cache_stats():
+    """
+    Get cache statistics for all clients.
+
+    Returns JSON with cache info: size, file count, last refresh time.
+    """
+    try:
+        import importlib.util
+        from datetime import datetime
+
+        # Load vars.py configuration
+        vars_path = PROJECT_ROOT / "vars.py"
+        if not vars_path.exists():
+            return jsonify({
+                'success': False,
+                'error': 'Configuration file not found'
+            }), 404
+
+        spec = importlib.util.spec_from_file_location("config", vars_path)
+        config = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config)
+
+        all_clients = getattr(config, 'clients', [])
+        cache_root = Path.home() / '.project-ape' / 'drive_cache'
+
+        stats = []
+        total_size = 0
+        total_files = 0
+
+        for client_id in all_clients:
+            client_name = getattr(config, f"{client_id}_name", client_id)
+            folder_url = getattr(config, f"{client_id}_folder", None)
+
+            if not folder_url:
+                continue
+
+            # Check if Drive folder (not local)
+            if not ('drive.google.com' in folder_url or folder_url.startswith('drive://')):
+                stats.append({
+                    'client_id': client_id,
+                    'client_name': client_name,
+                    'type': 'local',
+                    'cached': False
+                })
+                continue
+
+            # Extract folder ID
+            match = re.search(r'/folders/([a-zA-Z0-9_-]+)', folder_url)
+            if match:
+                folder_id = match.group(1)
+            elif folder_url.startswith('drive://'):
+                folder_id = folder_url[8:]
+            else:
+                continue
+
+            cache_dir = cache_root / folder_id
+            metadata_file = cache_dir / 'metadata.json'
+
+            if cache_dir.exists() and metadata_file.exists():
+                try:
+                    # Read metadata
+                    with open(metadata_file) as f:
+                        metadata = json.load(f)
+
+                    # Calculate cache size
+                    cache_size = sum(f.stat().st_size for f in cache_dir.rglob('*') if f.is_file())
+                    file_count = metadata.get('file_count', 0)
+                    cached_at = metadata.get('cached_at')
+
+                    # Calculate age
+                    age_str = 'Unknown'
+                    if cached_at:
+                        cached_time = datetime.fromisoformat(cached_at)
+                        age_delta = datetime.now() - cached_time
+
+                        if age_delta.days > 0:
+                            age_str = f"{age_delta.days}d ago"
+                        elif age_delta.seconds > 3600:
+                            age_str = f"{age_delta.seconds // 3600}h ago"
+                        else:
+                            age_str = f"{age_delta.seconds // 60}m ago"
+
+                    total_size += cache_size
+                    total_files += file_count
+
+                    stats.append({
+                        'client_id': client_id,
+                        'client_name': client_name,
+                        'type': 'drive',
+                        'cached': True,
+                        'size_bytes': cache_size,
+                        'size_mb': round(cache_size / (1024 * 1024), 2),
+                        'file_count': file_count,
+                        'last_refresh': cached_at,
+                        'age': age_str
+                    })
+                except Exception as e:
+                    stats.append({
+                        'client_id': client_id,
+                        'client_name': client_name,
+                        'type': 'drive',
+                        'cached': False,
+                        'error': str(e)
+                    })
+            else:
+                stats.append({
+                    'client_id': client_id,
+                    'client_name': client_name,
+                    'type': 'drive',
+                    'cached': False
+                })
+
+        return jsonify({
+            'success': True,
+            'stats': stats,
+            'total_size_mb': round(total_size / (1024 * 1024), 2),
+            'total_files': total_files,
+            'cache_path': str(cache_root)
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/clear-cache', methods=['POST'])
+def clear_cache():
+    """
+    Clear cached Google Drive files.
+
+    Request JSON:
+    {
+        "clients": ["merck", "blue_yonder"] // Optional: specific clients, or omit for all
+    }
+    """
+    try:
+        import importlib.util
+        import shutil
+
+        # Load vars.py configuration
+        vars_path = PROJECT_ROOT / "vars.py"
+        if not vars_path.exists():
+            return jsonify({
+                'success': False,
+                'error': 'Configuration file not found'
+            }), 404
+
+        spec = importlib.util.spec_from_file_location("config", vars_path)
+        config = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config)
+
+        request_data = request.get_json() or {}
+        selected_clients = request_data.get('clients', [])
+
+        all_clients = getattr(config, 'clients', [])
+        if not selected_clients:
+            selected_clients = all_clients
+
+        cache_root = Path.home() / '.project-ape' / 'drive_cache'
+        cleared_count = 0
+        cleared_size = 0
+
+        for client_id in selected_clients:
+            folder_url = getattr(config, f"{client_id}_folder", None)
+            if not folder_url:
+                continue
+
+            # Extract folder ID
+            match = re.search(r'/folders/([a-zA-Z0-9_-]+)', folder_url)
+            if match:
+                folder_id = match.group(1)
+            elif folder_url.startswith('drive://'):
+                folder_id = folder_url[8:]
+            else:
+                continue
+
+            cache_dir = cache_root / folder_id
+
+            if cache_dir.exists():
+                # Calculate size before deletion
+                size = sum(f.stat().st_size for f in cache_dir.rglob('*') if f.is_file())
+                cleared_size += size
+
+                # Delete cache directory
+                shutil.rmtree(cache_dir)
+                cleared_count += 1
+
+        return jsonify({
+            'success': True,
+            'message': f'Cleared cache for {cleared_count} client(s)',
+            'cleared_count': cleared_count,
+            'cleared_size_mb': round(cleared_size / (1024 * 1024), 2)
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/shutdown', methods=['POST'])
 def shutdown():
     """Gracefully shutdown the server and container."""

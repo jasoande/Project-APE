@@ -992,6 +992,325 @@ function downloadLogs() {
 }
 
 // ========================================================================
+// Setup Environment Button
+// ========================================================================
+
+let setupEventSource = null;
+let setupRunning = false;
+
+function runSetupEnvironment() {
+    if (setupRunning) {
+        showMessage('warning', '⚠️ Setup is already running');
+        return;
+    }
+
+    // Confirm with user
+    const confirmMsg = 'Run environment setup?\n\n' +
+                      'This will:\n' +
+                      '• Install Podman (container runtime)\n' +
+                      '• Install Google Cloud SDK\n' +
+                      '• Install Python 3.14+\n' +
+                      '• Create virtual environment\n' +
+                      '• Install NotebookLM CLI\n\n' +
+                      'This may take 2-5 minutes.';
+
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    // Update UI state
+    setupRunning = true;
+    const setupBtn = document.getElementById('setupEnvBtn');
+    const setupPanel = document.getElementById('setupOutputPanel');
+    const setupOutput = document.getElementById('setupOutput');
+    const setupStatus = document.getElementById('setupStatus');
+
+    // Show panel and reset state
+    setupPanel.style.display = 'block';
+    setupOutput.textContent = '';
+    setupStatus.style.display = 'none';
+
+    // Update button state
+    setupBtn.disabled = true;
+    setupBtn.innerHTML = '<div class="spinner" style="width: 16px; height: 16px; margin-right: 8px;"></div> Running Setup...';
+
+    // Show initial message
+    showMessage('info', '🔧 Starting environment setup...');
+
+    // Connect to SSE endpoint
+    setupEventSource = new EventSource('/api/run-setup');
+
+    setupEventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+
+            // Append output
+            if (data.message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const prefix = `[${timestamp}] `;
+
+                // Add line with appropriate styling
+                const line = document.createElement('div');
+                line.textContent = prefix + data.message;
+
+                // Color code based on type
+                if (data.type === 'success') {
+                    line.style.color = '#00d084';
+                } else if (data.type === 'error') {
+                    line.style.color = '#ff6b6b';
+                } else if (data.type === 'warning') {
+                    line.style.color = '#ffb900';
+                } else if (data.type === 'info') {
+                    line.style.color = '#93c5fd';
+                }
+
+                setupOutput.appendChild(line);
+
+                // Auto-scroll
+                setupOutput.parentElement.scrollTop = setupOutput.parentElement.scrollHeight;
+            }
+
+            // Handle completion
+            if (data.type === 'complete') {
+                setupEventSource.close();
+                setupRunning = false;
+
+                // Update button
+                setupBtn.disabled = false;
+                setupBtn.innerHTML = '🔧 Setup Environment';
+
+                // Show final status
+                setupStatus.style.display = 'block';
+                if (data.success) {
+                    setupStatus.style.background = 'rgba(34,197,94,0.2)';
+                    setupStatus.style.border = '1px solid #22c55e';
+                    setupStatus.style.color = '#86efac';
+                    setupStatus.textContent = '✅ Environment setup completed successfully!';
+                    showMessage('success', '✅ Environment setup complete!');
+                } else {
+                    setupStatus.style.background = 'rgba(220,38,38,0.2)';
+                    setupStatus.style.border = '1px solid #dc2626';
+                    setupStatus.style.color = '#fca5a5';
+                    setupStatus.textContent = '❌ Setup failed. See logs above for details.';
+                    showMessage('error', '❌ Setup failed. Check output above.');
+                }
+            }
+        } catch (err) {
+            console.error('Error parsing setup output:', err);
+        }
+    };
+
+    setupEventSource.onerror = function(error) {
+        console.error('Setup stream error:', error);
+        setupEventSource.close();
+        setupRunning = false;
+
+        // Update button
+        setupBtn.disabled = false;
+        setupBtn.innerHTML = '🔧 Setup Environment';
+
+        // Show error
+        setupStatus.style.display = 'block';
+        setupStatus.style.background = 'rgba(220,38,38,0.2)';
+        setupStatus.style.border = '1px solid #dc2626';
+        setupStatus.style.color = '#fca5a5';
+        setupStatus.textContent = '❌ Connection error. Check server logs.';
+        showMessage('error', '❌ Setup failed due to connection error');
+    };
+}
+
+function clearSetupOutput() {
+    document.getElementById('setupOutput').textContent = '';
+    document.getElementById('setupStatus').style.display = 'none';
+    showMessage('info', '🗑️ Setup output cleared');
+}
+
+// ========================================================================
+// NotebookLM Authentication
+// ========================================================================
+
+let authCheckInterval = null;
+let lastAuthCheck = null;
+
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/check-auth-status');
+        const data = await response.json();
+
+        if (data.success) {
+            updateAuthUI(data.authenticated, data.profile, data.checked_at);
+            lastAuthCheck = Date.now();
+        } else {
+            console.error('Auth check failed:', data.error);
+            updateAuthUI(false, 'default', Date.now() / 1000);
+        }
+    } catch (error) {
+        console.error('Failed to check auth status:', error);
+        updateAuthUI(false, 'default', Date.now() / 1000);
+    }
+}
+
+function updateAuthUI(authenticated, profile, checkedAt) {
+    const badge = document.getElementById('authStatusBadge');
+    const profileEl = document.getElementById('authProfile');
+    const lastCheckedEl = document.getElementById('authLastChecked');
+    const logoutBtn = document.getElementById('logoutNotebookLMBtn');
+
+    // Update badge
+    if (authenticated) {
+        badge.style.background = 'rgba(34,197,94,0.1)';
+        badge.style.borderColor = '#22c55e';
+        badge.innerHTML = `
+            <span style="font-size: 1.2rem;">✅</span>
+            <span style="font-weight: 600; color: #86efac;">Authenticated</span>
+        `;
+        logoutBtn.style.display = 'inline-flex';
+    } else {
+        badge.style.background = 'rgba(220,38,38,0.1)';
+        badge.style.borderColor = '#dc2626';
+        badge.innerHTML = `
+            <span style="font-size: 1.2rem;">❌</span>
+            <span style="font-weight: 600; color: #fca5a5;">Not Authenticated</span>
+        `;
+        logoutBtn.style.display = 'none';
+    }
+
+    // Update profile
+    profileEl.textContent = profile || 'default';
+
+    // Update last checked time
+    const now = Date.now();
+    const elapsed = Math.floor((now - (checkedAt * 1000)) / 1000);
+    let timeStr;
+    if (elapsed < 5) {
+        timeStr = 'Just now';
+    } else if (elapsed < 60) {
+        timeStr = `${elapsed} seconds ago`;
+    } else if (elapsed < 3600) {
+        timeStr = `${Math.floor(elapsed / 60)} minutes ago`;
+    } else {
+        timeStr = new Date(checkedAt * 1000).toLocaleTimeString();
+    }
+    lastCheckedEl.textContent = timeStr;
+}
+
+async function loginNotebookLM() {
+    const loginBtn = document.getElementById('loginNotebookLMBtn');
+    const instructionsPanel = document.getElementById('loginInstructions');
+    const instructionsContent = document.getElementById('loginInstructionsContent');
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = '⏳ Initiating login...';
+
+    try {
+        const response = await fetch('/api/notebooklm-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showMessage('info', '🔐 ' + data.message);
+
+            // Show instructions
+            if (data.instructions && data.instructions.length > 0) {
+                instructionsContent.textContent = data.instructions.join('\n');
+                instructionsPanel.style.display = 'block';
+            }
+
+            // Start polling for auth status every 5 seconds
+            if (authCheckInterval) {
+                clearInterval(authCheckInterval);
+            }
+            authCheckInterval = setInterval(checkAuthStatus, 5000);
+
+            // Check immediately after a delay
+            setTimeout(checkAuthStatus, 2000);
+
+        } else {
+            showMessage('error', 'Login failed: ' + data.error);
+
+            // Show fallback instructions
+            if (data.fallback_instructions && data.fallback_instructions.length > 0) {
+                instructionsContent.textContent = data.fallback_instructions.join('\n');
+                instructionsPanel.style.display = 'block';
+            }
+        }
+    } catch (error) {
+        showMessage('error', `Failed to initiate login: ${error.message}`);
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = '🔐 Login to NotebookLM';
+    }
+}
+
+async function logoutNotebookLM() {
+    if (!confirm('Are you sure you want to logout from NotebookLM?\n\nYou will need to re-authenticate before running workflows.')) {
+        return;
+    }
+
+    const logoutBtn = document.getElementById('logoutNotebookLMBtn');
+    logoutBtn.disabled = true;
+    logoutBtn.textContent = '⏳ Logging out...';
+
+    try {
+        const response = await fetch('/api/notebooklm-logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showMessage('success', '✅ ' + data.message);
+            await checkAuthStatus();
+
+            // Hide instructions panel
+            document.getElementById('loginInstructions').style.display = 'none';
+        } else {
+            showMessage('error', 'Logout failed: ' + data.error);
+        }
+    } catch (error) {
+        showMessage('error', `Failed to logout: ${error.message}`);
+    } finally {
+        logoutBtn.disabled = false;
+        logoutBtn.textContent = '🚪 Logout';
+    }
+}
+
+function initAuthStatusPolling() {
+    // Check auth status on page load
+    checkAuthStatus();
+
+    // Poll every 30 seconds
+    if (authCheckInterval) {
+        clearInterval(authCheckInterval);
+    }
+    authCheckInterval = setInterval(checkAuthStatus, 30000);
+
+    // Update "last checked" display every 5 seconds
+    setInterval(() => {
+        if (lastAuthCheck) {
+            const lastCheckedEl = document.getElementById('authLastChecked');
+            const elapsed = Math.floor((Date.now() - lastAuthCheck) / 1000);
+            let timeStr;
+            if (elapsed < 5) {
+                timeStr = 'Just now';
+            } else if (elapsed < 60) {
+                timeStr = `${elapsed} seconds ago`;
+            } else if (elapsed < 3600) {
+                timeStr = `${Math.floor(elapsed / 60)} minutes ago`;
+            } else {
+                const date = new Date(lastAuthCheck);
+                timeStr = date.toLocaleTimeString();
+            }
+            lastCheckedEl.textContent = timeStr;
+        }
+    }, 5000);
+}
+
+// ========================================================================
 // Event Listeners
 // ========================================================================
 
@@ -1025,6 +1344,18 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('copyPreviewBtn').addEventListener('click', copyPreview);
     document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
     document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
+
+    // Setup environment button
+    document.getElementById('setupEnvBtn').addEventListener('click', runSetupEnvironment);
+    document.getElementById('clearSetupOutputBtn').addEventListener('click', clearSetupOutput);
+
+    // NotebookLM authentication buttons
+    document.getElementById('loginNotebookLMBtn').addEventListener('click', loginNotebookLM);
+    document.getElementById('refreshAuthStatusBtn').addEventListener('click', checkAuthStatus);
+    document.getElementById('logoutNotebookLMBtn').addEventListener('click', logoutNotebookLM);
+
+    // Initialize auth status polling
+    initAuthStatusPolling();
 
     // Initial preview
     updatePreview();
