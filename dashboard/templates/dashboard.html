@@ -101,6 +101,26 @@
             display: flex;
             justify-content: flex-end;
             align-items: center;
+            gap: 15px;
+        }
+        .nav-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: #e6edf3;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: #ee0000;
+            box-shadow: 0 4px 12px rgba(238,0,0,0.2);
         }
 
         /* Stats Bar */
@@ -327,6 +347,141 @@
             background: #30363d;
         }
 
+        /* Log Section */
+        .logs-section {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 30px;
+        }
+        .logs-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px 10px 0 0;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .logs-section-header:hover {
+            background: #1c2128;
+        }
+        .logs-section-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .logs-toggle {
+            font-size: 1.2rem;
+            transition: transform 0.3s;
+        }
+        .logs-section.expanded .logs-toggle {
+            transform: rotate(180deg);
+        }
+        .logs-content-wrapper {
+            display: none;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            padding: 20px;
+        }
+        .logs-section.expanded .logs-content-wrapper {
+            display: block;
+        }
+        .logs-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .log-viewer {
+            background: #0a0d14;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            height: 500px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            padding: 0;
+        }
+        .log-content {
+            padding: 16px;
+            color: #e6edf3;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .log-viewer::-webkit-scrollbar {
+            width: 12px;
+        }
+        .log-viewer::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.3);
+            border-radius: 0 8px 8px 0;
+        }
+        .log-viewer::-webkit-scrollbar-thumb {
+            background: rgba(238,0,0,0.5);
+            border-radius: 6px;
+        }
+        .log-viewer::-webkit-scrollbar-thumb:hover {
+            background: rgba(238,0,0,0.7);
+        }
+        .log-viewer.auto-scroll {
+            border-color: rgba(0,208,132,0.5);
+        }
+        .log-viewer.paused {
+            border-color: rgba(255,185,0,0.5);
+        }
+        .log-line-error {
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+        .log-line-warning {
+            color: #ffb900;
+        }
+        .log-line-success {
+            color: #00d084;
+        }
+        .log-line-info {
+            color: #93c5fd;
+        }
+        .log-select {
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+            padding: 8px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #e6edf3;
+            font-size: 0.9rem;
+        }
+        .log-select:focus {
+            outline: none;
+            border-color: #ee0000;
+        }
+        .log-btn {
+            padding: 8px 16px;
+            background: #21262d;
+            color: #e6edf3;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .log-btn:hover {
+            background: #30363d;
+        }
+        .log-info {
+            color: #8b949e;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+
         /* Footer */
         .footer {
             text-align: center;
@@ -349,6 +504,7 @@
                 </div>
             </div>
             <div class="header-right">
+                <a href="/configure" class="nav-btn">⚙️ Configure Clients</a>
                 <div class="timer-box">
                     <div class="timer-label">EXECUTION TIME</div>
                     <div class="timer-value" id="execution-time">00m 00s</div>
@@ -393,6 +549,40 @@
             <div style="text-align: center; color: #8b949e; padding: 60px 20px; grid-column: 1 / -1;">
                 <div style="font-size: 1.5rem; margin-bottom: 10px;">⏳ Loading client status...</div>
                 <div style="font-size: 0.9rem; opacity: 0.7;">Waiting for processes to initialize</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs Section -->
+    <div class="logs-section" id="logsSection">
+        <div class="logs-section-header" onclick="toggleLogs()">
+            <h2>📋 Real-Time Logs</h2>
+            <span class="logs-toggle">▼</span>
+        </div>
+        <div class="logs-content-wrapper">
+            <div class="logs-controls">
+                <select class="log-select" id="logSelector">
+                    <option value="overall">📊 Overall Logs (All Components)</option>
+                </select>
+                <button type="button" class="log-btn" id="pauseLogsBtn">
+                    ⏸️ Pause
+                </button>
+                <button type="button" class="log-btn" id="clearLogsBtn">
+                    🗑️ Clear
+                </button>
+                <button type="button" class="log-btn" id="downloadLogsBtn">
+                    📥 Download
+                </button>
+            </div>
+
+            <div class="log-viewer auto-scroll" id="logViewer">
+                <div class="log-content" id="logContent">
+                    <!-- Logs will stream here -->
+                </div>
+            </div>
+
+            <div class="log-info">
+                📡 Logs update in real-time. Green border = auto-scrolling, Orange border = paused. Select a log source from the dropdown above.
             </div>
         </div>
     </div>
@@ -655,6 +845,110 @@
         }
 
         // Timer interval will be started by initializeTimer() when first status data arrives
+
+        // ========================================================================
+        // Logs Section
+        // ========================================================================
+
+        function toggleLogs() {
+            const logsSection = document.getElementById('logsSection');
+            logsSection.classList.toggle('expanded');
+
+            // Start streaming logs when expanded
+            if (logsSection.classList.contains('expanded') && !logStreamEventSource) {
+                startLogStream();
+            }
+        }
+
+        let logStreamEventSource = null;
+        let logsPaused = false;
+        let logsAutoScroll = true;
+
+        function startLogStream() {
+            const logSelector = document.getElementById('logSelector');
+            const logFile = logSelector.value;
+
+            // Close existing stream
+            if (logStreamEventSource) {
+                logStreamEventSource.close();
+            }
+
+            // Open new stream
+            logStreamEventSource = new EventSource(`/stream-logs?log=${logFile}`);
+
+            logStreamEventSource.onmessage = function(event) {
+                if (!logsPaused) {
+                    const logContent = document.getElementById('logContent');
+                    const logViewer = document.getElementById('logViewer');
+
+                    // Append new log line
+                    logContent.textContent += event.data + '\n';
+
+                    // Auto-scroll if enabled
+                    if (logsAutoScroll) {
+                        logViewer.scrollTop = logViewer.scrollHeight;
+                    }
+                }
+            };
+
+            logStreamEventSource.onerror = function(error) {
+                console.error('Log stream error:', error);
+            };
+        }
+
+        // Log controls
+        document.addEventListener('DOMContentLoaded', function() {
+            const pauseBtn = document.getElementById('pauseLogsBtn');
+            const clearBtn = document.getElementById('clearLogsBtn');
+            const downloadBtn = document.getElementById('downloadLogsBtn');
+            const logSelector = document.getElementById('logSelector');
+            const logViewer = document.getElementById('logViewer');
+
+            if (pauseBtn) {
+                pauseBtn.addEventListener('click', function() {
+                    logsPaused = !logsPaused;
+                    logsAutoScroll = !logsPaused;
+
+                    if (logsPaused) {
+                        pauseBtn.textContent = '▶️ Resume';
+                        logViewer.classList.remove('auto-scroll');
+                        logViewer.classList.add('paused');
+                    } else {
+                        pauseBtn.textContent = '⏸️ Pause';
+                        logViewer.classList.add('auto-scroll');
+                        logViewer.classList.remove('paused');
+                    }
+                });
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    document.getElementById('logContent').textContent = '';
+                });
+            }
+
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', function() {
+                    const logContent = document.getElementById('logContent').textContent;
+                    const blob = new Blob([logContent], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `project-ape-logs-${Date.now()}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            }
+
+            if (logSelector) {
+                logSelector.addEventListener('change', function() {
+                    document.getElementById('logContent').textContent = '';
+                    if (logStreamEventSource) {
+                        startLogStream();
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

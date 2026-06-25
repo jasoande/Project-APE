@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Project APE - Configuration Tool</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Red Hat Text", "Roboto", Arial, sans-serif;
+            background: #0f1419;
+            color: #e6edf3;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #0a0d14 0%, #1a1f2e 50%, #0f1419 100%);
+            border-bottom: 3px solid #ee0000;
+            padding: 30px 60px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        }
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo-section {
+            flex-shrink: 0;
+        }
+        .monkey-logo {
+            border: 3px solid #ee0000;
+            box-shadow: 0 8px 24px rgba(238,0,0,0.6), 0 0 20px rgba(238,0,0,0.3);
+            border-radius: 8px;
+            padding: 6px;
+        }
+        .header-text {
+            flex: 1;
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        .header p {
+            color: #8b949e;
+            font-size: 0.95rem;
+        }
+        .header-nav {
+            margin-top: 15px;
+        }
+        .header-nav a {
+            color: #e6edf3;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .header-nav a:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: #ee0000;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #8b949e;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: -2px;
+        }
+        .tab:hover {
+            color: #e6edf3;
+            background: rgba(255,255,255,0.03);
+        }
+        .tab.active {
+            color: #fff;
+            border-bottom-color: #ee0000;
+        }
+
+        /* Tab Panels */
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: #ee0000;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #cc0000;
+            box-shadow: 0 4px 12px rgba(238,0,0,0.4);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #e6edf3;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .btn-success {
+            background: rgba(34,197,94,0.2);
+            color: #86efac;
+            border: 1px solid #22c55e;
+        }
+        .btn-success:hover {
+            background: rgba(34,197,94,0.3);
+        }
+        .btn-danger {
+            background: rgba(220,38,38,0.2);
+            color: #fca5a5;
+            border: 1px solid #dc2626;
+        }
+        .btn-danger:hover {
+            background: rgba(220,38,38,0.3);
+        }
+
+        /* Client Cards */
+        .clients-grid {
+            display: grid;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .client-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+        }
+        .client-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .client-card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .client-card-remove {
+            background: transparent;
+            border: none;
+            color: #dc2626;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .client-card-remove:hover {
+            background: rgba(220,38,38,0.2);
+        }
+
+        /* Form Fields */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #c0c8d0;
+            margin-bottom: 8px;
+        }
+        .form-label .required {
+            color: #ee0000;
+            margin-left: 4px;
+        }
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            color: #e6edf3;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #ee0000;
+            box-shadow: 0 0 0 3px rgba(238,0,0,0.1);
+        }
+        .form-input.error {
+            border-color: #dc2626;
+            background: rgba(220,38,38,0.05);
+        }
+        .form-error {
+            color: #fca5a5;
+            font-size: 0.85rem;
+            margin-top: 6px;
+            display: none;
+        }
+        .form-error.visible {
+            display: block;
+        }
+        .form-help {
+            color: #8b949e;
+            font-size: 0.85rem;
+            margin-top: 6px;
+        }
+
+        /* Settings Sections */
+        .settings-section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .settings-section h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        /* Expandable Sections */
+        .expandable {
+            margin-bottom: 20px;
+        }
+        .expandable-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .expandable-header:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .expandable-header h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e6edf3;
+        }
+        .expandable-icon {
+            color: #8b949e;
+            transition: transform 0.2s;
+        }
+        .expandable.open .expandable-icon {
+            transform: rotate(180deg);
+        }
+        .expandable-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            background: rgba(0,0,0,0.2);
+        }
+        .expandable.open .expandable-content {
+            display: block;
+        }
+
+        /* Action Bar */
+        .action-bar {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Messages */
+        .message {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        .message.visible {
+            display: block;
+        }
+        .message-success {
+            background: rgba(34,197,94,0.1);
+            border: 1px solid #22c55e;
+            color: #86efac;
+        }
+        .message-error {
+            background: rgba(220,38,38,0.1);
+            border: 1px solid #dc2626;
+            color: #fca5a5;
+        }
+        .message-info {
+            background: rgba(59,130,246,0.1);
+            border: 1px solid #3b82f6;
+            color: #93c5fd;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+        }
+        .loading.visible {
+            display: flex;
+        }
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(238,0,0,0.2);
+            border-top-color: #ee0000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Preview Code Block */
+        .preview-code {
+            background: #1a1f2e;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .preview-code pre {
+            margin: 0;
+            color: #e6edf3;
+        }
+
+
+        /* File Upload */
+        .file-upload {
+            position: relative;
+            display: inline-block;
+        }
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .file-upload-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: #e6edf3;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .file-upload-label:hover {
+            background: rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='kingkong.png') }}" class="monkey-logo" style="width: 150px; height: 150px; object-fit: cover;">
+            </div>
+            <div class="header-text">
+                <h1>⚙️ Project APE Configuration</h1>
+                <p>Configure clients and generate vars.py configuration file</p>
+                <div class="header-nav">
+                    <a href="/">← Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Messages -->
+        <div id="successMessage" class="message message-success"></div>
+        <div id="errorMessage" class="message message-error"></div>
+        <div id="infoMessage" class="message message-info"></div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <span>Processing...</span>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="clients">👥 Clients</button>
+            <button class="tab" data-tab="settings">⚙️ Global Settings</button>
+            <button class="tab" data-tab="import">📥 Import/Export</button>
+            <button class="tab" data-tab="preview">👁️ Preview</button>
+        </div>
+
+        <!-- Tab Panels -->
+
+        <!-- Clients Tab -->
+        <div id="clients-panel" class="tab-panel active">
+            <div class="action-bar">
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="btn btn-success" id="loadConfigBtn">
+                        📂 Load Existing Configuration
+                    </button>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="btn btn-secondary" id="addClientBtn">
+                        ➕ Add Client
+                    </button>
+                </div>
+            </div>
+
+            <div class="clients-grid" id="clientsGrid">
+                <!-- Client cards will be added here dynamically -->
+            </div>
+
+            <div class="action-bar">
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="btn btn-primary" id="saveConfigBtn">
+                        💾 Save Configuration
+                    </button>
+                    <button type="button" class="btn btn-success" id="saveAndLaunchBtn">
+                        🚀 Save & Launch
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="downloadConfigBtn">
+                        📥 Download vars.py
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Settings Tab -->
+        <div id="settings-panel" class="tab-panel">
+            <div class="settings-section">
+                <h3>🎯 General Settings</h3>
+                <div class="form-group">
+                    <label class="form-label">Persona (AI Response Perspective)</label>
+                    <input type="text" class="form-input" id="persona"
+                           value="Red Hat solutions architect"
+                           placeholder="e.g., Red Hat solutions architect, account executive">
+                    <div class="form-help">The role perspective for AI-generated responses in chat prompts</div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Default Execution Mode</label>
+                        <select class="form-select" id="defaultMode">
+                            <option value="fast" selected>Fast Mode (10-15 min target)</option>
+                            <option value="deep">Deep Mode (35-40 min target)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Dashboard Port</label>
+                        <input type="number" class="form-input" id="dashboardPort"
+                               value="8765" min="1024" max="65535">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expandable Advanced Settings -->
+            <div class="expandable" id="timings-section">
+                <div class="expandable-header">
+                    <h4>⚡ Fast Mode Timings</h4>
+                    <span class="expandable-icon">▼</span>
+                </div>
+                <div class="expandable-content" id="timings-content">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+
+            <div class="expandable" id="deep-timings-section">
+                <div class="expandable-header">
+                    <h4>🔍 Deep Mode Timings</h4>
+                    <span class="expandable-icon">▼</span>
+                </div>
+                <div class="expandable-content" id="deep-timings-content">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+
+            <div class="expandable" id="drive-config-section">
+                <div class="expandable-header">
+                    <h4>☁️ Google Drive Configuration</h4>
+                    <span class="expandable-icon">▼</span>
+                </div>
+                <div class="expandable-content" id="drive-config-content">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Import/Export Tab -->
+        <div id="import-panel" class="tab-panel">
+            <div class="settings-section">
+                <h3>📥 CSV Import</h3>
+                <p class="form-help" style="margin-bottom: 20px;">
+                    Upload a CSV file with columns: name, folder, industry, subsegments
+                </p>
+                <div class="file-upload">
+                    <input type="file" id="csvFile" accept=".csv" />
+                    <label for="csvFile" class="file-upload-label">
+                        📄 Choose CSV File
+                    </label>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="button" class="btn btn-primary" id="importCsvBtn" disabled>
+                        📥 Import Clients
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-section" id="importPreview" style="display: none;">
+                <h3>👁️ Import Preview</h3>
+                <div id="importPreviewContent"></div>
+                <div style="margin-top: 20px;">
+                    <button type="button" class="btn btn-success" id="confirmImportBtn">
+                        ✅ Add These Clients
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="cancelImportBtn">
+                        ❌ Cancel
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>📤 Export</h3>
+                <p class="form-help" style="margin-bottom: 20px;">
+                    Download current configuration in various formats
+                </p>
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="btn btn-secondary" id="exportCsvBtn">
+                        📄 Export as CSV
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="exportJsonBtn">
+                        📋 Export as JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Tab -->
+        <div id="preview-panel" class="tab-panel">
+            <div class="settings-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>👁️ Configuration Preview</h3>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-success" id="saveAndLaunchPreviewBtn">
+                            🚀 Save & Launch
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="copyPreviewBtn">
+                            📋 Copy to Clipboard
+                        </button>
+                    </div>
+                </div>
+                <div class="preview-code">
+                    <pre id="previewContent"><!-- Generated vars.py will appear here --></pre>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/static/configure.js"></script>
+</body>
+</html>

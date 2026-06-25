@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Project APE - Launching Workflow</title>
+    <meta http-equiv="refresh" content="5;url=/">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Red Hat Text", "Roboto", Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0d14 0%, #1a1f2e 50%, #0f1419 100%);
+            color: #e6edf3;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.6);
+        }
+
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .monkey-logo {
+            border: 3px solid #ee0000;
+            box-shadow: 0 8px 24px rgba(238,0,0,0.6), 0 0 20px rgba(238,0,0,0.3);
+            border-radius: 8px;
+            padding: 6px;
+        }
+
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ffffff 0%, #ee0000 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #8b949e;
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+
+        .workflow-info {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .workflow-info h2 {
+            color: #fff;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #8b949e;
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: #e6edf3;
+            font-weight: 700;
+        }
+
+        .mode-fast {
+            color: #00d084;
+        }
+
+        .mode-deep {
+            color: #ff9500;
+        }
+
+        .clients-list {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .client-item {
+            padding: 8px 0;
+            color: #e6edf3;
+        }
+
+        .client-name {
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .client-industry {
+            color: #8b949e;
+            font-size: 0.9rem;
+            margin-left: 20px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: #ee0000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .redirect-message {
+            color: #8b949e;
+            font-size: 0.95rem;
+            margin-top: 20px;
+        }
+
+        .dashboard-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #ee0000;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .dashboard-link:hover {
+            background: #cc0000;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(238,0,0,0.3);
+        }
+
+        .status-message {
+            background: rgba(0,208,132,0.1);
+            border: 1px solid rgba(0,208,132,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            color: #00d084;
+            font-weight: 600;
+        }
+
+        .status-message.error {
+            background: rgba(255,0,0,0.1);
+            border-color: rgba(255,0,0,0.3);
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='kingkong.png') }}" class="monkey-logo" style="width: 150px; height: 150px; object-fit: cover;">
+        </div>
+        <h1>Launching Project APE</h1>
+        <p class="subtitle">Starting your account planning workflow...</p>
+
+        <div class="workflow-info">
+            <h2>Workflow Configuration</h2>
+
+            <div class="info-row">
+                <span class="info-label">Execution Mode:</span>
+                <span class="info-value mode-{{ workflow.mode }}">{{ workflow.mode.upper() }}</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Number of Clients:</span>
+                <span class="info-value">{{ workflow.client_count }}</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Estimated Time:</span>
+                <span class="info-value">{{ workflow.time_range }}</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Dashboard URL:</span>
+                <span class="info-value">{{ workflow.dashboard_url }}</span>
+            </div>
+
+            {% if workflow.client_details %}
+            <div class="clients-list">
+                <strong>Clients:</strong>
+                {% for client in workflow.client_details %}
+                <div class="client-item">
+                    <span class="client-name">• {{ client.name }}</span>
+                    {% if client.industry %}
+                    <div class="client-industry">{{ client.industry }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="spinner"></div>
+
+        <div id="status-message" class="status-message" style="display: none;"></div>
+
+        <p class="redirect-message">
+            Redirecting to dashboard in <span id="countdown">5</span> seconds...
+        </p>
+
+        <a href="/" class="dashboard-link">Go to Dashboard Now</a>
+    </div>
+
+    <script>
+        // Trigger workflow start
+        fetch('/api/start-workflow', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({{ workflow | tojson | safe }})
+        })
+        .then(response => response.json())
+        .then(data => {
+            const statusEl = document.getElementById('status-message');
+            if (data.success) {
+                statusEl.textContent = '✓ Workflow started successfully! Containers are launching...';
+                statusEl.classList.remove('error');
+                statusEl.style.display = 'block';
+            } else {
+                statusEl.textContent = '✗ Failed to start workflow: ' + data.error;
+                statusEl.classList.add('error');
+                statusEl.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            const statusEl = document.getElementById('status-message');
+            statusEl.textContent = '✗ Error: ' + error.message;
+            statusEl.classList.add('error');
+            statusEl.style.display = 'block';
+        });
+
+        // Countdown timer with redirect
+        let seconds = 5;
+        const countdownEl = document.getElementById('countdown');
+
+        const countdownInterval = setInterval(() => {
+            seconds--;
+            if (seconds > 0) {
+                countdownEl.textContent = seconds;
+            } else if (seconds === 0) {
+                countdownEl.textContent = seconds;
+                // Redirect to dashboard
+                window.location.href = '/';
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
