@@ -4,21 +4,52 @@
     <meta charset="utf-8">
     <title>Project APE - Configuration Tool</title>
     <style>
+        /* CSS Variables for theming */
+        :root {
+            --bg-primary: #0f1419;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #0d1117;
+            --bg-card: rgba(255,255,255,0.03);
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #c0c8d0;
+            --accent-red: #ee0000;
+            --border-primary: #30363d;
+            --border-secondary: rgba(255,255,255,0.1);
+            --shadow-color: rgba(0,0,0,0.6);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #ffffff;
+            --bg-card: rgba(0,0,0,0.03);
+            --text-primary: #24292f;
+            --text-secondary: #57606a;
+            --text-muted: #656d76;
+            --accent-red: #cf222e;
+            --border-primary: #d0d7de;
+            --border-secondary: rgba(0,0,0,0.1);
+            --shadow-color: rgba(0,0,0,0.1);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Red Hat Text", "Roboto", Arial, sans-serif;
-            background: #0f1419;
-            color: #e6edf3;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
             min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, #0a0d14 0%, #1a1f2e 50%, #0f1419 100%);
-            border-bottom: 3px solid #ee0000;
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+            border-bottom: 3px solid var(--accent-red);
             padding: 30px 60px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            box-shadow: 0 8px 24px var(--shadow-color);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
         .header-content {
             display: flex;
@@ -664,6 +695,59 @@
         .verify-container {
             padding: 20px;
         }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-secondary);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .theme-toggle:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-red);
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+            }
+            .header-content {
+                flex-direction: column;
+            }
+            .container {
+                padding: 20px 15px;
+            }
+            .tabs {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+            .action-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .clients-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Tablet Breakpoint */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .form-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
     </style>
 </head>
 <body>
@@ -676,6 +760,10 @@
                 <h1>⚙️ Project APE Configuration</h1>
                 <p>Configure clients and generate vars.py configuration file</p>
                 <div class="header-nav">
+                    <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                        <span id="themeIcon">🌙</span>
+                        <span style="font-size: 0.85rem; font-weight: 600;">Theme</span>
+                    </button>
                     <a href="/">← Back to Dashboard</a>
                 </div>
             </div>

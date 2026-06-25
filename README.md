@@ -2,27 +2,37 @@
 
 **Automated account research and planning using Google NotebookLM and AI orchestration**
 
+✨ **95% browser-accessible** - No terminal needed for daily operations
+
 [![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/yourusername/project-ape)
 [![Python](https://img.shields.io/badge/python-3.11+-green.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
 
+## 🌐 Web-First Experience
+
+**Launch your research in 5 clicks:**
+
+1. Open your browser → `http://localhost:8765/configure`
+2. Click "Setup Environment" → Automated installation (2-5 min)
+3. Click "Login to NotebookLM" → Authenticate with Google
+4. Click "Google Drive Setup" → 5-step wizard (one-time, 5 min)
+5. Fill in client form → Click "Start Workflow" → Done!
+
+**Monitor in real-time:** Live dashboard with progress tracking, quality scores, and instant access to results.
+
+---
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Quick Start (Browser-Based)](#quick-start-browser-based)
 - [Features](#features)
-- [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
-- [Installation](#installation)
-  - [Quick Start](#quick-start)
-  - [Detailed Setup](#detailed-setup)
-- [Google Drive Authentication](#google-drive-authentication)
-  - [Option 1: OAuth (Recommended)](#option-1-oauth-recommended)
-  - [Option 2: Service Account](#option-2-service-account)
-- [Configuration](#configuration)
-- [Usage](#usage)
+- [Web Configuration](#web-configuration)
 - [Dashboard](#dashboard)
 - [Execution Modes](#execution-modes)
 - [Troubleshooting](#troubleshooting)
+- [Advanced: Command Line Usage](#advanced-command-line-usage)
 - [Architecture Details](#architecture-details)
 - [Contributing](#contributing)
 
@@ -44,11 +54,94 @@ Project APE (Account Planning Engine) automates comprehensive account research b
 - Business development teams analyzing prospects
 
 **Key Benefits:**
+- 🌐 **Web-First**: 95%+ browser-accessible, no terminal needed
 - ⚡ **Fast**: 15-20 minutes per account (parallel execution)
 - 🎯 **Accurate**: AI-powered industry detection and quality scoring
 - 📊 **Transparent**: Real-time dashboard with progress tracking
 - 🔄 **Scalable**: Process multiple accounts concurrently
 - 🐳 **Portable**: Containerized for consistent deployment
+
+---
+
+## 🚀 Quick Start (Browser-Based)
+
+**No terminal commands required! Complete setup and execution from your browser.**
+
+### Step 1: Launch the Dashboard (30 seconds)
+
+Double-click `launch-project-ape.command` in Finder (macOS) or run the launcher script.
+
+Your browser automatically opens to: `http://localhost:8765/configure`
+
+![Configuration Page](docs/screenshots/configure-page.png)
+
+### Step 2: Setup Environment (2-5 minutes)
+
+1. On the configuration page, click **"Setup Environment"**
+2. Watch automated installation progress:
+   - Python virtual environment creation
+   - NotebookLM CLI installation
+   - Required dependencies
+3. Wait for green checkmark: ✅ **Environment Ready**
+
+![Setup Environment](docs/screenshots/setup-environment.png)
+
+### Step 3: Authenticate NotebookLM (1 minute)
+
+1. Click **"Login to NotebookLM"**
+2. Browser opens → Sign in with your Google account
+3. Grant NotebookLM permissions
+4. Return to dashboard → See ✅ **Authenticated**
+
+![Auth Status](docs/screenshots/auth-status.png)
+
+### Step 4: Setup Google Drive Access (5 minutes, one-time)
+
+Click **"Google Drive Setup"** to launch the OAuth wizard:
+
+1. **Step 1**: Click "Open Google Cloud Console" → Create project
+2. **Step 2**: Enable Google Drive API (one-click)
+3. **Step 3**: Configure OAuth consent screen
+4. **Step 4**: Create OAuth credentials → Download JSON
+5. **Step 5**: Upload JSON file → Authenticate
+
+![OAuth Wizard](docs/screenshots/oauth-wizard.png)
+
+**That's it!** Drive access configured. You'll never need to repeat this.
+
+### Step 5: Configure Your Clients (3 minutes)
+
+In the web form, add your first client:
+
+- **Client Name**: `Acme Corporation`
+- **Google Drive Folder**: Paste folder URL from Drive
+- **Industry**: Leave blank for auto-detection
+- **Subsegments**: Optional (e.g., "cloud, AI/ML")
+
+Click **"➕ Add Client"** to add more.
+
+### Step 6: Launch Your First Workflow (1 minute)
+
+1. Review your configuration
+2. Select execution mode: **Fast** (15-20 min) or **Deep** (45-60 min)
+3. Click **"🚀 Start Workflow"**
+4. Dashboard automatically switches to monitoring view
+
+![Dashboard](docs/screenshots/dashboard-monitoring.png)
+
+### What Success Looks Like
+
+✅ **Live dashboard** shows real-time progress for each client  
+✅ **Progress bars** update every 2 seconds  
+✅ **Quality scores** appear when complete (e.g., "8.5/10")  
+✅ **NotebookLM links** are clickable → Opens your research  
+✅ **Status shows** "COMPLETE" with green indicator  
+
+![Completed Workflow](docs/screenshots/completed-workflow.png)
+
+**Total time from zero to first results: 15-30 minutes**
+
+For detailed step-by-step instructions, see **[QUICK_START.md](QUICK_START.md)**
 
 ---
 
@@ -143,470 +236,41 @@ Project APE (Account Planning Engine) automates comprehensive account research b
 
 ## 📋 Prerequisites
 
-### System Requirements
-- **OS**: macOS (Intel/Apple Silicon) or Linux (x86_64/ARM64)
-- **RAM**: 8GB minimum, 16GB recommended
-- **Disk**: 10GB free space
-- **Python**: 3.11+ (Python 3.14 recommended)
-- **Container Runtime**: Podman or Docker
+**Everything you need to get started:**
 
-### Required Accounts
-1. **Google Account** with:
-   - Access to Google Drive
-   - Access to Google NotebookLM (notebooklm.google.com)
-   - Google Cloud project (can be created during setup)
+### Required
+- **macOS or Linux** system (Intel/Apple Silicon/ARM64)
+- **Google Account** with access to:
+  - Google Drive (for client documents)
+  - Google NotebookLM (free at notebooklm.google.com)
+- **10 minutes** for initial setup
 
-2. **Optional**:
-   - Gemini API key (for advanced features)
+### Optional
+- Gemini API key (for advanced AI features)
 
-### Network Requirements
-- Outbound HTTPS (443) access to:
-  - `drive.google.com`
-  - `notebooklm.google.com`
-  - `generativelanguage.googleapis.com` (Gemini API)
-  - `googleapis.com` (Drive API)
+**That's it!** The web interface handles all technical setup automatically.
 
 ---
 
-## 🚀 Installation
+## 🌐 Web Configuration
 
-### Quick Start
+**All configuration happens in your browser - no command line needed!**
 
-**For macOS/Linux users with Podman installed:**
+### Access the Configuration Interface
 
-```bash
-# Clone repository
-git clone https://github.com/yourusername/project-ape.git
-cd project-ape
+1. **Launch the dashboard:**
+   - Double-click `launch-project-ape.command` in Finder (macOS)
+   - Or browse to: `http://localhost:8765/configure`
 
-# Make launcher executable
-chmod +x launch-project-ape.command
+2. **Complete the setup wizard:**
+   - Environment setup (automated)
+   - NotebookLM authentication (browser-based)
+   - Google Drive OAuth (5-step wizard)
+   - Client configuration (web form)
 
-# Double-click launch-project-ape.command in Finder (macOS)
-# Or run: ./launch-project-ape.command
-```
+3. **Click "Start Workflow"** and monitor in real-time
 
-The launcher will:
-1. Detect if first run and install dependencies
-2. Open configuration UI in browser
-3. Guide you through setup
-
-### Detailed Setup
-
-#### Step 1: Install Dependencies
-
-**macOS:**
-```bash
-# Install Homebrew if needed
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install Podman
-brew install podman
-
-# Install Google Cloud SDK
-brew install --cask google-cloud-sdk
-
-# Install Python 3.11+
-brew install python@3.11
-```
-
-**Linux (Ubuntu/Debian):**
-```bash
-# Install Podman
-sudo apt-get update
-sudo apt-get install -y podman
-
-# Install Google Cloud SDK
-curl https://sdk.cloud.google.com | bash
-exec -l $SHELL
-
-# Install Python 3.11+
-sudo apt-get install -y python3.11 python3.11-venv python3-pip
-```
-
-#### Step 2: Clone Repository
-
-```bash
-git clone https://github.com/yourusername/project-ape.git
-cd project-ape
-```
-
-#### Step 3: Run Setup Script
-
-```bash
-./setup.sh
-```
-
-This will:
-- Create Python virtual environment
-- Install Python dependencies
-- Install NotebookLM CLI
-- Authenticate with Google services
-- Set up Drive credentials (OAuth or Service Account)
-- Configure container credentials
-
-**Expected Time:** 20-30 minutes
-
----
-
-## 🔐 Google Drive Authentication
-
-Project APE needs access to your Google Drive folders to download client documents. You have two options:
-
-### Option 1: OAuth (Recommended)
-
-**Best for:** Personal use, development, small teams
-
-**Advantages:**
-- No manual folder sharing required
-- Uses your personal Google account
-- Easier setup
-- More secure (browser-based auth)
-
-#### Setup Steps:
-
-1. **Create OAuth Client ID:**
-
-   Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-
-   ```
-   1. Select your project (or create new)
-   2. Click "Create Credentials" → "OAuth client ID"
-   3. Application type: "Desktop app"
-   4. Name: "Project APE Desktop"
-   5. Click "Create"
-   6. Download JSON file
-   ```
-
-2. **Save Credentials:**
-
-   ```bash
-   # Create credentials directory
-   mkdir -p ~/.project-ape
-   
-   # Move downloaded JSON file
-   mv ~/Downloads/client_secret_*.json ~/.project-ape/drive_credentials.json
-   ```
-
-3. **Authenticate:**
-
-   ```bash
-   # Run OAuth setup
-   python3 setup-oauth-drive.py
-   ```
-
-   This will:
-   - Open browser for Google sign-in
-   - Request Drive read-only permissions
-   - Save token to `~/.project-ape/drive_token.json`
-
-4. **Verify:**
-
-   ```bash
-   # Test Drive access
-   python3 verify-drive-access.py
-   ```
-
-**Token Lifetime:**
-- Tokens expire after 7 days of inactivity
-- Refresh automatically on first use
-- Re-run `setup-oauth-drive.py` if auth fails
-
----
-
-### Option 2: Service Account
-
-**Best for:** Production, automation, multiple team members
-
-**Advantages:**
-- Non-interactive (no browser required)
-- Long-lived credentials
-- Works in containers/headless environments
-- Better for CI/CD pipelines
-
-**Disadvantages:**
-- Requires manual folder sharing
-- More complex setup
-
-#### Setup Steps:
-
-1. **Create Service Account:**
-
-   ```bash
-   ./create-service-account.sh
-   ```
-
-   This script will:
-   - Create Google Cloud project (or use existing)
-   - Enable required APIs
-   - Create service account
-   - Download key file to `service-account-key.json`
-
-   **Manual alternative:**
-
-   Go to [Google Cloud Console](https://console.cloud.google.com/iam-admin/serviceaccounts)
-
-   ```
-   1. Select your project
-   2. Click "Create Service Account"
-   3. Name: "project-ape-service"
-   4. Description: "Service account for Project APE"
-   5. Click "Create and Continue"
-   6. Skip role assignment (no project-level permissions needed)
-   7. Click "Done"
-   8. Click on the service account email
-   9. Go to "Keys" tab → "Add Key" → "Create new key"
-   10. Format: JSON
-   11. Click "Create" and save as service-account-key.json
-   ```
-
-2. **Share Drive Folders:**
-
-   For each client folder in Google Drive:
-
-   ```
-   1. Open Google Drive (drive.google.com)
-   2. Right-click on client folder
-   3. Click "Share"
-   4. Add service account email:
-      project-ape-service@YOUR-PROJECT-ID.iam.gserviceaccount.com
-   5. Role: "Viewer"
-   6. Uncheck "Notify people"
-   7. Click "Share"
-   ```
-
-   **Important:** The service account email format is:
-   ```
-   SERVICE-ACCOUNT-NAME@PROJECT-ID.iam.gserviceaccount.com
-   ```
-
-3. **Verify:**
-
-   ```bash
-   # Test service account access
-   python3 verify-drive-access.py --service-account
-   ```
-
----
-
-## ⚙️ Configuration
-
-### Web Configuration (Recommended)
-
-1. **Start Dashboard:**
-
-   ```bash
-   # Double-click launch-project-ape.command
-   # Or run:
-   source ~/.project-ape-venv/bin/activate
-   python3 dashboard/server.py
-   ```
-
-2. **Open Browser:**
-
-   Navigate to: `http://localhost:8765/configure`
-
-3. **Add Clients:**
-
-   - Click "➕ Add Client"
-   - Fill in details:
-     - **Name**: `Acme Corporation`
-     - **Drive Folder**: `https://drive.google.com/drive/folders/ABC123...`
-     - **Industry**: `technology` (optional - auto-detected if blank)
-     - **Subsegments**: `cloud, AI/ML` (optional)
-
-4. **Configure Settings:**
-
-   - **Persona**: `solutions architect` (default)
-   - **Execution Mode**: `fast` or `deep`
-   - **Dashboard Port**: `8765` (default)
-
-5. **Save & Launch:**
-
-   Click "🚀 Save & Launch" to generate `vars.py` and start workflow
-
----
-
-### Manual Configuration (Advanced)
-
-Create `vars.py` from template:
-
-```bash
-cp example-vars.py vars.py
-```
-
-Edit `vars.py`:
-
-```python
-"""
-Project APE Configuration
-"""
-from pathlib import Path
-
-# ==============================================================================
-# CLIENT CONFIGURATIONS
-# ==============================================================================
-
-clients = [
-    "acme_corp",
-    "techstart_inc",
-]
-
-# --- Acme Corporation ---
-acme_corp_name = "Acme Corporation"
-acme_corp_folder = "https://drive.google.com/drive/folders/ABC123XYZ"
-acme_corp_industry = "manufacturing"  # Optional - leave empty for auto-detect
-acme_corp_subsegments = "aerospace, industrial automation"
-
-# --- TechStart Inc ---
-techstart_inc_name = "TechStart Inc"
-techstart_inc_folder = "https://drive.google.com/drive/folders/DEF456UVW"
-techstart_inc_industry = ""  # Auto-detect
-techstart_inc_subsegments = ""  # Auto-detect
-
-# ==============================================================================
-# GENERAL SETTINGS
-# ==============================================================================
-
-persona = "Red Hat solutions architect"  # AI response perspective
-default_mode = "fast"  # "fast" or "deep"
-
-# ==============================================================================
-# DASHBOARD
-# ==============================================================================
-
-DASHBOARD_PORT = 8765
-DASHBOARD_REFRESH_INTERVAL = 2  # seconds
-
-# ==============================================================================
-# EXECUTION TIMING
-# ==============================================================================
-
-# Fast Mode (15-20 min total for all clients in parallel)
-TIMINGS = {
-    'notebook_creation_delay': 3.0,
-    'source_add_delay': (2.0, 4.0),
-    'source_processing_delay': 30.0,
-    'ask_prompt_delay': (8.0, 12.0),
-    'chat_prompt_delay': (5.0, 8.0),
-    'deduplication_delay': 20.0,
-    'mindmap_delay': 15.0,
-    'source_import_wait': 10.0,
-}
-
-# Deep Mode (45-60 min total for all clients in parallel)
-DEEP_TIMINGS = {
-    'notebook_creation_delay': 3.0,
-    'source_add_delay': (2.0, 4.0),
-    'source_processing_delay': 45.0,
-    'ask_prompt_delay': (15.0, 25.0),
-    'chat_prompt_delay': (10.0, 15.0),
-    'deduplication_delay': 25.0,
-    'mindmap_delay': 20.0,
-    'source_import_wait': 15.0,
-}
-
-# ==============================================================================
-# GOOGLE DRIVE
-# ==============================================================================
-
-DRIVE_CONFIG = {
-    'cache_enabled': True,
-    'cache_ttl_hours': 168,  # 7 days
-    'export_google_docs': True,  # Export Docs/Sheets to PDF
-    'recursive': False,  # Don't download subfolders
-    'max_file_size_mb': 50,  # Skip files larger than 50MB
-}
-
-# ==============================================================================
-# GEMINI AI (Optional)
-# ==============================================================================
-
-GEMINI_AGENT_CONFIG = {
-    'enabled': True,  # Set to False to disable
-    'model': 'gemini-2.0-flash-exp',
-    'temperature': 0.2,
-    'enable_error_analysis': True,
-    'enable_quality_validation': True,
-    'quality_target': 8.5,
-}
-
-# ==============================================================================
-# PATHS (Do not modify for container)
-# ==============================================================================
-
-STATUS_DIR = Path('/app/.multi_process_status')
-LOGS_DIR = Path('/app/logs')
-```
-
----
-
-## 🎮 Usage
-
-### Container Mode (Recommended)
-
-**Start workflow with auto-detection:**
-
-```bash
-./launch_ape.sh fast
-```
-
-This will:
-1. Detect architecture (Intel/ARM)
-2. Pull container image
-3. Start dashboard at `http://localhost:8765`
-4. Launch all clients in parallel
-5. Auto-shutdown after 5 minutes
-
-**Specify clients:**
-
-```bash
-# Run specific clients
-./launch_ape.sh fast acme_corp techstart_inc
-
-# Deep mode
-./launch_ape.sh deep acme_corp
-
-# Force refresh Drive cache
-./launch_ape.sh fast --refresh
-```
-
-**Command Options:**
-
-```bash
-./launch_ape.sh {fast|deep} [--refresh] [client1 client2 ...]
-
-Modes:
-  fast     Quick research (15-20 minutes total)
-  deep     Thorough research (45-60 minutes total)
-
-Options:
-  --refresh    Force refresh Google Drive cache (ignore 7-day TTL)
-
-Examples:
-  ./launch_ape.sh fast
-  ./launch_ape.sh deep --refresh
-  ./launch_ape.sh fast acme_corp techstart_inc
-```
-
----
-
-### Local Mode (Development)
-
-**Run without container:**
-
-```bash
-# Activate virtual environment
-source ~/.project-ape-venv/bin/activate
-
-# Start workflow
-python3 main.py --mode fast
-
-# Options:
-python3 main.py --mode deep --refresh
-python3 main.py --mode fast --clients acme_corp
-python3 main.py --mode fast --no-dashboard
-```
+**See [QUICK_START.md](QUICK_START.md) for detailed browser-based walkthrough**
 
 ---
 
@@ -687,112 +351,230 @@ Deep Mode Total: 45-60 minutes
 
 ---
 
+## 💻 Advanced: Command Line Usage
+
+**For power users, automation, and CI/CD pipelines**
+
+The web interface handles 95%+ of use cases. Use command line only for:
+- Automated workflows and scripting
+- CI/CD pipeline integration
+- Advanced debugging
+- Custom container configurations
+
+### Installation (Advanced)
+
+<details>
+<summary>Click to expand manual installation steps</summary>
+
+#### Step 1: Install Dependencies
+
+**macOS:**
+```bash
+brew install podman
+brew install --cask google-cloud-sdk
+brew install python@3.11
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update && sudo apt-get install -y podman
+curl https://sdk.cloud.google.com | bash
+sudo apt-get install -y python3.11 python3.11-venv python3-pip
+```
+
+#### Step 2: Clone Repository
+
+```bash
+git clone https://github.com/yourusername/project-ape.git
+cd project-ape
+```
+
+#### Step 3: Run Setup Script
+
+```bash
+./setup.sh
+```
+
+**Expected Time:** 20-30 minutes
+
+</details>
+
+### Command Line Execution
+
+**Container Mode:**
+
+```bash
+# Fast mode - all clients
+./launch_ape.sh fast
+
+# Deep mode - specific clients
+./launch_ape.sh deep acme_corp techstart_inc
+
+# Force refresh Drive cache
+./launch_ape.sh fast --refresh
+```
+
+**Local Mode:**
+
+```bash
+# Activate virtual environment
+source ~/.project-ape-venv/bin/activate
+
+# Start workflow
+python3 main.py --mode fast
+
+# With options
+python3 main.py --mode deep --refresh --clients merck organon
+```
+
+### Manual Configuration (vars.py)
+
+<details>
+<summary>Click to expand manual configuration</summary>
+
+Create `vars.py` from template:
+
+```bash
+cp example-vars.py vars.py
+```
+
+Edit with your preferred editor:
+
+```python
+clients = ["acme_corp", "techstart_inc"]
+
+acme_corp_name = "Acme Corporation"
+acme_corp_folder = "https://drive.google.com/drive/folders/ABC123XYZ"
+acme_corp_industry = ""  # Auto-detect
+acme_corp_subsegments = ""
+
+persona = "solutions architect"
+default_mode = "fast"
+DASHBOARD_PORT = 8765
+```
+
+See `example-vars.py` for complete configuration options.
+
+</details>
+
+### Google Drive Authentication (CLI)
+
+<details>
+<summary>Click to expand OAuth setup via command line</summary>
+
+**OAuth Setup:**
+
+1. Create OAuth credentials at [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Download JSON file
+3. Save credentials:
+   ```bash
+   mkdir -p ~/.project-ape
+   mv ~/Downloads/client_secret_*.json ~/.project-ape/drive_credentials.json
+   ```
+4. Authenticate:
+   ```bash
+   python3 setup-oauth-drive.py
+   ```
+
+**Service Account Setup:**
+
+```bash
+./create-service-account.sh
+```
+
+Then share Drive folders with the service account email.
+
+See [OAUTH_SETUP_GUIDE.md](OAUTH_SETUP_GUIDE.md) for detailed instructions.
+
+</details>
+
+---
+
 ## 🔧 Troubleshooting
+
+**Most issues can be resolved from the web dashboard.**
+
+### Dashboard Indicators
+
+✅ **Green checkmarks** = Everything working  
+⚠️ **Yellow warnings** = Attention needed  
+❌ **Red errors** = Action required  
 
 ### Common Issues
 
 #### 1. NotebookLM Authentication Failed
 
-**Symptoms:**
-```
-ERROR: NotebookLM authentication expired
-```
+**Dashboard shows:** ❌ "NotebookLM auth expired"
 
-**Solution:**
-```bash
-# Refresh credentials
-notebooklm auth refresh
+**Web Solution:**
+1. Click **"Login to NotebookLM"** button in dashboard
+2. Browser opens → Sign in with Google
+3. Grant permissions → Return to dashboard
+4. ✅ Should now show "Authenticated"
 
-# Or re-authenticate
-notebooklm auth login
-```
+**Command line alternative:** `notebooklm auth refresh`
 
 #### 2. Google Drive Access Denied
 
-**OAuth:**
-```bash
-# Re-run OAuth setup
-python3 setup-oauth-drive.py
-```
+**Dashboard shows:** ❌ "Cannot access Drive folder"
 
-**Service Account:**
-```
-1. Verify service account email in Drive folder share settings
-2. Check folder permissions (must be "Viewer" or higher)
-3. Ensure folder ID is correct in vars.py
-```
+**Web Solution:**
+1. Click **"Google Drive Setup"** in dashboard
+2. Complete OAuth wizard (5 steps)
+3. Re-authenticate if prompted
+4. ✅ Should now show "Drive Connected"
 
-#### 3. Container Won't Stop
+**Command line alternative:** Run `python3 setup-oauth-drive.py`
 
-**Symptoms:**
-Container remains running after workflow completes
+#### 3. Dashboard Won't Load
+
+**Browser shows:** "Connection refused" or "Page not found"
 
 **Solution:**
-```bash
-# Auto-shutdown is now enabled (5 minutes after completion)
-# Or manually stop:
-podman stop project-ape
+1. Check if dashboard is running: Look for terminal window
+2. If not running: Double-click `launch-project-ape.command`
+3. Wait 10 seconds for server to start
+4. Refresh browser: `http://localhost:8765`
 
-# Force remove:
-podman rm -f project-ape
-```
+#### 4. Port 8765 Already in Use
 
-#### 4. Rocket Ship Still Shows on Launch Page
+**Dashboard shows:** Error starting server
 
-**Cause:** Browser cache
+**Web Solution:**
+1. Close any other Project APE instances
+2. Restart your browser
+3. Re-launch the dashboard
+
+**Command line alternative:** Kill process on port 8765 and restart
+
+#### 5. Workflow Stuck or Not Progressing
+
+**Dashboard shows:** Same progress for 5+ minutes
 
 **Solution:**
-- Hard refresh: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows)
-- Or restart Flask server and refresh normally
+1. Check **"📋 Real-Time Logs"** section (click to expand)
+2. Look for error messages in red
+3. Download logs with **"📥 Download"** button
+4. See detailed troubleshooting in [TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md)
 
-#### 5. Port 8765 Already in Use
+### View Logs from Dashboard
 
-**Solution:**
-```bash
-# Find process using port
-lsof -i :8765
+**No terminal needed!**
 
-# Kill process
-kill -9 <PID>
-
-# Or change port in vars.py:
-DASHBOARD_PORT = 8766
-```
-
-### Debug Mode
-
-**Enable verbose logging:**
-
-```bash
-# Container mode
-./launch_ape.sh fast --debug
-
-# Local mode
-python3 main.py --mode fast --log-level DEBUG
-```
-
-**Check logs:**
-
-```bash
-# View client logs
-tail -f logs/acme_corp.log
-
-# View overall logs
-tail -f logs/overall.log
-
-# Download from dashboard
-# Click "📥 Download" in Logs section
-```
+1. Click **"📋 Real-Time Logs"** to expand log section
+2. Logs stream automatically with real-time updates
+3. Use **"⏸ Pause"** to stop scrolling
+4. Use **"📥 Download"** to save logs for analysis
+5. Use **"🗑 Clear"** to reset view
 
 ### Getting Help
 
-1. Check [Troubleshooting Guide](Docs/TROUBLESHOOTING.md)
-2. Review logs in `logs/` directory
-3. Check container logs: `podman logs project-ape`
-4. Open GitHub issue with:
-   - Error message
-   - Log snippets
-   - System info (`uname -a`, `python --version`)
+1. **First**: Check dashboard logs (📋 Real-Time Logs section)
+2. **Second**: Review [TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md)
+3. **Third**: Open GitHub issue with:
+   - Screenshot of dashboard error
+   - Downloaded log files (📥 Download button)
+   - Browser console errors (F12 → Console tab)
 
 ---
 

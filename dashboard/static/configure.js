@@ -1475,7 +1475,7 @@ async function showCacheStats() {
 
                     if (stat.cached && stat.type === 'drive') {
                         html += `
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 12px;">
                                 <div>
                                     <div style="color: #8b949e; font-size: 0.8rem;">Cache Size</div>
                                     <div style="font-weight: 600; color: #e6edf3;">${stat.size_mb} MB</div>
@@ -1488,6 +1488,15 @@ async function showCacheStats() {
                                     <div style="color: #8b949e; font-size: 0.8rem;">Last Refresh</div>
                                     <div style="font-weight: 600; color: #e6edf3;">${stat.age}</div>
                                 </div>
+                            </div>
+                            <button
+                                class="btn btn-secondary"
+                                style="padding: 6px 12px; font-size: 0.85rem; width: 100%;"
+                                onclick="toggleFileList('${stat.client_id}')">
+                                📄 View Files
+                            </button>
+                            <div id="files-${stat.client_id}" style="display: none; margin-top: 12px; max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 6px; padding: 12px;">
+                                <!-- File list will be loaded here -->
                             </div>
                         `;
                     } else if (stat.error) {
@@ -1683,3 +1692,178 @@ async function clearCache() {
         clearBtn.textContent = originalText;
     }
 }
+
+// ========================================================================
+// System Status Functions
+// ========================================================================
+
+async function loadSystemStatus() {
+    try {
+        const response = await fetch('/api/system-status');
+        const data = await response.json();
+
+        const panel = document.getElementById('systemStatusPanel');
+
+        // Create status cards
+        panel.innerHTML = `
+            <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 12px;">
+                <div style="font-size: 0.75rem; color: #8b949e; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Python Version</div>
+                <div style="font-size: 1.1rem; color: #e6edf3; font-weight: 600;">${data.python_version}</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 12px;">
+                <div style="font-size: 0.75rem; color: #8b949e; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Virtual Environment</div>
+                <div style="font-size: 1.1rem; color: ${data.venv_active ? '#86efac' : '#fca5a5'}; font-weight: 600;">
+                    ${data.venv_active ? '✅ Active' : '❌ Not Active'}
+                </div>
+                ${data.venv_path ? `<div style="font-size: 0.7rem; color: #8b949e; margin-top: 4px; word-break: break-all;">${data.venv_path}</div>` : ''}
+            </div>
+            <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 12px;">
+                <div style="font-size: 0.75rem; color: #8b949e; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Disk Space</div>
+                <div style="font-size: 1.1rem; color: ${data.disk_percent > 90 ? '#fca5a5' : data.disk_percent > 75 ? '#fdba74' : '#86efac'}; font-weight: 600;">
+                    ${data.disk_free_gb} GB Free
+                </div>
+                <div style="font-size: 0.7rem; color: #8b949e; margin-top: 4px;">
+                    ${data.disk_percent}% used of ${data.disk_total_gb} GB
+                </div>
+            </div>
+            <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 12px;">
+                <div style="font-size: 0.75rem; color: #8b949e; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Environment</div>
+                <div style="font-size: 1.1rem; color: #e6edf3; font-weight: 600;">
+                    ${data.container_mode ? '🐳 Container' : '💻 Local'}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        const panel = document.getElementById('systemStatusPanel');
+        panel.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #fca5a5; grid-column: 1 / -1;">
+                ❌ Failed to load system status: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// ========================================================================
+// Cache File Browser Functions
+// ========================================================================
+
+async function toggleFileList(clientId) {
+    const fileListDiv = document.getElementById(`files-${clientId}`);
+
+    if (fileListDiv.style.display === 'none') {
+        // Show and load files
+        fileListDiv.style.display = 'block';
+        await loadCacheFiles(clientId);
+    } else {
+        // Hide
+        fileListDiv.style.display = 'none';
+    }
+}
+
+async function loadCacheFiles(clientId) {
+    const fileListDiv = document.getElementById(`files-${clientId}`);
+
+    try {
+        fileListDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: #8b949e;">Loading files...</div>';
+
+        const response = await fetch(`/api/cache-files/${clientId}`);
+        const data = await response.json();
+
+        if (data.success && data.files.length > 0) {
+            // Create table with file details
+            let html = `
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <th style="text-align: left; padding: 8px; color: #8b949e; font-weight: 600;">File Name</th>
+                            <th style="text-align: right; padding: 8px; color: #8b949e; font-weight: 600;">Size</th>
+                            <th style="text-align: right; padding: 8px; color: #8b949e; font-weight: 600;">Cached</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.files.forEach(file => {
+                const cachedDate = new Date(file.cached_at * 1000);
+                const cachedStr = cachedDate.toLocaleDateString() + ' ' + cachedDate.toLocaleTimeString();
+
+                html += `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 8px; color: #e6edf3; word-break: break-word;">${file.name}</td>
+                        <td style="padding: 8px; color: #8b949e; text-align: right; white-space: nowrap;">${file.size_mb} MB</td>
+                        <td style="padding: 8px; color: #8b949e; text-align: right; white-space: nowrap; font-size: 0.75rem;">${cachedStr}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+                <div style="margin-top: 12px; padding: 8px; background: rgba(59,130,246,0.05); border: 1px solid #3b82f6; border-radius: 4px; font-size: 0.8rem; color: #93c5fd;">
+                    📊 Total: ${data.total_count} files
+                </div>
+            `;
+
+            fileListDiv.innerHTML = html;
+        } else if (data.files.length === 0) {
+            fileListDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: #8b949e;">No files found in cache</div>';
+        } else {
+            fileListDiv.innerHTML = `<div style="text-align: center; padding: 20px; color: #fca5a5;">Error: ${data.error}</div>`;
+        }
+    } catch (error) {
+        fileListDiv.innerHTML = `<div style="text-align: center; padding: 20px; color: #fca5a5;">Failed to load files: ${error.message}</div>`;
+    }
+}
+
+// ========================================================================
+// Theme Toggle Functions
+// ========================================================================
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    const themeIcon = document.getElementById('themeIcon');
+
+    if (savedTheme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        if (themeIcon) themeIcon.textContent = '☀️';
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        if (themeIcon) themeIcon.textContent = '🌙';
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const themeIcon = document.getElementById('themeIcon');
+
+    if (currentTheme === 'light') {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'dark');
+        if (themeIcon) themeIcon.textContent = '🌙';
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+        if (themeIcon) themeIcon.textContent = '☀️';
+    }
+}
+
+// Load system status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize theme
+    initTheme();
+
+    // Load system status
+    loadSystemStatus();
+
+    // Add event listener for refresh button
+    const refreshSystemStatusBtn = document.getElementById('refreshSystemStatusBtn');
+    if (refreshSystemStatusBtn) {
+        refreshSystemStatusBtn.addEventListener('click', loadSystemStatus);
+    }
+
+    // Add event listener for theme toggle button
+    const themeToggleBtn = document.getElementById('themeToggle');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+});
