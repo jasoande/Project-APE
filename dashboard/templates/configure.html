@@ -413,6 +413,257 @@
         .file-upload-label:hover {
             background: rgba(255,255,255,0.1);
         }
+
+        /* OAuth Wizard Styles */
+        .wizard-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .wizard-progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .wizard-progress::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(255,255,255,0.1);
+            z-index: 0;
+        }
+
+        .wizard-progress .step {
+            background: #161b22;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #8b949e;
+            z-index: 1;
+            position: relative;
+        }
+
+        .wizard-progress .step.active {
+            border-color: #ee0000;
+            color: #ee0000;
+            background: rgba(238,0,0,0.1);
+        }
+
+        .wizard-step {
+            display: none;
+            animation: fadeInWizard 0.3s;
+        }
+
+        .wizard-step.active {
+            display: block;
+        }
+
+        @keyframes fadeInWizard {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .wizard-step h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .instructions {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .instructions ol {
+            list-style: none;
+            counter-reset: step-counter;
+            padding: 0;
+        }
+
+        .instructions li {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .instructions input[type="checkbox"] {
+            margin-right: 8px;
+            margin-top: 4px;
+        }
+
+        .instructions a {
+            color: #58a6ff;
+            text-decoration: none;
+            margin-left: 8px;
+        }
+
+        .instructions a:hover {
+            text-decoration: underline;
+        }
+
+        .upload-zone {
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-zone:hover {
+            border-color: #ee0000;
+            background: rgba(238,0,0,0.05);
+        }
+
+        .upload-zone.drag-over {
+            border-color: #ee0000;
+            background: rgba(238,0,0,0.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #8b949e;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .upload-success .success-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .upload-success .success-text {
+            color: #3fb950;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .auth-container {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .auth-status {
+            margin: 30px 0;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-message {
+            font-size: 1rem;
+            color: #e6edf3;
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+        }
+
+        .status-message.success {
+            color: #3fb950;
+            background: rgba(63,185,80,0.1);
+        }
+
+        .status-message.error {
+            color: #f85149;
+            background: rgba(248,81,73,0.1);
+        }
+
+        .btn-large {
+            font-size: 1.1rem;
+            padding: 16px 32px;
+        }
+
+        .wizard-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .result-item .label {
+            color: #8b949e;
+            font-weight: 600;
+        }
+
+        .result-item .value {
+            color: #e6edf3;
+        }
+
+        .sample-files {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+        }
+
+        .sample-files h4 {
+            font-size: 0.9rem;
+            color: #8b949e;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+
+        .file-icon {
+            font-size: 1.2rem;
+        }
+
+        .file-name {
+            color: #e6edf3;
+            font-size: 0.9rem;
+        }
+
+        .status-checking {
+            text-align: center;
+            color: #8b949e;
+        }
+
+        .verify-container {
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -438,6 +689,31 @@
             <p class="form-help" style="margin-bottom: 20px;">
                 Administrative tools for managing the Project APE environment
             </p>
+
+            <!-- System Status Panel -->
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                    <div>
+                        <h4 style="font-size: 1rem; font-weight: 600; color: #e6edf3; margin-bottom: 8px;">
+                            💻 System Status
+                        </h4>
+                        <p class="form-help" style="margin: 0;">
+                            Current environment and resource information
+                        </p>
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="refreshSystemStatusBtn" style="padding: 6px 12px; font-size: 0.85rem;">
+                        🔄 Refresh
+                    </button>
+                </div>
+
+                <div id="systemStatusPanel" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                    <!-- Status will be populated here -->
+                    <div style="text-align: center; padding: 20px; color: #8b949e;">
+                        Loading system status...
+                    </div>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 30px;">
                 <button type="button" class="btn btn-secondary" id="setupEnvBtn">
                     🔧 Setup Environment
@@ -634,6 +910,7 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab active" data-tab="clients">👥 Clients</button>
+            <button class="tab" data-tab="oauth-setup">🔑 Google Drive Setup</button>
             <button class="tab" data-tab="settings">⚙️ Global Settings</button>
             <button class="tab" data-tab="import">📥 Import/Export</button>
             <button class="tab" data-tab="preview">👁️ Preview</button>
@@ -672,6 +949,167 @@
                         📥 Download vars.py
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- OAuth Setup Tab -->
+        <div id="oauth-setup-panel" class="tab-panel">
+            <div class="wizard-container">
+
+                <!-- Progress Indicator -->
+                <div class="wizard-progress">
+                    <div class="step active" data-step="1">1</div>
+                    <div class="step" data-step="2">2</div>
+                    <div class="step" data-step="3">3</div>
+                    <div class="step" data-step="4">4</div>
+                    <div class="step" data-step="5">5</div>
+                </div>
+
+                <!-- Step 1: Check Prerequisites -->
+                <div class="wizard-step active" data-step="1">
+                    <h3>Step 1: Check Prerequisites</h3>
+                    <div id="oauth-status-check">
+                        <div class="status-item">
+                            <span class="status-label">OAuth Credentials:</span>
+                            <span id="creds-status-badge" class="status-badge">Checking...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Authentication Token:</span>
+                            <span id="token-status-badge" class="status-badge">Checking...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Drive Access:</span>
+                            <span id="access-status-badge" class="status-badge">Checking...</span>
+                        </div>
+                    </div>
+                    <div class="wizard-actions">
+                        <button class="btn btn-primary" onclick="nextWizardStep()">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Create Credentials -->
+                <div class="wizard-step" data-step="2">
+                    <h3>Step 2: Create OAuth Credentials</h3>
+                    <div class="instructions">
+                        <p>Follow these steps to create OAuth credentials in Google Cloud Console:</p>
+                        <ol>
+                            <li>
+                                <input type="checkbox" id="check-gcp-project">
+                                <label for="check-gcp-project">
+                                    Create or select a GCP project
+                                    <a href="https://console.cloud.google.com/projectcreate" target="_blank">Open GCP Console →</a>
+                                </label>
+                            </li>
+                            <li>
+                                <input type="checkbox" id="check-enable-api">
+                                <label for="check-enable-api">
+                                    Enable Google Drive API
+                                    <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank">Enable API →</a>
+                                </label>
+                            </li>
+                            <li>
+                                <input type="checkbox" id="check-oauth-consent">
+                                <label for="check-oauth-consent">
+                                    Configure OAuth consent screen (External, test users)
+                                    <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank">Configure →</a>
+                                </label>
+                            </li>
+                            <li>
+                                <input type="checkbox" id="check-create-creds">
+                                <label for="check-create-creds">
+                                    Create OAuth Client ID (Application type: Desktop app)
+                                    <a href="https://console.cloud.google.com/apis/credentials/oauthclient" target="_blank">Create →</a>
+                                </label>
+                            </li>
+                            <li>
+                                <input type="checkbox" id="check-download">
+                                <label for="check-download">
+                                    Download the JSON file (client_secret_*.json)
+                                </label>
+                            </li>
+                        </ol>
+                    </div>
+                    <div class="wizard-actions">
+                        <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
+                        <button class="btn btn-primary" onclick="nextWizardStep()">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Upload Credentials -->
+                <div class="wizard-step" data-step="3">
+                    <h3>Step 3: Upload Credentials</h3>
+                    <div class="upload-zone" id="oauth-upload-zone">
+                        <div class="upload-placeholder">
+                            <div class="upload-icon">📁</div>
+                            <div class="upload-text">
+                                Drag and drop client_secret_*.json here
+                                <br>or click to browse
+                            </div>
+                            <input type="file" id="oauth-file-input" accept=".json" hidden>
+                        </div>
+                        <div class="upload-success" style="display: none;">
+                            <div class="success-icon">✅</div>
+                            <div class="success-text">
+                                Credentials uploaded successfully!
+                                <br>
+                                <span id="uploaded-filename"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wizard-actions">
+                        <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
+                        <button class="btn btn-primary" id="upload-next-btn" disabled onclick="nextWizardStep()">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Authenticate -->
+                <div class="wizard-step" data-step="4">
+                    <h3>Step 4: Authenticate with Google</h3>
+                    <div class="auth-container">
+                        <p>Click the button below to open a browser window and grant Project APE access to your Google Drive.</p>
+                        <div class="auth-status" id="auth-flow-status">
+                            <div class="status-message">Ready to authenticate</div>
+                        </div>
+                        <button class="btn btn-primary btn-large" id="start-oauth-btn" onclick="startOAuthFlow()">
+                            🔐 Authenticate with Google Drive
+                        </button>
+                    </div>
+                    <div class="wizard-actions">
+                        <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
+                        <button class="btn btn-primary" id="auth-next-btn" disabled onclick="nextWizardStep()">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Step 5: Verify -->
+                <div class="wizard-step" data-step="5">
+                    <h3>Step 5: Verify Drive Access</h3>
+                    <div class="verify-container">
+                        <div id="verify-status">
+                            <div class="status-checking">
+                                <div class="spinner"></div>
+                                <div>Testing Drive API access...</div>
+                            </div>
+                        </div>
+                        <div id="verify-results" style="display: none;">
+                            <div class="result-item">
+                                <span class="label">Authenticated:</span>
+                                <span id="auth-email" class="value">Yes</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="label">Accessible files:</span>
+                                <span id="file-count" class="value"></span>
+                            </div>
+                            <div id="sample-files"></div>
+                        </div>
+                    </div>
+                    <div class="wizard-actions">
+                        <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
+                        <button class="btn btn-success" id="complete-btn" onclick="completeOAuthSetup()">
+                            ✅ Complete Setup
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -806,5 +1244,6 @@
     </div>
 
     <script src="/static/configure.js"></script>
+    <script src="/static/oauth-wizard.js"></script>
 </body>
 </html>

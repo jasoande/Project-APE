@@ -11,10 +11,14 @@ import sys
 import re
 import csv
 import io
+import os
 from pathlib import Path
 from flask import Flask, render_template, jsonify, Response, request
 import logging
 import importlib.util
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
 
 # Disable Flask's default logging
 log = logging.getLogger('werkzeug')
@@ -1264,6 +1268,239 @@ def clear_cache():
             'cleared_size_mb': round(cleared_size / (1024 * 1024), 2)
         })
 
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/oauth-status', methods=['GET'])
+def oauth_status():
+    """Check if OAuth credentials and token exist."""
+    try:
+        creds_dir = Path.home() / '.project-ape'
+        creds_file = creds_dir / 'drive_credentials.json'
+        token_file = creds_dir / 'drive_token.json'
+
+        response = {
+            'credentials_exist': creds_file.exists(),
+            'token_exist': token_file.exists(),
+            'authenticated': False,
+            'email': None,
+            'scopes': []
+        }
+
+        # If token exists, check if it's valid
+        if token_file.exists():
+            try:
+                creds = Credentials.from_authorized_user_file(str(token_file))
+                response['authenticated'] = creds.valid or (creds.expired and creds.refresh_token)
+                if hasattr(creds, 'token') and creds.token:
+                    response['email'] = 'Authenticated'
+                if hasattr(creds, 'scopes'):
+                    response['scopes'] = creds.scopes
+            except Exception as e:
+                print(f"Error checking token validity: {e}", file=sys.stderr)
+
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/upload-oauth-credentials', methods=['POST'])
+def upload_oauth_credentials():
+    """Accept uploaded client_secret JSON file."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file uploaded'}), 400
+
+        file = request.files['file']
+
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+
+        # Parse and validate JSON
+        file_content = file.read()
+        credentials_data = json.loads(file_content)
+
+        # Validate structure (must have installed.client_id, etc.)
+        if 'installed' not in credentials_data:
+            return jsonify({'success': False, 'error': 'Invalid OAuth credentials format. Expected "installed" key.'}), 400
+
+        if 'client_id' not in credentials_data['installed']:
+            return jsonify({'success': False, 'error': 'Invalid OAuth credentials format. Missing client_id.'}), 400
+
+        # Save to ~/.project-ape/drive_credentials.json
+        creds_dir = Path.home() / '.project-ape'
+        creds_dir.mkdir(parents=True, exist_ok=True)
+        creds_file = creds_dir / 'drive_credentials.json'
+
+        with open(creds_file, 'w') as f:
+            json.dump(credentials_data, f, indent=2)
+
+        os.chmod(creds_file, 0o600)  # Secure permissions
+
+        client_id_preview = credentials_data['installed']['client_id'][:20] + '...'
+
+        return jsonify({
+            'success': True,
+            'message': 'Credentials uploaded successfully',
+            'client_id': client_id_preview
+        })
+    except json.JSONDecodeError:
+        return jsonify({'success': False, 'error': 'Invalid JSON file'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/start-oauth-flow', methods=['POST'])
+def start_oauth_flow():
+    """Trigger OAuth flow and stream progress via SSE."""
+    def generate():
+        try:
+            yield 'data: {"status": "starting", "message": "Initializing OAuth flow..."}\n\n'
+
+            creds_dir = Path.home() / '.project-ape'
+            creds_file = creds_dir / 'drive_credentials.json'
+            token_file = creds_dir / 'drive_token.json'
+
+            if not creds_file.exists():
+                yield 'data: {"status": "error", "message": "Credentials file not found. Please upload OAuth credentials first."}\n\n'
+                return
+
+            SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+
+            flow = InstalledAppFlow.from_client_secrets_file(
+                str(creds_file), SCOPES
+            )
+
+            yield 'data: {"status": "browser_opening", "message": "Opening browser for authentication..."}\n\n'
+
+            # Run OAuth flow (opens browser automatically)
+            creds = flow.run_local_server(
+                port=0,
+                success_message='Authentication successful! You can close this window and return to Project APE.',
+                open_browser=True
+            )
+
+            yield 'data: {"status": "token_saving", "message": "Saving authentication token..."}\n\n'
+
+            # Save token
+            with open(token_file, 'w') as f:
+                f.write(creds.to_json())
+
+            os.chmod(token_file, 0o600)  # Secure permissions
+
+            yield 'data: {"status": "complete", "message": "Authentication complete!", "email": "Authenticated"}\n\n'
+
+        except Exception as e:
+            error_msg = str(e)
+            print(f"[OAuth Flow Error] {error_msg}", file=sys.stderr)
+            yield f'data: {{"status": "error", "message": "OAuth flow failed: {error_msg}"}}\n\n'
+
+    return Response(generate(), mimetype='text/event-stream')
+
+
+@app.route('/api/test-drive-access', methods=['GET'])
+def test_drive_access():
+    """Verify Drive API access by listing sample files."""
+    try:
+        token_file = Path.home() / '.project-ape' / 'drive_token.json'
+
+        if not token_file.exists():
+            return jsonify({
+                'success': False,
+                'error': 'Authentication token not found. Please complete OAuth flow first.'
+            }), 404
+
+        creds = Credentials.from_authorized_user_file(str(token_file))
+
+        # Refresh token if expired
+        if creds.expired and creds.refresh_token:
+            from google.auth.transport.requests import Request
+            creds.refresh(Request())
+            # Save refreshed token
+            with open(token_file, 'w') as f:
+                f.write(creds.to_json())
+
+        service = build('drive', 'v3', credentials=creds)
+        results = service.files().list(
+            pageSize=10,
+            fields="files(id, name, mimeType)"
+        ).execute()
+
+        files = results.get('files', [])
+
+        return jsonify({
+            'success': True,
+            'authenticated': True,
+            'total_accessible': len(files),
+            'sample_files': [{'name': f['name'], 'type': f.get('mimeType', 'unknown')} for f in files[:5]]
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/system-status', methods=['GET'])
+def system_status():
+    """Return system resource status."""
+    try:
+        import psutil
+        import shutil
+
+        disk = shutil.disk_usage('/')
+
+        return jsonify({
+            'venv_active': sys.prefix != sys.base_prefix,
+            'venv_path': sys.prefix if sys.prefix != sys.base_prefix else None,
+            'disk_free_gb': round(disk.free / (1024**3), 2),
+            'disk_total_gb': round(disk.total / (1024**3), 2),
+            'disk_percent': round((disk.used / disk.total) * 100, 1),
+            'python_version': sys.version.split()[0],
+            'container_mode': os.path.exists('/.dockerenv') or os.path.exists('/run/.containerenv')
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/cache-files/<client_id>', methods=['GET'])
+def get_cache_files(client_id):
+    """List individual cached files for a client."""
+    try:
+        cache_dir = Path.home() / '.project-ape' / 'drive_cache' / client_id
+
+        if not cache_dir.exists():
+            return jsonify({'files': []})
+
+        files = []
+        for file_path in cache_dir.rglob('*'):
+            if file_path.is_file() and file_path.name != 'metadata.json':
+                files.append({
+                    'name': file_path.name,
+                    'size_bytes': file_path.stat().st_size,
+                    'size_mb': round(file_path.stat().st_size / (1024 * 1024), 2),
+                    'cached_at': file_path.stat().st_mtime,
+                    'path': str(file_path.relative_to(cache_dir))
+                })
+
+        # Sort by name
+        files.sort(key=lambda x: x['name'])
+
+        return jsonify({
+            'success': True,
+            'files': files,
+            'total_count': len(files)
+        })
     except Exception as e:
         return jsonify({
             'success': False,
