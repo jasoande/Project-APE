@@ -69,14 +69,26 @@ def detect_workflow(vars_module) -> Dict[str, Any]:
         time_range = f"{total_time_min}-{total_time_max} minutes (all {len(clients)} clients in parallel)"
 
     # Build launch command
+    # Detect if we're running in local mode (venv exists) or container mode
+    venv_path = Path.home() / '.project-ape-venv'
+    use_local = venv_path.exists() and (venv_path / 'bin' / 'python3').exists()
+
     refresh_flag = '--refresh' if refresh else ''
     client_args = ' '.join(clients) if clients else ''
 
+    # Choose appropriate launcher based on environment
+    if use_local:
+        # Local mode: use run-workflow.sh or direct python execution
+        launcher = './run-workflow.sh'
+    else:
+        # Container mode: use Docker launcher
+        launcher = './launch_ape.sh'
+
     # Full command (excluding refresh flag if not needed)
     if refresh_flag:
-        command = f"./launch_ape.sh {mode} {refresh_flag} {client_args}".strip()
+        command = f"{launcher} {mode} {refresh_flag} {client_args}".strip()
     else:
-        command = f"./launch_ape.sh {mode} {client_args}".strip()
+        command = f"{launcher} {mode} {client_args}".strip()
 
     # Get client details for display
     client_details = []

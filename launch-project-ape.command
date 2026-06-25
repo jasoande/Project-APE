@@ -22,12 +22,17 @@ if curl -s -o /dev/null -w "%{http_code}" "$CONFIG_URL" | grep -q "200"; then
 fi
 
 # Server not running, start it in background
-if [ -f "./activate-ape-env.sh" ]; then
-    source ./activate-ape-env.sh
+VENV_PYTHON="$HOME/.project-ape-venv/bin/python3"
+
+# Check if virtual environment exists
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "Error: Virtual environment not found"
+    echo "Please run: ./setup-environment.sh"
+    exit 1
 fi
 
-# Start dashboard server in background
-nohup python3 "$SCRIPT_DIR/dashboard/server.py" > /dev/null 2>&1 &
+# Start dashboard server in background with virtual environment Python
+nohup "$VENV_PYTHON" "$SCRIPT_DIR/dashboard/server.py" > /dev/null 2>&1 &
 SERVER_PID=$!
 
 # Wait for server to start (max 10 seconds)
