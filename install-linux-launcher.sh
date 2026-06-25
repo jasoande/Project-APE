@@ -38,9 +38,9 @@ Name=Project APE
 Comment=Account Planning Engine - Automated research using NotebookLM
 Exec=python3 "${SCRIPT_DIR}/launch-project-ape.py"
 Icon=applications-internet
-Terminal=true
+Terminal=false
 Categories=Development;Office;
-StartupNotify=true
+StartupNotify=false
 Path=${SCRIPT_DIR}
 EOF
 
