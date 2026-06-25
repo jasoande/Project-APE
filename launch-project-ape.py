@@ -60,21 +60,29 @@ def is_server_running():
         return False
 
 
-def check_venv_functional(venv_python):
+def check_venv_functional(venv_python, debug=False):
     """Check if virtual environment has required dependencies installed"""
     if not venv_python.exists():
+        if debug:
+            print(f"   Debug: venv python not found at {venv_python}")
         return False
 
     try:
         # Test if Flask is installed (core dashboard dependency)
         result = subprocess.run(
             [str(venv_python), "-c", "import flask"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE if debug else subprocess.DEVNULL,
+            stderr=subprocess.PIPE if debug else subprocess.DEVNULL,
             timeout=5
         )
+        if debug and result.returncode != 0:
+            print(f"   Debug: Flask import failed")
+            if result.stderr:
+                print(f"   Error: {result.stderr.decode()}")
         return result.returncode == 0
-    except Exception:
+    except Exception as e:
+        if debug:
+            print(f"   Debug: Exception during check: {e}")
         return False
 
 
@@ -112,6 +120,8 @@ def run_setup():
         if result.returncode == 0:
             print("\n✅ Setup completed successfully!")
             print()
+            # Give the venv a moment to settle (filesystem sync)
+            time.sleep(1)
             return True
         else:
             print("\n❌ Setup failed")
@@ -154,10 +164,13 @@ def start_server():
             sys.exit(1)
 
         # Verify venv is now functional
-        if not check_venv_functional(venv_python):
+        if not check_venv_functional(venv_python, debug=True):
             print(f"❌ Setup completed but venv is still not functional")
             print(f"   Expected: {venv_python}")
-            print("   Try running manually: ./setup-environment.sh")
+            print("\n💡 Troubleshooting:")
+            print("   1. Check if Flask installed: ~/.project-ape-venv/bin/pip list | grep -i flask")
+            print("   2. Try running manually: ./setup-environment.sh")
+            print("   3. Check setup logs above for errors")
             sys.exit(1)
 
     # Start server in background (platform-specific)
