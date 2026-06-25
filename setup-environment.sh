@@ -780,11 +780,6 @@ if [[ "$NEED_INSTALL_NOTEBOOKLM" == "true" ]]; then
     echo "Installing Google Drive API libraries..."
     "$VENV_DIR/bin/python3" -m pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
 
-    # Install Flask and dashboard dependencies
-    echo
-    echo "Installing web dashboard dependencies..."
-    "$VENV_DIR/bin/python3" -m pip install flask>=3.0.0 werkzeug>=3.0.0 python-dotenv>=1.0.0
-
     echo
     echo "Installing Playwright browser (Chromium)..."
 
@@ -823,6 +818,14 @@ if [[ "$NEED_INSTALL_NOTEBOOKLM" == "true" ]]; then
     echo -e "${GREEN}✅ NotebookLM CLI installed in virtual environment${NC}"
     "$VENV_DIR/bin/notebooklm" --version
 fi
+
+# ==============================================================================
+# Install Flask and dashboard dependencies (ALWAYS, even if NotebookLM exists)
+# ==============================================================================
+
+echo
+echo "Installing web dashboard dependencies..."
+"$VENV_DIR/bin/python3" -m pip install flask>=3.0.0 werkzeug>=3.0.0 python-dotenv>=1.0.0
 
 # ==============================================================================
 # STEP 5: Create Activation Helper Script
