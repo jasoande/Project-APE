@@ -58,10 +58,11 @@ class ClientPipeline:
 
         # Get client details from config
         self.client_name = getattr(config, f"{client_id}_name", client_id)
-        client_folder_spec = getattr(config, f"{client_id}_folder", "")
+        self.client_folder_spec = getattr(config, f"{client_id}_folder", "")
 
-        # Handle Google Drive folders - download before pipeline starts
-        self.client_folder = self._setup_client_folder(client_folder_spec)
+        # Defer Drive download until execute() to avoid OAuth race condition
+        # Will be set in execute() after staggered launch
+        self.client_folder = None
 
         # Industry and subsegments will be determined in execute()
         # Either from manual config or Gemini AI detection
@@ -190,7 +191,11 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] Mode: {self.mode.upper()}")
             logger.info(f"[{self.client_id}] ========================================")
 
-            # No initial delay - removed to maximize speed
+            # Step 0: Setup client folder (Download from Drive if needed)
+            # This happens AFTER staggered launch to avoid OAuth race condition
+            self.update_status("Setting up client folder...", 1)
+            self.client_folder = self._setup_client_folder(self.client_folder_spec)
+            logger.info(f"[{self.client_id}] Client folder: {self.client_folder}")
 
             # Step 0.5: Determine Industry and Subsegments (Gemini AI or manual config)
             self.update_status("Determining industry and subsegments...", 3)
@@ -322,6 +327,11 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] Starting AGENT-ORCHESTRATED pipeline for {self.client_name}")
             logger.info(f"[{self.client_id}] Mode: {self.mode.upper()}")
             logger.info(f"[{self.client_id}] ========================================")
+
+            # Step 0: Setup client folder (Download from Drive if needed)
+            self.update_status("Setting up client folder...", 1)
+            self.client_folder = self._setup_client_folder(self.client_folder_spec)
+            logger.info(f"[{self.client_id}] Client folder: {self.client_folder}")
 
             # Initialize Gemini agent
             agent = GeminiOrchestrationAgent(
@@ -1051,6 +1061,11 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] ========================================")
             logger.info(f"[{self.client_id}] UPDATE MODE - Refreshing {self.client_name}")
             logger.info(f"[{self.client_id}] ========================================")
+
+            # Step 0: Setup client folder (Download from Drive if needed)
+            self.update_status("Setting up client folder...", 1)
+            self.client_folder = self._setup_client_folder(self.client_folder_spec)
+            logger.info(f"[{self.client_id}] Client folder: {self.client_folder}")
 
             # Step 1: Determine Industry (for research context)
             self.update_status("Loading industry configuration...", 5)
