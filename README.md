@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="200"/>
+</div>
+
 # Project APE - Account Planning Engine
 
 **Automated account research and planning using Google NotebookLM and AI orchestration**
@@ -69,9 +73,20 @@ Project APE (Account Planning Engine) automates comprehensive account research b
 
 ### Step 1: Launch the Dashboard (30 seconds)
 
-Double-click `launch-project-ape.command` in Finder (macOS) or run the launcher script.
+**Choose your launcher based on your operating system:**
+
+- **Windows**: Double-click `launch-project-ape.bat` (or `launch-project-ape.ps1`)
+- **Linux**: 
+  - **GUI**: Run `./install-linux-launcher.sh` first (one-time), then double-click desktop icon
+  - **Terminal**: Run `./launch-project-ape.sh` or `python3 launch-project-ape.py`
+- **macOS**: Double-click `launch-project-ape.command` in Finder (or use new cross-platform launcher)
+- **All platforms**: Run `python3 launch-project-ape.py` (universal launcher)
 
 Your browser automatically opens to: `http://localhost:8765/configure`
+
+📖 **See [CROSS_PLATFORM_LAUNCHER.md](CROSS_PLATFORM_LAUNCHER.md) for detailed launcher documentation**
+
+**Linux Users Note**: Most Linux file managers open scripts in a text editor by default. Use the desktop launcher installer for true double-click support.
 
 ![Configuration Page](Docs/screenshots/configure-page.png)
 
@@ -239,11 +254,17 @@ For detailed step-by-step instructions, see **[QUICK_START.md](QUICK_START.md)**
 **Everything you need to get started:**
 
 ### Required
-- **macOS or Linux** system (Intel/Apple Silicon/ARM64)
+- **Windows, Linux, or macOS** system (Intel/Apple Silicon/ARM64)
+- **Python 3.10+** (Python 3.11+ recommended)
 - **Google Account** with access to:
   - Google Drive (for client documents)
   - Google NotebookLM (free at notebooklm.google.com)
 - **10 minutes** for initial setup
+
+### Cross-Platform Support
+✅ **Windows**: Full support with native launchers (.bat, .ps1, .py)
+✅ **Linux**: Full support with shell and Python launchers
+✅ **macOS**: Full support with all launcher types
 
 ### Optional
 - Gemini API key (for advanced AI features)
@@ -476,15 +497,11 @@ See `example-vars.py` for complete configuration options.
    python3 setup-oauth-drive.py
    ```
 
-**Service Account Setup:**
+**OAuth is the only supported authentication method.**
 
-```bash
-./create-service-account.sh
-```
+All Google Drive access uses OAuth 2.0 user authentication. No service accounts required!
 
-Then share Drive folders with the service account email.
-
-See [OAUTH_SETUP_GUIDE.md](OAUTH_SETUP_GUIDE.md) for detailed instructions.
+See the web-based OAuth wizard in the dashboard for easy setup.
 
 </details>
 
@@ -713,8 +730,7 @@ project-ape/
 │
 └── .project-ape/                # User credentials (in home dir)
     ├── drive_token.json         # OAuth token
-    ├── drive_credentials.json   # OAuth client secrets
-    └── service-account-key.json # Service account key
+    └── drive_credentials.json   # OAuth client secrets
 ```
 
 ---
