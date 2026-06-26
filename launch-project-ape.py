@@ -68,13 +68,17 @@ def check_venv_functional(venv_python, debug=False):
         return False
 
     try:
-        # Test if Flask is installed (core dashboard dependency)
+        # Test if core dependencies are installed
+        # Check Flask (dashboard), pypdf (PDF processing), and PIL (image processing)
         # Suppress warnings by setting PYTHONWARNINGS=ignore
         env = os.environ.copy()
         env['PYTHONWARNINGS'] = 'ignore'
 
+        # Check all required imports in one test
+        import_test = "import flask; import pypdf; from PIL import Image"
+
         result = subprocess.run(
-            [str(venv_python), "-c", "import flask"],
+            [str(venv_python), "-c", import_test],
             stdout=subprocess.PIPE if debug else subprocess.DEVNULL,
             stderr=subprocess.PIPE if debug else subprocess.DEVNULL,
             env=env,
@@ -83,17 +87,17 @@ def check_venv_functional(venv_python, debug=False):
         )
         if debug:
             if result.returncode != 0:
-                print(f"   Debug: Flask import failed (return code: {result.returncode})")
+                print(f"   Debug: Dependency check failed (return code: {result.returncode})")
                 if result.stderr:
                     print(f"   Stderr: {result.stderr}")
                 if result.stdout:
                     print(f"   Stdout: {result.stdout}")
             else:
-                print(f"   Debug: Flask import succeeded ✓")
+                print(f"   Debug: All dependencies found ✓")
         return result.returncode == 0
     except subprocess.TimeoutExpired:
         if debug:
-            print(f"   Debug: Timeout during Flask import check")
+            print(f"   Debug: Timeout during dependency check")
         return False
     except Exception as e:
         if debug:
