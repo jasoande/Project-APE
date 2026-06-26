@@ -820,12 +820,18 @@ if [[ "$NEED_INSTALL_NOTEBOOKLM" == "true" ]]; then
 fi
 
 # ==============================================================================
-# Install Flask and dashboard dependencies (ALWAYS, even if NotebookLM exists)
+# Install Flask, dashboard, and core dependencies (ALWAYS, even if NotebookLM exists)
 # ==============================================================================
 
 echo
-echo "Installing web dashboard dependencies..."
-"$VENV_DIR/bin/python3" -m pip install flask>=3.0.0 werkzeug>=3.0.0 python-dotenv>=1.0.0
+echo "Installing web dashboard and core dependencies..."
+"$VENV_DIR/bin/python3" -m pip install \
+    flask>=3.0.0 \
+    werkzeug>=3.0.0 \
+    python-dotenv>=1.0.0 \
+    pypdf>=4.0.0 \
+    Pillow>=10.0.0 \
+    reportlab>=4.0.0
 
 # ==============================================================================
 # STEP 5: Create Activation Helper Script
