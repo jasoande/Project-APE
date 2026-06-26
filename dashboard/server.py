@@ -715,8 +715,7 @@ def start_workflow():
                     cwd=PROJECT_ROOT,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    text=True,
-                    start_new_session=True  # Detach from parent process
+                    text=True
                 )
 
                 print(f"[WORKFLOW] Workflow process started (PID: {process.pid})", file=sys.stderr)
