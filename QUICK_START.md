@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+</div>
+
 # Quick Start Guide - Web UI First
 
 **Get up and running in 15 minutes using only your browser**

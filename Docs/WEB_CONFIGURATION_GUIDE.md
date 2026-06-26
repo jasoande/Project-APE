@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+</div>
+
 # Project APE Web Configuration Tool - User Guide
 
 ## Quick Start

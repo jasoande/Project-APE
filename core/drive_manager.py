@@ -5,7 +5,6 @@ Manages Google Drive folder downloads with OAuth authentication and caching.
 
 Features:
 - OAuth 2.0 user authentication with token caching
-- Service account support for automation
 - Automatic Google Workspace file export (Docs → PDF, Sheets → XLSX)
 - Intelligent caching with TTL
 - Context manager pattern for automatic cleanup
@@ -31,7 +30,6 @@ from typing import Dict, List, Optional, Tuple
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google.oauth2 import service_account
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
@@ -121,8 +119,7 @@ class DriveManager:
         self.using_cache = False
 
         # Extract configuration
-        self.auth_method = self.config.get('auth_method', 'oauth')
-        self.service_account_key = self.config.get('service_account_key')
+        # OAuth is the only supported authentication method
         self.export_google_docs = self.config.get('export_google_docs', True)
         self.recursive = self.config.get('recursive', False)
         self.max_file_size_mb = self.config.get('max_file_size_mb', 50)
@@ -190,17 +187,13 @@ class DriveManager:
 
     def authenticate(self) -> bool:
         """
-        Authenticate with Google Drive using OAuth or service account.
+        Authenticate with Google Drive using OAuth 2.0.
 
         Returns:
             True if authentication successful
         """
         try:
-            if self.auth_method == 'service_account':
-                creds = self._service_account_authenticate()
-            else:
-                creds = self._oauth_authenticate()
-
+            creds = self._oauth_authenticate()
             self.service = build('drive', 'v3', credentials=creds)
             logger.info(f"[{self.client_id}] 🔐 Authenticated with Google Drive")
             return True
@@ -248,33 +241,6 @@ class DriveManager:
             token_file.parent.mkdir(parents=True, exist_ok=True)
             with open(token_file, 'w') as f:
                 f.write(creds.to_json())
-
-        return creds
-
-    def _service_account_authenticate(self) -> Credentials:
-        """
-        Authenticate using service account JSON key.
-
-        Returns:
-            Valid credentials
-
-        Raises:
-            DriveAuthenticationError: If authentication fails
-        """
-        key_file = self.service_account_key or os.getenv('GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY')
-
-        if not key_file:
-            raise DriveAuthenticationError(
-                "Service account key not configured. Set in vars.py DRIVE_CONFIG "
-                "or GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY environment variable"
-            )
-
-        if not Path(key_file).exists():
-            raise DriveAuthenticationError(f"Service account key not found: {key_file}")
-
-        creds = service_account.Credentials.from_service_account_file(
-            key_file, scopes=self.SCOPES
-        )
 
         return creds
 

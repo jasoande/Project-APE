@@ -230,55 +230,6 @@ if [[ $REPLY =~ ^[1]$ ]]; then
     fi
 
     log_info "OAuth authentication configured"
-
-else
-    # Service Account Setup
-    log_info "Setting up service account authentication..."
-
-    if [ ! -f "./create-service-account.sh" ]; then
-        log_error "create-service-account.sh not found"
-        exit 1
-    fi
-
-    # Check if service account already exists
-    if [ -f "./service-account-key.json" ]; then
-        log_info "Service account key already exists"
-        read -p "Create new service account? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Skipping service account creation"
-        else
-            ./create-service-account.sh
-        fi
-    else
-        log_info "Creating Google Cloud service account..."
-        ./create-service-account.sh
-    fi
-
-    # Verify service account key exists
-    if [ ! -f "./service-account-key.json" ]; then
-        log_error "Service account key not found"
-        echo "create-service-account.sh may have failed"
-        exit 1
-    fi
-
-    # Fix permissions for container access
-    log_info "Fixing service account key permissions for container access..."
-    chmod 644 ./service-account-key.json
-
-    # Update vars.py to use service account (if it exists)
-    if [ -f "./vars.py" ]; then
-        log_info "Verifying vars.py uses service account..."
-        if grep -q "auth_method.*service_account" vars.py; then
-            log_info "✅ vars.py already configured for service account"
-        else
-            log_warn "vars.py may need to be updated to use service_account"
-            echo "Ensure vars.py has: auth_method: 'service_account'"
-        fi
-    fi
-
-    log_info "Service account ready"
-    log_warn "Remember: You must manually share Drive folders with the service account!"
 fi
 
 ################################################################################

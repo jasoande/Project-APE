@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="200"/>
+</div>
+
 # Project APE - Account Planning Engine
 
 **Automated account research and planning using Google NotebookLM and AI orchestration**
@@ -493,15 +497,11 @@ See `example-vars.py` for complete configuration options.
    python3 setup-oauth-drive.py
    ```
 
-**Service Account Setup:**
+**OAuth is the only supported authentication method.**
 
-```bash
-./create-service-account.sh
-```
+All Google Drive access uses OAuth 2.0 user authentication. No service accounts required!
 
-Then share Drive folders with the service account email.
-
-See [OAUTH_SETUP_GUIDE.md](OAUTH_SETUP_GUIDE.md) for detailed instructions.
+See the web-based OAuth wizard in the dashboard for easy setup.
 
 </details>
 
@@ -730,8 +730,7 @@ project-ape/
 │
 └── .project-ape/                # User credentials (in home dir)
     ├── drive_token.json         # OAuth token
-    ├── drive_credentials.json   # OAuth client secrets
-    └── service-account-key.json # Service account key
+    └── drive_credentials.json   # OAuth client secrets
 ```
 
 ---
