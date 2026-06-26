@@ -142,6 +142,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Add venv bin to PATH so notebooklm CLI is accessible from subprocesses
+export PATH="$VENV_DIR/bin:$PATH"
+
 # Build command
 CMD=("$PYTHON_BIN" "$SCRIPT_DIR/main.py")
 
