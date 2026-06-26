@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Project APE
+Comment=Account Planning Engine - Automated research using NotebookLM
+Exec=python3 %d/launch-project-ape.py
+Icon=applications-internet
+Terminal=false
+Categories=Development;Office;
+StartupNotify=false
+Path=%d

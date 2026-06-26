@@ -707,23 +707,28 @@ def start_workflow():
                     # Execute with bash to handle shebang and virtual env activation
                     cmd = ['/bin/bash'] + cmd
 
-                # Execute in project root directory
-                result = subprocess.run(
+                # Execute in project root directory as background process
+                # Don't use subprocess.run() - it blocks and waits for completion
+                # Use Popen() so main.py can spawn its own client processes
+                process = subprocess.Popen(
                     cmd,
                     cwd=PROJECT_ROOT,
-                    check=True,
-                    capture_output=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
                     text=True
                 )
 
-                print(f"[WORKFLOW] Workflow completed successfully", file=sys.stderr)
-                if result.stdout:
-                    print(f"[WORKFLOW] stdout: {result.stdout}", file=sys.stderr)
+                print(f"[WORKFLOW] Workflow process started (PID: {process.pid})", file=sys.stderr)
+                print(f"[WORKFLOW] Command: {' '.join(cmd)}", file=sys.stderr)
 
-            except subprocess.CalledProcessError as e:
-                print(f"[WORKFLOW] Workflow execution failed with code {e.returncode}", file=sys.stderr)
-                print(f"[WORKFLOW] stdout: {e.stdout}", file=sys.stderr)
-                print(f"[WORKFLOW] stderr: {e.stderr}", file=sys.stderr)
+            except FileNotFoundError as e:
+                print(f"[WORKFLOW] Workflow script not found: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
+            except PermissionError as e:
+                print(f"[WORKFLOW] Permission denied executing workflow: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
             except Exception as e:
                 print(f"[WORKFLOW] Error running workflow: {e}", file=sys.stderr)
                 import traceback
@@ -866,8 +871,19 @@ def notebooklm_login():
             try:
                 # Run notebooklm login in background
                 # This will open a browser window for OAuth
+
+                # Use full path to notebooklm in virtual environment
+                # The venv may not be activated in the Flask server's environment
+                venv_notebooklm = Path.home() / '.project-ape-venv' / 'bin' / 'notebooklm'
+
+                if venv_notebooklm.exists():
+                    notebooklm_cmd = str(venv_notebooklm)
+                else:
+                    # Fallback to PATH (if venv is activated)
+                    notebooklm_cmd = 'notebooklm'
+
                 result = subprocess.run(
-                    ['notebooklm', 'login'],
+                    [notebooklm_cmd, 'login'],
                     capture_output=True,
                     text=True,
                     timeout=300  # 5 minute timeout
@@ -878,8 +894,20 @@ def notebooklm_login():
 
                     # STEP 1: Setup Google Cloud Application Default Credentials
                     print(f"[AUTH] Setting up Google Cloud ADC...", file=sys.stderr)
+
+                    # Detect Linux headless environment for xvfb
+                    import platform
+                    is_linux = platform.system() == 'Linux'
+                    has_display = os.environ.get('DISPLAY') is not None
+
+                    # On Linux without DISPLAY, use xvfb-run for gcloud browser auth
+                    if is_linux and not has_display:
+                        adc_cmd = ['xvfb-run', '-a', 'gcloud', 'auth', 'application-default', 'login']
+                    else:
+                        adc_cmd = ['gcloud', 'auth', 'application-default', 'login']
+
                     adc_result = subprocess.run(
-                        ['gcloud', 'auth', 'application-default', 'login'],
+                        adc_cmd,
                         capture_output=True,
                         text=True,
                         timeout=300

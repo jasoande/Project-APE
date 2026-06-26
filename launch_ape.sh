@@ -72,6 +72,10 @@ log_step() {
     echo -e "${BLUE}[STEP]${NC} $1"
 }
 
+log_error() {
+    echo -e "${YELLOW}[ERROR]${NC} $1" >&2
+}
+
 ################################################################################
 # Detect Architecture
 ################################################################################
@@ -227,12 +231,14 @@ run_container() {
         echo ""
     fi
 
-    # Check for cache volume (OPTIONAL - improves performance)
-    local cache_volume="project-ape-cache"
-    local cache_mount=""
-    if $runtime volume exists ${cache_volume} 2>/dev/null; then
-        log_info "Using cache volume: ${cache_volume}"
-        cache_mount="-v ${cache_volume}:/home/apeuser/.project-ape"
+    # Mount the .project-ape directory for OAuth credentials and cache
+    # This contains: drive_credentials.json, drive_token.json, and drive_cache/
+    local project_ape_mount=""
+    if [ -d "$HOME/.project-ape" ]; then
+        project_ape_mount="-v $HOME/.project-ape:/home/apeuser/.project-ape:z"
+        log_info "Mounting OAuth credentials from ~/.project-ape"
+    else
+        log_info "No ~/.project-ape directory found (OAuth not configured yet)"
     fi
 
     # Detect if we need --userns=keep-id for Podman
@@ -263,9 +269,8 @@ run_container() {
         -v $(pwd)/dashboard:/app/dashboard:ro,z \
         -v $(pwd)/logs:/app/logs:z \
         -v $(pwd)/.multi_process_status:/app/.multi_process_status:z \
-        -v $HOME/.project-ape:/home/apeuser/.project-ape:z \
+        ${project_ape_mount} \
         ${creds_mount} \
-        ${cache_mount} \
         "${image}" \
         ${cmd}
 
@@ -337,17 +342,28 @@ main() {
     echo "════════════════════════════════════════════════════════════════"
     echo ""
 
-    # Parse arguments
-    if [ $# -eq 0 ]; then
-        echo "ERROR: Mode is required (fast or deep)" >&2
-        echo "Usage: $0 {fast|deep} [client1 client2 ...]" >&2
-        echo "   or: $0 --mode {fast|deep} [--clients client1 client2 ...]" >&2
-        exit 1
+    # Read default mode from vars.py if no arguments provided (GUI double-click)
+    local default_mode="fast"
+    if [ -f "$(pwd)/vars.py" ]; then
+        # Extract default_mode from vars.py
+        default_mode=$(grep "^default_mode" vars.py | sed 's/.*["\x27]\(.*\)["\x27].*/\1/' | head -1)
+        # Fallback to fast if not found or invalid
+        if [[ ! "$default_mode" =~ ^(fast|deep)$ ]]; then
+            default_mode="fast"
+        fi
     fi
 
+    # Parse arguments
     local mode=""
     local clients=""
     local refresh_flag=""
+
+    if [ $# -eq 0 ]; then
+        # No arguments - use default mode from vars.py (GUI launch)
+        mode="$default_mode"
+        log_info "Launched from GUI - using default mode: $mode"
+        log_info "(Set 'default_mode' in vars.py to change default)"
+    fi
 
     # Parse arguments - support both positional and flag-based syntax
     while [ $# -gt 0 ]; do
