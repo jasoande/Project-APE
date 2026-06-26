@@ -707,23 +707,29 @@ def start_workflow():
                     # Execute with bash to handle shebang and virtual env activation
                     cmd = ['/bin/bash'] + cmd
 
-                # Execute in project root directory
-                result = subprocess.run(
+                # Execute in project root directory as background process
+                # Don't use subprocess.run() - it blocks and waits for completion
+                # Use Popen() so main.py can spawn its own client processes
+                process = subprocess.Popen(
                     cmd,
                     cwd=PROJECT_ROOT,
-                    check=True,
-                    capture_output=True,
-                    text=True
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    start_new_session=True  # Detach from parent process
                 )
 
-                print(f"[WORKFLOW] Workflow completed successfully", file=sys.stderr)
-                if result.stdout:
-                    print(f"[WORKFLOW] stdout: {result.stdout}", file=sys.stderr)
+                print(f"[WORKFLOW] Workflow process started (PID: {process.pid})", file=sys.stderr)
+                print(f"[WORKFLOW] Command: {' '.join(cmd)}", file=sys.stderr)
 
-            except subprocess.CalledProcessError as e:
-                print(f"[WORKFLOW] Workflow execution failed with code {e.returncode}", file=sys.stderr)
-                print(f"[WORKFLOW] stdout: {e.stdout}", file=sys.stderr)
-                print(f"[WORKFLOW] stderr: {e.stderr}", file=sys.stderr)
+            except FileNotFoundError as e:
+                print(f"[WORKFLOW] Workflow script not found: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
+            except PermissionError as e:
+                print(f"[WORKFLOW] Permission denied executing workflow: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
             except Exception as e:
                 print(f"[WORKFLOW] Error running workflow: {e}", file=sys.stderr)
                 import traceback
