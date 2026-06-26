@@ -12,6 +12,12 @@ google-auth-oauthlib>=1.1.0
 google-auth-httplib2>=0.1.1
 
 # ==============================================================================
+# GOOGLE GEMINI AI (Optional - For AI Orchestration)
+# ==============================================================================
+# Gemini AI for intelligent error recovery and quality validation
+google-genai>=2.0.0
+
+# ==============================================================================
 # WEB DASHBOARD (Required)
 # ==============================================================================
 # Flask web server for real-time progress monitoring
