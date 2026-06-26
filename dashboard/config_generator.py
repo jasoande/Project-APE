@@ -237,8 +237,6 @@ DRIVE_CONFIG = {{
     'enabled': True,
     'cache_enabled': True,
     'cache_ttl_hours': 24,
-    'auth_method': 'service_account',
-    'service_account_key': None,  # Loaded from .env: GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY
     'export_google_docs': True,
     'recursive': False,
     'max_file_size_mb': 50,
@@ -396,8 +394,6 @@ def generate_vars_py_full(clients_data: List[Dict], settings: Dict) -> str:
         'enabled': True,
         'cache_enabled': True,
         'cache_ttl_hours': 24,
-        'auth_method': 'service_account',
-        'service_account_key': None,
         'export_google_docs': True,
         'recursive': False,
         'max_file_size_mb': 50,

@@ -710,7 +710,6 @@ None - all configuration is in `vars.py`
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account JSON | Auto-detected |
 | `GEMINI_API_KEY` | Gemini API key for AI features | None (optional) |
 
 ### NotebookLM CLI
@@ -733,8 +732,7 @@ NotebookLM CLI stores credentials in:
 │       ├── metadata.json
 │       └── *.pdf
 ├── drive_credentials.json    # OAuth credentials
-├── drive_token.json          # OAuth access token
-└── service-account-key.json  # Service account key (if used)
+└── drive_token.json          # OAuth access token
 ```
 
 ### Project Directory
@@ -865,7 +863,7 @@ python3 core/client_pipeline.py {client_id} --mode {fast|deep} --status-file {pa
 
 **Key Features:**
 
-- OAuth and service account authentication
+- OAuth 2.0 user authentication
 - Recursive folder traversal
 - Smart caching with TTL
 - Google Docs export to PDF
