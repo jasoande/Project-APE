@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+</div>
+
 # Linux Quick Start Guide
 
 ## Problem: Double-clicking scripts opens them in a text editor

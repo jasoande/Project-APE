@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+</div>
+
 # Project APE - Complete Documentation Index
 
 **Central hub for all Project APE documentation**

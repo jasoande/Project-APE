@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="200"/>
+</div>
+
 # Project APE - Account Planning Engine
 
 **Automated account research and planning using Google NotebookLM and AI orchestration**

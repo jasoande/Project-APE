@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+</div>
+
 # API Reference - Project APE
 
 **Technical reference for advanced users, developers, and CI/CD integration**
