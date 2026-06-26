@@ -342,17 +342,28 @@ main() {
     echo "════════════════════════════════════════════════════════════════"
     echo ""
 
-    # Parse arguments
-    if [ $# -eq 0 ]; then
-        echo "ERROR: Mode is required (fast or deep)" >&2
-        echo "Usage: $0 {fast|deep} [client1 client2 ...]" >&2
-        echo "   or: $0 --mode {fast|deep} [--clients client1 client2 ...]" >&2
-        exit 1
+    # Read default mode from vars.py if no arguments provided (GUI double-click)
+    local default_mode="fast"
+    if [ -f "$(pwd)/vars.py" ]; then
+        # Extract default_mode from vars.py
+        default_mode=$(grep "^default_mode" vars.py | sed 's/.*["\x27]\(.*\)["\x27].*/\1/' | head -1)
+        # Fallback to fast if not found or invalid
+        if [[ ! "$default_mode" =~ ^(fast|deep)$ ]]; then
+            default_mode="fast"
+        fi
     fi
 
+    # Parse arguments
     local mode=""
     local clients=""
     local refresh_flag=""
+
+    if [ $# -eq 0 ]; then
+        # No arguments - use default mode from vars.py (GUI launch)
+        mode="$default_mode"
+        log_info "Launched from GUI - using default mode: $mode"
+        log_info "(Set 'default_mode' in vars.py to change default)"
+    fi
 
     # Parse arguments - support both positional and flag-based syntax
     while [ $# -gt 0 ]; do
