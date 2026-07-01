@@ -145,18 +145,34 @@ def stream_logs(client_token):
             yield f"data: Log file not found: {log_file}\n\n"
             return
 
-        with open(log_file, 'r') as f:
-            # Send existing content
-            for line in f:
-                yield f"data: {line}\n\n"
+        max_idle_time = 300  # 5 minutes max with no new content
+        idle_iterations = 0
+        max_iterations = max_idle_time * 2  # 0.5s sleep per iteration
 
-            # Stream new content
-            while True:
-                line = f.readline()
-                if line:
+        try:
+            with open(log_file, 'r') as f:
+                # Send existing content
+                for line in f:
                     yield f"data: {line}\n\n"
-                else:
-                    time.sleep(0.5)
+
+                # Stream new content with timeout
+                while idle_iterations < max_iterations:
+                    line = f.readline()
+                    if line:
+                        yield f"data: {line}\n\n"
+                        idle_iterations = 0  # Reset on new content
+                    else:
+                        time.sleep(0.5)
+                        idle_iterations += 1
+
+                # Timeout reached
+                yield f"data: [Stream timeout - refresh to reconnect]\n\n"
+        except (BrokenPipeError, ConnectionResetError, GeneratorExit):
+            # Client disconnected - clean exit
+            pass
+        except Exception as e:
+            # Log other errors but don't crash
+            print(f"Error streaming logs for {client_token}: {e}", file=sys.stderr)
 
     return Response(generate(), mimetype='text/event-stream')
 
@@ -182,39 +198,53 @@ def stream_overall_logs():
             yield f"data: Log files will appear here when workflows run.\n\n"
             return
 
-        # Send existing content from all files
-        for log_file in log_files:
-            try:
-                yield f"data: ═══════════════════════════════════════════════════════════════\n\n"
-                yield f"data: 📄 {log_file.name}\n\n"
-                yield f"data: ═══════════════════════════════════════════════════════════════\n\n"
-                with open(log_file, 'r') as f:
-                    for line in f:
-                        yield f"data: {line}\n\n"
-                yield f"data: \n\n"
-            except Exception as e:
-                yield f"data: Error reading {log_file.name}: {e}\n\n"
+        max_idle_time = 300  # 5 minutes max with no new content
+        idle_iterations = 0
+        max_iterations = max_idle_time * 2
 
-        # Stream new content from most recent log file
-        if log_files:
-            most_recent = max(log_files, key=lambda p: p.stat().st_mtime)
-            try:
-                with open(most_recent, 'r') as f:
-                    f.seek(0, 2)  # Go to end
-                    yield f"data: \n\n"
-                    yield f"data: ──────────────────────────────────────────────────────────────\n\n"
-                    yield f"data: 🔄 Streaming live updates from {most_recent.name}...\n\n"
-                    yield f"data: ──────────────────────────────────────────────────────────────\n\n"
-                    yield f"data: \n\n"
-
-                    while True:
-                        line = f.readline()
-                        if line:
+        try:
+            # Send existing content from all files
+            for log_file in log_files:
+                try:
+                    yield f"data: ═══════════════════════════════════════════════════════════════\n\n"
+                    yield f"data: 📄 {log_file.name}\n\n"
+                    yield f"data: ═══════════════════════════════════════════════════════════════\n\n"
+                    with open(log_file, 'r') as f:
+                        for line in f:
                             yield f"data: {line}\n\n"
-                        else:
-                            time.sleep(0.5)
-            except Exception as e:
-                yield f"data: Error streaming {most_recent.name}: {e}\n\n"
+                    yield f"data: \n\n"
+                except Exception as e:
+                    yield f"data: Error reading {log_file.name}: {e}\n\n"
+
+            # Stream new content from most recent log file with timeout
+            if log_files:
+                most_recent = max(log_files, key=lambda p: p.stat().st_mtime)
+                try:
+                    with open(most_recent, 'r') as f:
+                        f.seek(0, 2)  # Go to end
+                        yield f"data: \n\n"
+                        yield f"data: ──────────────────────────────────────────────────────────────\n\n"
+                        yield f"data: 🔄 Streaming live updates from {most_recent.name}...\n\n"
+                        yield f"data: ──────────────────────────────────────────────────────────────\n\n"
+                        yield f"data: \n\n"
+
+                        while idle_iterations < max_iterations:
+                            line = f.readline()
+                            if line:
+                                yield f"data: {line}\n\n"
+                                idle_iterations = 0
+                            else:
+                                time.sleep(0.5)
+                                idle_iterations += 1
+
+                        yield f"data: [Stream timeout - refresh to reconnect]\n\n"
+                except Exception as e:
+                    yield f"data: Error streaming {most_recent.name}: {e}\n\n"
+        except (BrokenPipeError, ConnectionResetError, GeneratorExit):
+            # Client disconnected - clean exit
+            pass
+        except Exception as e:
+            print(f"Error in overall log stream: {e}", file=sys.stderr)
 
     return Response(generate(), mimetype='text/event-stream')
 

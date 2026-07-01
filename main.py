@@ -101,11 +101,15 @@ class ProcessManager:
         logger.info("\n📊 Starting dashboard server...")
 
         dashboard_script = SCRIPT_DIR / "dashboard" / "server.py"
+        dashboard_log = LOGS_DIR / "dashboard.log"
+
+        # Log dashboard output for debugging crashes
+        log_handle = open(dashboard_log, 'w')
 
         self.dashboard_process = subprocess.Popen(
             [sys.executable, str(dashboard_script)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stdout=log_handle,
+            stderr=subprocess.STDOUT
         )
 
         # Wait for server to start
