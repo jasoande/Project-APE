@@ -29,10 +29,6 @@ from pathlib import Path
 from typing import List, Dict
 from datetime import datetime
 import importlib.util
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 # ==============================================================================
 # CONFIGURATION

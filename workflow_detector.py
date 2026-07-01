@@ -69,26 +69,29 @@ def detect_workflow(vars_module) -> Dict[str, Any]:
         time_range = f"{total_time_min}-{total_time_max} minutes (all {len(clients)} clients in parallel)"
 
     # Build launch command
-    # Detect if we're running in local mode (venv exists) or container mode
-    venv_path = Path.home() / '.project-ape-venv'
-    use_local = venv_path.exists() and (venv_path / 'bin' / 'python3').exists()
+    # Direct execution via main.py (now in project root)
+    import sys
+    from pathlib import Path
 
-    refresh_flag = '--refresh' if refresh else ''
-    client_args = ' '.join(clients) if clients else ''
+    python_executable = sys.executable  # Use same Python that's running now
 
-    # Choose appropriate launcher based on environment
-    if use_local:
-        # Local mode: use run-workflow.sh or direct python execution
-        launcher = './run-workflow.sh'
-    else:
-        # Container mode: use Docker launcher
-        launcher = './launch_ape.sh'
+    # main.py is now in project root
+    main_py_path = 'main.py'
 
-    # Full command (excluding refresh flag if not needed)
-    if refresh_flag:
-        command = f"{launcher} {mode} {refresh_flag} {client_args}".strip()
-    else:
-        command = f"{launcher} {mode} {client_args}".strip()
+    # Build command arguments
+    command_parts = [python_executable, main_py_path, '--mode', mode]
+
+    # Add clients if specified
+    if clients:
+        command_parts.append('--clients')
+        command_parts.extend(clients)  # Add each client as separate argument
+
+    # Add refresh flag if cache disabled
+    if not cache_enabled:
+        command_parts.append('--refresh')
+
+    # Join into single command string
+    command = ' '.join(command_parts)
 
     # Get client details for display
     client_details = []
@@ -109,7 +112,7 @@ def detect_workflow(vars_module) -> Dict[str, Any]:
         'clients': clients,
         'client_count': len(clients),
         'client_details': client_details,
-        'refresh_flag': refresh_flag,
+        'refresh_flag': '--refresh' if not cache_enabled else '',
         'estimated_minutes_min': total_time_min,
         'estimated_minutes_max': total_time_max,
         'time_range': time_range,

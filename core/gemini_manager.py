@@ -52,7 +52,7 @@ class GeminiManager:
         if not api_key:
             raise ValueError(
                 "GEMINI_API_KEY not found. "
-                "Please add it to your .env file."
+                "Please add it to your vars.py configuration."
             )
 
         self.api_key = api_key
