@@ -1420,29 +1420,39 @@ def clear_cache():
 def oauth_status():
     """Check if OAuth credentials and token exist."""
     try:
+        # Ensure .project-ape directory exists
         creds_dir = Path.home() / '.project-ape'
+        creds_dir.mkdir(parents=True, exist_ok=True)
+
         creds_file = creds_dir / 'drive_credentials.json'
         token_file = creds_dir / 'drive_token.json'
 
         response = {
+            'success': True,
             'credentials_exist': creds_file.exists(),
             'token_exist': token_file.exists(),
             'authenticated': False,
             'email': None,
-            'scopes': []
+            'scopes': [],
+            'ready_for_upload': True  # Always ready to accept credentials
         }
 
         # If token exists, check if it's valid
         if token_file.exists():
             try:
-                creds = Credentials.from_authorized_user_file(str(token_file))
-                response['authenticated'] = creds.valid or (creds.expired and creds.refresh_token)
-                if hasattr(creds, 'token') and creds.token:
-                    response['email'] = 'Authenticated'
-                if hasattr(creds, 'scopes'):
-                    response['scopes'] = creds.scopes
+                if not GOOGLE_AUTH_AVAILABLE:
+                    response['authenticated'] = False
+                    response['error'] = 'Google OAuth packages not installed'
+                else:
+                    creds = Credentials.from_authorized_user_file(str(token_file))
+                    response['authenticated'] = creds.valid or (creds.expired and creds.refresh_token)
+                    if hasattr(creds, 'token') and creds.token:
+                        response['email'] = 'Authenticated'
+                    if hasattr(creds, 'scopes'):
+                        response['scopes'] = creds.scopes
             except Exception as e:
                 print(f"Error checking token validity: {e}", file=sys.stderr)
+                response['token_error'] = str(e)
 
         return jsonify(response)
     except Exception as e:
@@ -1505,48 +1515,70 @@ def start_oauth_flow():
         try:
             # Check if Google OAuth packages are available
             if not GOOGLE_AUTH_AVAILABLE:
-                yield 'data: {"status": "error", "message": "Google OAuth packages not installed. Run: pip install google-auth-oauthlib google-auth google-api-python-client (or activate venv)"}\n\n'
+                yield 'data: {"status": "error", "message": "Google OAuth packages not installed. Activate virtual environment: source ~/.project-ape-venv/bin/activate"}\n\n'
                 return
 
             yield 'data: {"status": "starting", "message": "Initializing OAuth flow..."}\n\n'
 
+            # Ensure directory exists
             creds_dir = Path.home() / '.project-ape'
+            creds_dir.mkdir(parents=True, exist_ok=True)
+
             creds_file = creds_dir / 'drive_credentials.json'
             token_file = creds_dir / 'drive_token.json'
 
             if not creds_file.exists():
-                yield 'data: {"status": "error", "message": "Credentials file not found. Please upload OAuth credentials first."}\n\n'
+                yield 'data: {"status": "error", "message": "OAuth credentials not uploaded. Please go to Step 3 and upload your credentials.json file first."}\n\n'
                 return
 
             SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
-            flow = InstalledAppFlow.from_client_secrets_file(
-                str(creds_file), SCOPES
-            )
+            yield 'data: {"status": "loading", "message": "Loading OAuth configuration..."}\n\n'
 
-            yield 'data: {"status": "browser_opening", "message": "Opening browser for authentication..."}\n\n'
+            try:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    str(creds_file), SCOPES
+                )
+            except Exception as e:
+                yield f'data: {{"status": "error", "message": "Invalid credentials file: {str(e)}. Please re-upload your OAuth credentials."}}\n\n'
+                return
+
+            yield 'data: {"status": "browser_opening", "message": "Opening browser for authentication... (Check for popup blockers)"}\n\n'
 
             # Run OAuth flow (opens browser automatically)
-            creds = flow.run_local_server(
-                port=0,
-                success_message='Authentication successful! You can close this window and return to Project APE.',
-                open_browser=True
-            )
+            try:
+                creds = flow.run_local_server(
+                    port=0,
+                    success_message='✅ Authentication successful! You can close this window and return to Project APE.',
+                    open_browser=True
+                )
+            except Exception as e:
+                error_detail = str(e)
+                if "Connection refused" in error_detail or "Address already in use" in error_detail:
+                    yield 'data: {"status": "error", "message": "Port conflict detected. Please close any applications using ports 8080-8090 and try again."}\n\n'
+                else:
+                    yield f'data: {{"status": "error", "message": "Browser authentication failed: {error_detail}"}}\n\n'
+                return
 
             yield 'data: {"status": "token_saving", "message": "Saving authentication token..."}\n\n'
 
             # Save token
-            with open(token_file, 'w') as f:
-                f.write(creds.to_json())
+            try:
+                with open(token_file, 'w') as f:
+                    f.write(creds.to_json())
+                os.chmod(token_file, 0o600)  # Secure permissions
+            except Exception as e:
+                yield f'data: {{"status": "error", "message": "Failed to save token: {str(e)}"}}\n\n'
+                return
 
-            os.chmod(token_file, 0o600)  # Secure permissions
-
-            yield 'data: {"status": "complete", "message": "Authentication complete!", "email": "Authenticated"}\n\n'
+            yield 'data: {"status": "complete", "message": "✅ Authentication complete! Google Drive access granted.", "email": "Authenticated"}\n\n'
 
         except Exception as e:
             error_msg = str(e)
             print(f"[OAuth Flow Error] {error_msg}", file=sys.stderr)
-            yield f'data: {{"status": "error", "message": "OAuth flow failed: {error_msg}"}}\n\n'
+            import traceback
+            traceback.print_exc()
+            yield f'data: {{"status": "error", "message": "OAuth flow failed: {error_msg}. Check console for details."}}\n\n'
 
     return Response(generate(), mimetype='text/event-stream')
 
