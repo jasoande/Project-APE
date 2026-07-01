@@ -199,25 +199,29 @@ def start_server():
             sys.exit(1)
 
     # Start server in background (platform-specific)
+    # Log stderr to file for debugging startup crashes
+    log_file = script_dir / "dashboard-startup.log"
     try:
         if IS_WINDOWS:
             # Windows: Use CREATE_NEW_PROCESS_GROUP and CREATE_NO_WINDOW
-            subprocess.Popen(
-                [str(venv_python), str(server_script)],
-                cwd=str(script_dir),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
-            )
+            with open(log_file, 'w') as log:
+                subprocess.Popen(
+                    [str(venv_python), str(server_script)],
+                    cwd=str(script_dir),
+                    stdout=subprocess.DEVNULL,
+                    stderr=log,
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
+                )
         else:
             # Unix: Use nohup-style background execution
-            subprocess.Popen(
-                [str(venv_python), str(server_script)],
-                cwd=str(script_dir),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True
-            )
+            with open(log_file, 'w') as log:
+                subprocess.Popen(
+                    [str(venv_python), str(server_script)],
+                    cwd=str(script_dir),
+                    stdout=subprocess.DEVNULL,
+                    stderr=log,
+                    start_new_session=True
+                )
 
         return True
     except Exception as e:
@@ -278,12 +282,33 @@ def main():
 
     # Wait for server to be ready
     if not wait_for_server_ready():
+        script_dir = get_script_directory()
+        log_file = script_dir / "dashboard-startup.log"
+
         print("\n❌ Server did not start within timeout period")
         print(f"   Waited {MAX_WAIT_SECONDS} seconds")
+
+        # Check if log file has error information
+        if log_file.exists():
+            print(f"\n📋 Server startup log ({log_file}):")
+            print("=" * 70)
+            try:
+                with open(log_file, 'r') as f:
+                    log_content = f.read().strip()
+                    if log_content:
+                        print(log_content)
+                    else:
+                        print("(empty - no errors captured)")
+            except Exception as e:
+                print(f"(could not read log: {e})")
+            print("=" * 70)
+
         print("\n💡 Troubleshooting steps:")
-        print("   1. Check if port 8765 is already in use")
-        print("   2. Verify virtual environment: ~/.project-ape-venv")
-        print("   3. Try running manually: python dashboard/server.py")
+        print("   1. Check the error log above for Python import errors")
+        print("   2. Check if port 8765 is already in use: lsof -i :8765")
+        print("   3. Verify virtual environment: ~/.project-ape-venv/bin/python3 --version")
+        print(f"   4. Try running manually: {get_venv_python()} dashboard/server.py")
+        print(f"   5. Check startup log: cat {log_file}")
         sys.exit(1)
 
     # Open browser
