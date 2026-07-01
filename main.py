@@ -124,13 +124,15 @@ class ProcessManager:
         dashboard_script = SCRIPT_DIR / "dashboard" / "server.py"
         dashboard_log = LOGS_DIR / "dashboard.log"
 
-        # Log dashboard output for debugging crashes
-        log_handle = open(dashboard_log, 'w')
+        # CRITICAL: Log dashboard output with unbuffered I/O for debugging crashes
+        # Use line buffering to ensure logs are written immediately
+        log_handle = open(dashboard_log, 'w', buffering=1)  # Line buffering
 
         self.dashboard_process = subprocess.Popen(
-            [sys.executable, str(dashboard_script)],
+            [sys.executable, '-u', str(dashboard_script)],  # -u for unbuffered Python output
             stdout=log_handle,
-            stderr=subprocess.STDOUT
+            stderr=subprocess.STDOUT,
+            env={**subprocess.os.environ, 'PYTHONUNBUFFERED': '1'}  # Force unbuffered
         )
 
         # Wait for server to start and verify it's running

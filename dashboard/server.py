@@ -32,9 +32,14 @@ except ImportError as e:
     InstalledAppFlow = None
     build = None
 
-# Disable Flask's default logging
+# Enable Flask's logging with better visibility
 log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+log.setLevel(logging.WARNING)  # Changed from ERROR to WARNING to see issues
+
+# Add handler for stderr
+handler = logging.StreamHandler(sys.stderr)
+handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s', '%H:%M:%S'))
+log.addHandler(handler)
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
@@ -74,6 +79,45 @@ app = Flask(__name__,
             static_folder=str(SCRIPT_DIR / 'static'))
 
 
+@app.route('/health')
+def health():
+    """Health check endpoint for monitoring."""
+    try:
+        import threading
+        import psutil
+        import os
+
+        process = psutil.Process(os.getpid())
+        memory_info = process.memory_info()
+
+        return jsonify({
+            'status': 'healthy',
+            'pid': os.getpid(),
+            'threads': threading.active_count(),
+            'memory_mb': round(memory_info.rss / 1024 / 1024, 2),
+            'status_dir': str(STATUS_DIR),
+            'status_dir_exists': STATUS_DIR.exists(),
+            'logs_dir': str(LOGS_DIR),
+            'logs_dir_exists': LOGS_DIR.exists()
+        })
+    except ImportError:
+        # psutil not available, return basic info
+        import threading
+        import os
+        return jsonify({
+            'status': 'healthy',
+            'pid': os.getpid(),
+            'threads': threading.active_count(),
+            'status_dir': str(STATUS_DIR),
+            'status_dir_exists': STATUS_DIR.exists()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500
+
+
 @app.route('/')
 def dashboard():
     """Serve the dashboard HTML template."""
@@ -89,15 +133,32 @@ def configure():
 @app.route('/status')
 def status():
     """Serve aggregated status as JSON."""
-    clients = []
-    running = 0
-    complete = 0
-    failed = 0
-    mode = "fast"
-    run_id = None
+    try:
+        clients = []
+        running = 0
+        complete = 0
+        failed = 0
+        mode = "fast"
+        run_id = None
 
-    if STATUS_DIR.exists():
-        for status_file in STATUS_DIR.glob("*.json"):
+        if not STATUS_DIR.exists():
+            print(f"⚠️  STATUS_DIR does not exist: {STATUS_DIR}", file=sys.stderr)
+            return jsonify({
+                'total': 0,
+                'running': 0,
+                'complete': 0,
+                'failed': 0,
+                'mode': mode,
+                'run_id': run_id,
+                'clients': [],
+                'error': f'Status directory not found: {STATUS_DIR}'
+            })
+
+        status_files = list(STATUS_DIR.glob("*.json"))
+        if not status_files:
+            print(f"⚠️  No status files found in {STATUS_DIR}", file=sys.stderr)
+
+        for status_file in status_files:
             try:
                 with open(status_file, 'r') as f:
                     client_data = json.load(f)
@@ -119,60 +180,83 @@ def status():
                     elif status in ['FAILED', 'DEGRADED']:
                         failed += 1
             except Exception as e:
-                print(f"Error reading {status_file}: {e}")
+                print(f"❌ Error reading {status_file}: {e}", file=sys.stderr)
 
-    # Sort by client name
-    clients.sort(key=lambda x: x.get('name', ''))
+        # Sort by client name
+        clients.sort(key=lambda x: x.get('name', ''))
 
-    return jsonify({
-        'total': len(clients),
-        'running': running,
-        'complete': complete,
-        'failed': failed,
-        'mode': mode,
-        'run_id': run_id,  # Include run_id in response
-        'clients': clients
-    })
+        return jsonify({
+            'total': len(clients),
+            'running': running,
+            'complete': complete,
+            'failed': failed,
+            'mode': mode,
+            'run_id': run_id,  # Include run_id in response
+            'clients': clients
+        })
+
+    except Exception as e:
+        print(f"❌ FATAL: /status endpoint crashed: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return jsonify({
+            'error': str(e),
+            'total': 0,
+            'running': 0,
+            'complete': 0,
+            'failed': 0,
+            'mode': 'fast',
+            'run_id': None,
+            'clients': []
+        }), 500
 
 
 @app.route('/logs/<client_token>')
 def stream_logs(client_token):
     """Stream logs for a specific client."""
+    import threading
+    connection_id = f"{client_token}_{time.time()}"
+
+    print(f"📡 SSE connection opened: {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
+
     def generate():
-        log_file = LOGS_DIR / f"{client_token}.log"
-
-        if not log_file.exists():
-            yield f"data: Log file not found: {log_file}\n\n"
-            return
-
-        max_idle_time = 30  # 30 seconds max with no new content
-        idle_iterations = 0
-        max_iterations = max_idle_time * 2  # 0.5s sleep per iteration
-
         try:
-            with open(log_file, 'r') as f:
-                # Send existing content
-                for line in f:
-                    yield f"data: {line}\n\n"
+            log_file = LOGS_DIR / f"{client_token}.log"
 
-                # Stream new content with timeout
-                while idle_iterations < max_iterations:
-                    line = f.readline()
-                    if line:
+            if not log_file.exists():
+                yield f"data: Log file not found: {log_file}\n\n"
+                return
+
+            max_idle_time = 30  # 30 seconds max with no new content
+            idle_iterations = 0
+            max_iterations = max_idle_time * 2  # 0.5s sleep per iteration
+
+            try:
+                with open(log_file, 'r') as f:
+                    # Send existing content
+                    for line in f:
                         yield f"data: {line}\n\n"
-                        idle_iterations = 0  # Reset on new content
-                    else:
-                        time.sleep(0.5)
-                        idle_iterations += 1
 
-                # Timeout reached
-                yield f"data: [Stream timeout - refresh to reconnect]\n\n"
-        except (BrokenPipeError, ConnectionResetError, GeneratorExit):
-            # Client disconnected - clean exit
-            pass
-        except Exception as e:
-            # Log other errors but don't crash
-            print(f"Error streaming logs for {client_token}: {e}", file=sys.stderr)
+                    # Stream new content with timeout
+                    while idle_iterations < max_iterations:
+                        line = f.readline()
+                        if line:
+                            yield f"data: {line}\n\n"
+                            idle_iterations = 0  # Reset on new content
+                        else:
+                            time.sleep(0.5)
+                            idle_iterations += 1
+
+                    # Timeout reached
+                    yield f"data: [Stream timeout - refresh to reconnect]\n\n"
+            except (BrokenPipeError, ConnectionResetError, GeneratorExit):
+                # Client disconnected - clean exit
+                print(f"🔌 SSE connection closed (client disconnect): {connection_id}", file=sys.stderr)
+            except Exception as e:
+                # Log other errors but don't crash
+                print(f"❌ Error streaming logs for {client_token}: {e}", file=sys.stderr)
+        finally:
+            print(f"🔚 SSE connection cleanup: {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
 
     return Response(generate(), mimetype='text/event-stream')
 
@@ -180,6 +264,11 @@ def stream_logs(client_token):
 @app.route('/logs/overall')
 def stream_overall_logs():
     """Stream combined logs from all components."""
+    import threading
+    connection_id = f"overall_{time.time()}"
+
+    print(f"📡 SSE connection opened (overall): {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
+
     def generate():
         # Find all log files
         log_files = []
@@ -242,9 +331,11 @@ def stream_overall_logs():
                     yield f"data: Error streaming {most_recent.name}: {e}\n\n"
         except (BrokenPipeError, ConnectionResetError, GeneratorExit):
             # Client disconnected - clean exit
-            pass
+            print(f"🔌 SSE connection closed (client disconnect): {connection_id}", file=sys.stderr)
         except Exception as e:
-            print(f"Error in overall log stream: {e}", file=sys.stderr)
+            print(f"❌ Error in overall log stream: {e}", file=sys.stderr)
+        finally:
+            print(f"🔚 SSE connection cleanup (overall): {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
 
     return Response(generate(), mimetype='text/event-stream')
 
@@ -1766,23 +1857,35 @@ def run_server(port=8765, debug=False):
     """Run the Flask server."""
     import signal
     import sys
+    import threading
 
     print(f"\n📊 Dashboard server starting...")
     print(f"   URL: http://localhost:{port}")
     print(f"   Refresh: Every 2 seconds")
     print(f"   Logs: Real-time streaming")
+    print(f"   STATUS_DIR: {STATUS_DIR}")
+    print(f"   LOGS_DIR: {LOGS_DIR}")
+    print(f"   Initial threads: {threading.active_count()}")
     print(f"\n   Press Ctrl+C to stop\n")
 
     # Signal handler for graceful shutdown
     def signal_handler(sig, frame):
-        print("\n⏰ Dashboard server received shutdown signal")
+        print(f"\n⏰ Dashboard server received shutdown signal (active threads: {threading.active_count()})")
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
     # Bind to 0.0.0.0 for container compatibility (allows external access)
-    app.run(host='0.0.0.0', port=port, debug=debug, threaded=True)
+    # CRITICAL: Use threaded=True with a high thread count to prevent exhaustion
+    # Default is ~40 threads; increase to 100 for multiple clients with SSE streams
+    try:
+        from werkzeug.serving import WSGIRequestHandler
+        WSGIRequestHandler.protocol_version = "HTTP/1.1"  # Enable keep-alive
+    except:
+        pass
+
+    app.run(host='0.0.0.0', port=port, debug=debug, threaded=True, processes=1)
 
 
 if __name__ == "__main__":
