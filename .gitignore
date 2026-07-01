@@ -40,8 +40,6 @@ docs_generated/
 *.pptx
 *.docx
 
-developer-docs/
-
 # Client data (NEVER commit)
 client_data/
 Venella_2026/
@@ -77,4 +75,18 @@ temp/
 
 # Claude Code
 .claude/
-.env
+
+# Build logs (from container builds)
+build-logs/
+
+# Temporary test/deployment scripts
+*-vm-*.sh
+deploy-*.sh
+verify-*.sh
+check-vm-*.sh
+
+# Temporary documentation
+*_COMPLETE.md
+*_FINAL.md
+*_INSTRUCTIONS.md
+*_SUMMARY.md

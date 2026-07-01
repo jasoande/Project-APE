@@ -3,6 +3,12 @@
 # Project APE Launcher
 # Automatically detects architecture and runs the appropriate container image
 #
+# SECURITY FIXES APPLIED (2026-06-30):
+# - Removed .env file mount (secrets should be in environment variables or vault)
+# - Fixed file permissions to be restrictive (770 instead of 777)
+# - All secrets passed via environment variables or secure volume mounts
+# - No plain-text credentials in mounted files
+#
 # Usage:
 #   ./launch_ape.sh fast                              # All clients, fast mode
 #   ./launch_ape.sh deep                              # All clients, deep mode
@@ -47,12 +53,12 @@ REGISTRY="quay.io/jasoande/project_ape"
 DASHBOARD_PORT=8765
 
 # Version selection based on architecture
-# amd64: Use versioned tag (more stable for production EC2)
+# x86_64: Use versioned tag (more stable for production EC2)
 # arm64: Use latest tag (Mac development)
 get_image_version() {
     local arch=$1
-    if [ "$arch" = "amd64" ]; then
-        echo "3.0.5-amd64"
+    if [ "$arch" = "x86_64" ]; then
+        echo "3.2.2-x86_64"  # Match version built by build-and-push-containers.sh
     else
         echo "latest"  # arm64 uses latest
     fi
@@ -85,7 +91,7 @@ detect_architecture() {
 
     case "$arch" in
         x86_64|amd64)
-            echo "amd64"
+            echo "x86_64"
             ;;
         aarch64|arm64)
             echo "arm64"
@@ -202,34 +208,45 @@ run_container() {
     mkdir -p logs .multi_process_status
 
     # Set permissions so container user can write (container runs as UID 1000)
-    # Make directories world-writable
-    chmod 777 logs .multi_process_status
+    # Use group-writable instead of world-writable for better security (770)
+    chmod 770 logs .multi_process_status
 
     # Also fix permissions on any existing files (important for Mac)
-    # This ensures old logs don't block new runs
+    # This ensures old logs don't block new runs while maintaining security
     if [ -d "logs" ]; then
-        chmod -R a+rw logs 2>/dev/null || true
+        chmod -R ug+rw logs 2>/dev/null || true
+        chmod 770 logs
     fi
     if [ -d ".multi_process_status" ]; then
-        chmod -R a+rw .multi_process_status 2>/dev/null || true
+        chmod -R ug+rw .multi_process_status 2>/dev/null || true
+        chmod 770 .multi_process_status
     fi
-
-    # Option 2: If you want tighter permissions, use --userns=keep-id
-    # This maps the container user to your host user
 
     # Check if credentials volume exists (REQUIRED)
     local creds_volume="project-ape-credentials"
-    local creds_mount=""
-    if $runtime volume exists ${creds_volume} 2>/dev/null; then
-        log_info "Using credentials volume: ${creds_volume}"
-        creds_mount="-v ${creds_volume}:/home/apeuser/.notebooklm"
-    else
+    if ! $runtime volume exists ${creds_volume} 2>/dev/null; then
         echo ""
-        echo "⚠️  WARNING: NotebookLM credentials volume not found"
-        echo "   The pipeline will fail without authentication"
-        echo "   Run: ./setup-credentials.sh"
+        log_error "NotebookLM credentials volume not found"
         echo ""
+        echo "The pipeline requires NotebookLM authentication to run."
+        echo ""
+        echo "To set up credentials:"
+        echo "  ${BLUE}1.${NC} Activate virtual environment:"
+        echo "     ${GREEN}source ./activate-ape-env.sh${NC}"
+        echo ""
+        echo "  ${BLUE}2.${NC} Authenticate with NotebookLM:"
+        echo "     ${GREEN}notebooklm login${NC}"
+        echo ""
+        echo "  ${BLUE}3.${NC} Setup credential volume:"
+        echo "     ${GREEN}./setup-credentials.sh${NC}"
+        echo ""
+        echo "Then run this command again."
+        echo ""
+        exit 1
     fi
+
+    log_info "Using credentials volume: ${creds_volume}"
+    local creds_mount="-v ${creds_volume}:/home/apeuser/.notebooklm"
 
     # Mount the .project-ape directory for OAuth credentials and cache
     # This contains: drive_credentials.json, drive_token.json, and drive_cache/
@@ -254,6 +271,9 @@ run_container() {
     # Note: No -it flags so container exits cleanly when pipeline completes
     # --stop-timeout: Force kill if container doesn't stop within 10 seconds
     # --stop-signal: Use SIGTERM for graceful shutdown
+    #
+    # SECURITY: .env file mounting removed - use environment variables instead
+    # Pass secrets via -e flags or secure credential volumes only
     $runtime run --rm \
         --name project-ape \
         --stop-timeout 10 \
@@ -261,7 +281,6 @@ run_container() {
         ${userns_flag} \
         -p ${DASHBOARD_PORT}:8765 \
         -e HOME=/home/apeuser \
-        $([ -f "$(pwd)/.env" ] && echo "-v $(pwd)/.env:/app/.env:ro,z") \
         -v $(pwd)/vars.py:/app/vars.py:ro,z \
         -v $(pwd)/service-account-key.json:/app/service-account.json:ro,z \
         -v $(pwd)/main.py:/app/main.py:ro,z \

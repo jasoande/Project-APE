@@ -578,7 +578,7 @@ python3 main.py --mode fast --no-dashboard
 
 **Features:**
 
-- Auto-detects architecture (amd64/arm64)
+- Auto-detects architecture (x86_64/arm64)
 - Selects appropriate container runtime (podman/docker)
 - Mounts credentials volume
 - Port forwarding for dashboard
@@ -636,9 +636,9 @@ python3 dashboard/server.py
 
 **Tags:**
 
-- `latest` - Latest ARM64 build (Mac development)
-- `3.0.5-amd64` - Stable AMD64 build (production)
-- `3.0.5-arm64` - Stable ARM64 build
+- `latest` - Multi-architecture manifest (x86_64 + arm64)
+- `3.2.2-x86_64` - Stable x86_64 build (Intel/AMD production)
+- `3.2.2-arm64` - Stable ARM64 build (Mac/ARM servers)
 
 ### Pull Image
 
@@ -647,7 +647,8 @@ python3 dashboard/server.py
 podman pull quay.io/jasoande/project_ape:latest
 
 # Specific architecture
-podman pull quay.io/jasoande/project_ape:3.0.5-amd64
+podman pull quay.io/jasoande/project_ape:3.2.2-x86_64
+podman pull quay.io/jasoande/project_ape:3.2.2-arm64
 ```
 
 ### Run Container
@@ -1024,7 +1025,7 @@ GEMINI_AGENT_CONFIG = {
 
 ```yaml
 research_accounts:
-  image: quay.io/jasoande/project_ape:3.0.5-amd64
+  image: quay.io/jasoande/project_ape:3.2.2-x86_64
   script:
     - python3 main.py --mode fast --no-dashboard
   artifacts:
