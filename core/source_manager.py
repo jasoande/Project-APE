@@ -459,6 +459,37 @@ class SourceManager:
                     })
         return sources
 
+    def has_consolidated_pdf_source(self, client_name: str) -> bool:
+        """
+        Check if a consolidated PDF source exists in the notebook.
+
+        Args:
+            client_name: Client name to match in PDF title
+
+        Returns:
+            True if consolidated PDF found, False otherwise
+        """
+        try:
+            sources = self.list_sources()
+
+            # Look for sources with titles containing "{ClientName}-Consolidated"
+            # Example: "Panasonic Avionics-Consolidated-2026-07-01_16-04.pdf"
+            consolidated_pattern = f"{client_name}-Consolidated"
+
+            for source in sources:
+                title = source.get('title', '')
+                if consolidated_pattern in title and title.endswith('.pdf'):
+                    logger.info(f"[{self.client_id}] ✅ Found consolidated PDF in notebook: {title}")
+                    return True
+
+            logger.info(f"[{self.client_id}] ⚠️  No consolidated PDF found in notebook (pattern: {consolidated_pattern}*.pdf)")
+            return False
+
+        except Exception as e:
+            logger.warning(f"[{self.client_id}] Error checking for consolidated PDF: {e}")
+            # On error, assume PDF doesn't exist to be safe
+            return False
+
     def deduplicate_sources(self) -> int:
         """
         Remove duplicate sources from notebook.
