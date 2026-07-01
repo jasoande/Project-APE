@@ -75,7 +75,8 @@ def check_venv_functional(venv_python, debug=False):
         env['PYTHONWARNINGS'] = 'ignore'
 
         # Check all required imports in one test
-        import_test = "import flask; import pypdf; from PIL import Image"
+        # Include OAuth packages since they're needed for Drive authentication
+        import_test = "import flask; import pypdf; from PIL import Image; from google_auth_oauthlib.flow import InstalledAppFlow; from google.oauth2.credentials import Credentials"
 
         result = subprocess.run(
             [str(venv_python), "-c", import_test],

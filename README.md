@@ -1,569 +1,264 @@
 <div align="center">
   <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="200"/>
   
-  # Project APE - Account Planning Engine
+  # Project APE
+  **Account Planning Engine**
   
-  **AI-Powered Enterprise Account Research Automation**
+  *AI-Powered Enterprise Account Research & Intelligence Automation*
   
-  [![Version](https://img.shields.io/badge/version-4.0.1-blue.svg)](https://github.com/yourusername/project-ape)
-  [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
-  [![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
-  [![Container](https://img.shields.io/badge/container-podman%20%7C%20docker-blueviolet.svg)](https://quay.io/repository/jasoande/project_ape/project-ape)
+  [![Version](https://img.shields.io/badge/version-4.0.1-ee0000?style=for-the-badge&logo=github)](https://github.com/yourusername/Project-APE-dev)
+  [![Python](https://img.shields.io/badge/python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+  [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=for-the-badge)](https://github.com/yourusername/Project-APE-dev)
+  [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
+  
+  **🎯 100% GUI-Driven Workflow | No Terminal Required**
 </div>
 
 ---
 
-## Overview
+## 📖 Overview
 
-Project APE (Account Planning Engine) transforms enterprise account research from a manual, time-intensive process into an automated, AI-driven workflow. Leveraging Google NotebookLM's advanced research capabilities, Project APE generates comprehensive account intelligence in minutes, not days.
+**Project APE** (Account Planning Engine) is an enterprise-grade AI automation platform that transforms account research from a multi-day manual process into a 15-minute automated workflow. Built on Google's NotebookLM platform, Project APE generates comprehensive account intelligence, competitive analysis, and strategic recommendations for enterprise sales teams.
 
-### What It Does
-
-- **Automated Research**: Processes client documents and conducts deep web research
-- **Industry Analysis**: AI-powered industry detection and competitive landscape mapping
-- **Intelligence Generation**: Creates structured account plans with actionable insights
-- **Quality Validation**: Automated scoring and validation of research outputs
-- **Real-Time Monitoring**: Web dashboard with live progress tracking
-
-### Who It's For
-
-- **Sales Teams** preparing for enterprise account meetings
-- **Solutions Architects** developing technical account strategies
-- **Account Executives** building strategic engagement plans
-- **Business Development** teams researching new prospects
+**Key Innovation:** Fully GUI-driven workflow — double-click to launch, configure everything in your web browser, monitor real-time progress through an intuitive dashboard. No command-line knowledge required.
 
 ---
 
-## Key Features
+## ✨ Key Features
 
-### Core Capabilities
-
-- **Multi-Client Parallel Processing**: Process up to 5 accounts simultaneously
-- **Dual Execution Modes**: 
-  - Fast mode: 15-20 minutes per account
-  - Deep mode: 45-60 minutes with 8-9x more sources
-- **Google Drive Integration**: Automatic document download and synchronization
-- **NotebookLM Orchestration**: Leverages Google's AI research platform
-- **Quality Scoring**: Automated 1-10 scale validation of research outputs
-- **Smart Caching**: 7-day Drive cache with selective refresh
-
-### Dashboard Features
-
-- Real-time progress tracking per client
-- Live log streaming with pause/resume
-- Quality score visualization
-- Direct NotebookLM links
-- Execution metrics and timing
-- Auto-refresh every 2 seconds
-
-### Container Support
-
-- Multi-architecture: linux/amd64, linux/arm64
-- Non-root container execution
-- Volume-based credential management
-- Registry: `quay.io/jasoande/project_ape/project-ape`
+- **🖱️ Zero Terminal Interface** — Double-click launcher, configure in web browser, monitor via dashboard
+- **🤖 AI-Powered Research** — Automated web research importing 20-180 external sources per client
+- **📊 Multi-Client Parallel Execution** — Process up to 5 clients simultaneously (15-60 min total)
+- **🔄 Real-Time Progress Monitoring** — Live dashboard with progress bars, logs, and execution metrics
+- **☁️ Google Drive Integration** — Direct upload from Drive folders (PDFs, Google Docs, Sheets)
+- **🎨 Beautiful Web Interface** — Modern dark/light theme UI with live status updates
+- **📈 Quality Validation** — AI-generated quality scores (1-10) with completeness checks
+- **🚀 Two Execution Modes** — Fast mode (15-20 min) vs. Deep mode (45-60 min, 8-9x more sources)
 
 ---
 
-## Quick Start
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- **Python 3.10+** (Python 3.11+ recommended)
-- **Chrome browser** (for NotebookLM authentication)
-- **Google Account** with access to:
-  - Google Drive
-  - Google NotebookLM (free at notebooklm.google.com)
-- **Podman or Docker** (for containerized execution)
+Before launching Project APE, ensure you have:
 
-### Installation
-
-1. **Clone the repository**
-
-```bash
-git clone https://github.com/yourusername/project-ape.git
-cd project-ape
-```
-
-2. **Authenticate with NotebookLM**
-
-```bash
-# Install NotebookLM CLI
-pip install notebooklm
-
-# Login (opens Chrome browser)
-notebooklm login
-```
-
-3. **Setup Google Drive OAuth**
-
-```bash
-# Run OAuth setup wizard
-python3 setup-oauth-drive-improved.py
-
-# Follow prompts to:
-# - Create Google Cloud project (or select existing)
-# - Enable Drive API
-# - Create OAuth credentials
-# - Download and configure credentials
-# - Complete authentication flow
-```
-
-4. **Configure your clients**
-
-```bash
-# Copy example configuration
-cp developer-docs/example-vars.py vars.py
-
-# Edit with your client details
-vi vars.py
-```
-
-Example configuration:
-
-```python
-clients = ["acme_corp"]
-
-acme_corp_name = "Acme Corporation"
-acme_corp_folder = "https://drive.google.com/drive/folders/YOUR_FOLDER_ID"
-acme_corp_industry = ""  # Auto-detect
-acme_corp_subsegments = ""
-
-persona = "solutions architect"
-default_mode = "fast"
-```
-
-5. **Launch the workflow**
-
-```bash
-# Fast mode (15-20 minutes)
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode fast
-
-# Deep mode (45-60 minutes)
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode deep
-```
-
-6. **Monitor progress**
-
-Open the dashboard at: `http://localhost:8765`
+- **Python 3.10 or higher** ([Download](https://www.python.org/downloads/))
+- **Google Chrome browser** (required for NotebookLM authentication)
+- **Google account** with access to NotebookLM ([notebooklm.google.com](https://notebooklm.google.com))
+- **Internet connection** (for AI research and web scraping)
 
 ---
 
-## Usage
-
-### Running Workflows
-
-**Single Client:**
+### Step 1: Clone the Repository
 
 ```bash
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode fast
-```
-
-**Multiple Clients (Parallel):**
-
-```bash
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp,techstart_inc,globalbank --mode fast
-```
-
-**Force Cache Refresh:**
-
-```bash
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode fast --refresh
-```
-
-### Execution Modes
-
-| Mode | Duration | Sources | Use Case |
-|------|----------|---------|----------|
-| **Fast** | 15-20 min | 20-50 | Quick account overviews |
-| **Deep** | 45-60 min | 90-180 | Comprehensive analysis for high-value accounts |
-
-Both modes process all configured clients in parallel.
-
-### Dashboard
-
-The web dashboard provides real-time monitoring at `http://localhost:8765`:
-
-- **Header**: Overall progress, execution timer, client counts
-- **Client Cards**: Individual progress, quality scores, NotebookLM links
-- **Logs Section**: Real-time log streaming with controls
-- **Auto-Refresh**: Updates every 2 seconds
-
-### Output Structure
-
-```
-docs_generated/
-├── acme_corp/
-│   ├── Acme_Corporation_Account_Plan.pdf
-│   ├── Research_Summary.txt
-│   ├── Quality_Score.json
-│   └── NotebookLM_Link.txt
-└── ...
+git clone https://github.com/yourusername/Project-APE-dev.git
+cd Project-APE-dev
 ```
 
 ---
 
-## Architecture
+### Step 2: Launch Project APE
 
-### System Architecture
+**🖱️ No terminal commands needed for normal usage!**
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Project APE Architecture                 │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  User Interface Layer                                       │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  Web Dashboard (Flask)                                │  │
-│  │  - Real-time progress                                 │  │
-│  │  - Live logs                                          │  │
-│  │  - Quality scores                                     │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                          ↕                                  │
-│  Orchestration Layer                                        │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  main.py (Multi-Process Manager)                      │  │
-│  │  - Process spawning                                   │  │
-│  │  - Status aggregation                                 │  │
-│  │  - Resource management                                │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                          ↕                                  │
-│  Execution Layer (Parallel Processes)                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ Client 1 │  │ Client 2 │  │ Client 3 │  │ Client N │  │
-│  │ Pipeline │  │ Pipeline │  │ Pipeline │  │ Pipeline │  │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
-│       ↓              ↓              ↓              ↓        │
-│  Core Components Layer                                      │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  • DriveManager (Download files)                      │  │
-│  │  • NotebookManager (NotebookLM API)                   │  │
-│  │  • SourceManager (Upload & process)                   │  │
-│  │  • GeminiAgent (AI orchestration)                     │  │
-│  │  • QualityScorer (Result validation)                  │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                          ↕                                  │
-│  External Services                                          │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  • Google Drive API                                   │  │
-│  │  • Google NotebookLM                                  │  │
-│  │  • Google Gemini API (optional)                       │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+#### On macOS:
+1. Double-click `launch-project-ape.command` in Finder
+2. Browser opens automatically to configuration page
 
-### Pipeline Workflow
+#### On Windows:
+1. Double-click `launch-project-ape.py`
+2. Browser opens automatically to configuration page
 
-Each client executes through five sequential phases:
+#### On Linux:
+1. Double-click `launch-project-ape.py` (or run: `./launch-project-ape.py`)
+2. Browser opens automatically to configuration page
 
-1. **Document Download** (30-60 seconds)
-   - Connects to Google Drive via OAuth
-   - Downloads PDFs and documents from client folder
-   - Converts Google Docs to PDF
-   - Implements smart caching (7-day TTL)
-
-2. **Notebook Creation** (10-15 seconds)
-   - Creates NotebookLM notebook
-   - Uploads consolidated sources
-   - Waits for source processing
-
-3. **Research Phase** (3-8 minutes)
-   - Executes AI-powered research queries
-   - Imports 20-180 external sources (mode-dependent)
-   - Analyzes industry trends and competitive landscape
-
-4. **Analysis Phase** (8-12 minutes)
-   - Runs 6 consolidated analysis prompts
-   - Generates strategic insights
-   - Identifies opportunities and risks
-
-5. **Quality Validation** (1-2 minutes)
-   - Validates source count and completeness
-   - Generates 1-10 quality score
-   - Creates summary outputs
+**What happens automatically:**
+- ✅ Checks if virtual environment exists
+- ✅ Runs automated setup if needed (2-5 minutes first time)
+- ✅ Starts dashboard server in background
+- ✅ Opens browser to configuration page
 
 ---
 
-## Configuration
+### Step 3: Follow Web Setup Wizard
 
-### Client Configuration (vars.py)
+The launcher opens **http://localhost:8765/configure** where you'll complete setup:
 
-```python
-# Client list
-clients = ["acme_corp", "techstart_inc"]
+#### **Setup Page Tasks:**
 
-# Client 1 configuration
-acme_corp_name = "Acme Corporation"
-acme_corp_folder = "https://drive.google.com/drive/folders/ABC123XYZ"
-acme_corp_industry = ""  # Leave empty for auto-detection
-acme_corp_subsegments = "cloud, AI/ML, enterprise software"
+1. **NotebookLM Authentication**
+   - Click "Authenticate NotebookLM" button
+   - Follow OAuth flow in browser
+   - Status changes to ✅ when complete
 
-# Client 2 configuration
-techstart_inc_name = "TechStart Inc"
-techstart_inc_folder = "https://drive.google.com/drive/folders/DEF456UVW"
-techstart_inc_industry = "technology"
-techstart_inc_subsegments = ""
+2. **Google Drive OAuth**
+   - Click "Setup Drive OAuth" button
+   - Follow OAuth flow in browser
+   - Upload credentials.json file
+   - Generate token
+   - Status changes to ✅ when complete
 
-# Global settings
-persona = "solutions architect"
-default_mode = "fast"
-DASHBOARD_PORT = 8765
-```
+3. **Configuration Review**
+   - System automatically validates all components
+   - Green checkmarks indicate ready status
+   - Red X indicators show what needs attention
 
-### Timing Configuration
-
-**Fast Mode** (optimized for speed):
-
-```python
-TIMINGS = {
-    'ask_prompt_delay': (8.0, 12.0),      # Research query delays
-    'chat_prompt_delay': (5.0, 8.0),      # Analysis prompt delays
-    'source_processing_wait': 30,          # Source upload wait
-}
-```
-
-**Deep Mode** (optimized for coverage):
-
-```python
-DEEP_TIMINGS = {
-    'ask_prompt_delay': (15.0, 25.0),     # Longer delays for more sources
-    'chat_prompt_delay': (10.0, 15.0),    # Conservative timing
-    'source_processing_wait': 45,          # Extended wait
-}
-```
+**See [Docs/WEB_CONFIGURATION_GUIDE.md](Docs/WEB_CONFIGURATION_GUIDE.md) for detailed setup walkthrough.**
 
 ---
 
-## Container Deployment
+### Step 4: Configure Clients
 
-### Building Containers
+In the web configuration interface:
 
-```bash
-# Build for current architecture
-podman build -t project-ape:latest -f Containerfile.debian .
+1. **Add Client Button** — Click to create new client entry
 
-# Build multi-architecture (requires buildx)
-podman build --platform linux/amd64,linux/arm64 \
-  -t quay.io/jasoande/project_ape/project-ape:4.0.1 \
-  -f Containerfile.debian .
-```
+2. **Fill Client Details:**
+   - **Client Name**: "Acme Corporation"
+   - **Client ID**: `acme_corp` (lowercase, underscores only)
+   - **Google Drive Folder URL**: `https://drive.google.com/drive/folders/1ABC123XYZ`
+   - **Industry** (optional): "technology" or leave blank for auto-detection
+   - **Industry Subsegments**: "cloud, AI/ML, DevOps, cybersecurity"
 
-### Running Containers
+3. **Global Settings:**
+   - **Persona**: "Red Hat solutions architect" (AI role/perspective)
+   - **Execution Mode**: Fast (15-20 min) or Deep (45-60 min)
+   - **Dashboard Port**: 8765 (default)
 
-```bash
-# Run with ape-run.sh (recommended)
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode fast
-
-# Manual container run
-podman run -it --rm \
-  -v ./vars.py:/app/vars.py:ro,z \
-  -v ./logs:/app/logs:z \
-  -v ./docs_generated:/app/docs_generated:z \
-  -v project-ape-credentials:/opt/app-root/src/.notebooklm:z \
-  -p 8765:8765 \
-  quay.io/jasoande/project_ape/project-ape:4.0.1 \
-  --clients acme_corp --mode fast
-```
-
-### Registry
-
-Official images: `quay.io/jasoande/project_ape/project-ape`
-
-- `latest` - Latest stable release
-- `4.0.1` - Specific version tag
-- `4.0` - Minor version tag
+4. **Save Configuration** — Changes auto-save to `vars.py`
 
 ---
 
-## Documentation
+### Step 5: Launch Workflows
 
-- **[Installation Guide](Docs/INSTALLATION.md)** - Detailed setup instructions
-- **[User Guide](Docs/USER_GUIDE.md)** - Complete usage documentation
-- **[Architecture](Docs/ARCHITECTURE.md)** - Technical architecture details
-- **[Deployment Guide](developer-docs/DEPLOYMENT.md)** - Container deployment
-- **[Troubleshooting](Docs/TROUBLESHOOTING.md)** - Common issues and solutions
+**From the Dashboard:**
 
----
+1. Navigate to **Dashboard** tab (top navigation)
+2. Click **"Launch Workflows"** button
+3. Select clients to process (checkboxes)
+4. Click **"Start Execution"**
 
-## Troubleshooting
+**Real-time monitoring:**
+- Progress bars for each client
+- Live log streaming
+- Phase indicators (PDF download → Notebook creation → Research → Analysis → Quality)
+- Estimated time remaining
+- Quality scores upon completion
 
-### Common Issues
-
-**NotebookLM Authentication Failed**
-
-```bash
-# Re-authenticate
-notebooklm login
-
-# Verify credentials
-ls -la ~/.notebooklm/credentials.json
-```
-
-**Google Drive Access Denied**
-
-```bash
-# Re-run OAuth setup
-python3 setup-oauth-drive-improved.py
-
-# Delete old token
-rm ~/.project-ape/token.json
-```
-
-**Container Won't Start**
-
-```bash
-# Check credentials volume
-podman volume exists project-ape-credentials
-
-# Recreate volume
-podman volume rm project-ape-credentials
-./setup-credentials.sh
-```
-
-**Dashboard Not Accessible**
-
-```bash
-# Verify port 8765 is not in use
-lsof -i :8765
-
-# Check container logs
-podman logs -f <container-name>
-```
-
-For comprehensive troubleshooting, see **[Docs/TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md)**
+**Completion:** Outputs saved to `docs_generated/<client_id>/`
 
 ---
 
-## Development
+## 📚 Documentation
 
-### Setup Development Environment
+Comprehensive guides available in the `Docs/` directory:
 
-```bash
-# Clone repository
-git clone https://github.com/yourusername/project-ape.git
-cd project-ape
-
-# Create virtual environment
-python3 -m venv ~/.project-ape-venv
-source ~/.project-ape-venv/bin/activate
-
-# Install dependencies
-pip install -r developer-docs/requirements.txt
-```
-
-### Running Tests
-
-```bash
-# Single client test
-./developer-docs/ape-run.sh --vars ./developer-docs/example-vars.py --clients example_client --mode fast
-
-# Verify outputs
-ls -la docs_generated/example_client/
-cat logs/example_client.log
-```
-
-### Code Structure
-
-```
-project-ape/
-├── core/                     # Core pipeline components
-│   ├── client_pipeline.py    # Single client workflow
-│   ├── drive_manager.py      # Google Drive integration
-│   ├── notebook_manager.py   # NotebookLM API wrapper
-│   ├── source_manager.py     # Source upload manager
-│   └── quality_scorer.py     # Result validation
-│
-├── dashboard/                # Web interface
-│   ├── server.py             # Flask application
-│   ├── templates/            # HTML templates
-│   └── static/               # CSS, JS, images
-│
-├── developer-docs/           # Development documentation
-│   ├── ape-run.sh            # Container launcher
-│   ├── requirements.txt      # Python dependencies
-│   └── example-vars.py       # Configuration template
-│
-└── Docs/                     # User documentation
-    ├── INSTALLATION.md
-    ├── USER_GUIDE.md
-    └── TROUBLESHOOTING.md
-```
+| Document | Description |
+|----------|-------------|
+| [QUICKSTART.md](QUICKSTART.md) | 5-minute quick start guide |
+| [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | Technical architecture and overview |
+| [INSTALLATION.md](Docs/INSTALLATION.md) | Complete installation & setup guide |
+| [WEB_CONFIGURATION_GUIDE.md](Docs/WEB_CONFIGURATION_GUIDE.md) | Web UI configuration walkthrough |
+| [USER_GUIDE.md](Docs/USER_GUIDE.md) | Detailed usage guide with best practices |
+| [ARCHITECTURE.md](Docs/ARCHITECTURE.md) | Technical architecture documentation |
+| [TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md) | Common issues and solutions |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Developer contribution guide |
 
 ---
 
-## Contributing
+## 🔧 Troubleshooting
 
-We welcome contributions! Please follow these guidelines:
+### Dashboard Won't Open
 
+**Symptoms:** Browser doesn't open, or shows "Connection refused"
+
+**Solutions:**
+1. Check if server is running: Navigate to http://localhost:8765 manually
+2. Port conflict: Another app using port 8765
+   - Change port in `vars.py`: `DASHBOARD_PORT = 8766`
+   - Re-launch
+3. Firewall blocking: Allow Python through firewall
+
+---
+
+### Authentication Failed
+
+**Symptoms:** "NotebookLM authentication failed" or "Drive OAuth failed"
+
+**Solutions:**
+1. **NotebookLM:**
+   - Re-run authentication from web UI
+   - Ensure Chrome browser is default
+   - Check credentials: `~/.notebooklm/credentials.json` exists
+   
+2. **Google Drive:**
+   - Re-upload `credentials.json` in web UI
+   - Regenerate token
+   - Verify Drive folder permissions (must be accessible by your Google account)
+
+---
+
+### Workflow Stuck/Timeout
+
+**Symptoms:** Progress bar frozen, phase not advancing
+
+**Solutions:**
+1. Check logs in dashboard (real-time log viewer)
+2. Look for quota errors (NotebookLM API limits)
+3. Verify internet connection
+4. Restart workflow from dashboard
+
+---
+
+**See [Docs/TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md) for comprehensive troubleshooting guide.**
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+Quick summary:
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Standards
-
-- **Python**: PEP 8, type hints, docstrings
-- **JavaScript**: ESLint, no jQuery
-- **Shell**: ShellCheck compliant
-- **Documentation**: Markdown, clear examples
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Test using GUI launcher (`python3 launch-project-ape.py`)
+4. Commit changes (`git commit -m 'Add amazing feature'`)
+5. Push to branch (`git push origin feature/amazing-feature`)
+6. Open Pull Request
 
 ---
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## Acknowledgments
+## 🙏 Credits
 
-- **Google NotebookLM** team for the AI research platform
-- **Google Gemini** team for AI orchestration capabilities
-- **Open Source Community** for dependencies and tools
+**Built with:**
+- [NotebookLM](https://notebooklm.google.com) — Google's AI research platform
+- [Flask](https://flask.palletsprojects.com/) — Web dashboard framework
+- [Google Drive API](https://developers.google.com/drive) — Document management
 
----
-
-## Support
-
-- **Documentation**: [Docs/](Docs/)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/project-ape/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/project-ape/discussions)
-
----
-
-**Version**: 4.0.1  
-**Last Updated**: June 30, 2026  
-**Author**: Jason Anderson
-
----
-
-## Quick Reference
-
-```bash
-# Initial Setup
-notebooklm login
-python3 setup-oauth-drive-improved.py
-cp developer-docs/example-vars.py vars.py
-
-# Run Workflow
-./developer-docs/ape-run.sh --vars ./vars.py --clients yourclient --mode fast
-
-# Monitor
-# → Dashboard: http://localhost:8765
-
-# Container Operations
-podman build -t project-ape:latest -f Containerfile.debian .
-podman push quay.io/jasoande/project_ape/project-ape:4.0.1
-
-# Troubleshooting
-tail -f logs/overall.log
-cat .multi_process_status/yourclient.json
-```
+**Developed by:** Jason Anderson  
+**Version:** 4.0.1  
+**Release Date:** July 2026
 
 ---
 
 <div align="center">
-  <strong>Built with AI. Powered by NotebookLM.</strong>
+  
+  **🎯 Project APE — Transforming Account Research from Days to Minutes**
+  
+  *Enterprise AI Automation for Sales Intelligence*
+  
+  ---
+  
+  **Questions? Issues? Feature Requests?**  
+  [Open an issue](https://github.com/yourusername/Project-APE-dev/issues) | [View documentation](Docs/) | [Watch demo video](Docs/videos/)
+  
 </div>

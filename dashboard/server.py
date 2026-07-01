@@ -16,9 +16,21 @@ from pathlib import Path
 from flask import Flask, render_template, jsonify, Response, request
 import logging
 import importlib.util
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+# Google OAuth imports - check if available
+try:
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+    GOOGLE_AUTH_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Warning: Google OAuth packages not available: {e}", file=sys.stderr)
+    print(f"   Google Drive authentication will not work until you install:", file=sys.stderr)
+    print(f"   pip install google-auth-oauthlib google-auth google-api-python-client", file=sys.stderr)
+    GOOGLE_AUTH_AVAILABLE = False
+    # Define dummy values so dashboard can still start
+    Credentials = None
+    InstalledAppFlow = None
+    build = None
 
 # Disable Flask's default logging
 log = logging.getLogger('werkzeug')
@@ -33,6 +45,16 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # Import core modules AFTER fixing path
 from core.auth_manager import AuthManager
+
+# Import workflow detector from project root (NOT developer-docs)
+try:
+    import workflow_detector
+    WORKFLOW_DETECTOR_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Warning: workflow_detector module not available: {e}", file=sys.stderr)
+    print(f"   Workflow detection features will not work", file=sys.stderr)
+    WORKFLOW_DETECTOR_AVAILABLE = False
+    workflow_detector = None
 
 # Load configuration to get proper paths (for container compatibility)
 try:
@@ -414,6 +436,7 @@ def save_config():
         clients = data.get('clients', [])
         settings = data.get('settings', {})
 
+        # Save vars.py to project root where main.py expects it
         vars_path = SCRIPT_DIR.parent / 'vars.py'
 
         # Debug logging
@@ -612,9 +635,11 @@ def launch_page():
     This is the transition from configuration to workflow execution.
     """
     try:
-        # Import workflow detector
-        sys.path.insert(0, str(PROJECT_ROOT))
-        import workflow_detector
+        # Check if workflow detector is available
+        if not WORKFLOW_DETECTOR_AVAILABLE:
+            return render_template('error.html',
+                                 error="Workflow detector not available",
+                                 message="The workflow_detector module could not be loaded. Check server logs."), 500
 
         # Check if vars.py exists
         vars_path = PROJECT_ROOT / "vars.py"
@@ -687,6 +712,9 @@ def start_workflow():
                 'via': 'web_ui'
             }, indent=2))
 
+        # Store workflow execution result
+        workflow_result = {'success': False, 'error': None, 'pid': None}
+
         def run_workflow():
             """Background thread to execute workflow launcher"""
             try:
@@ -696,16 +724,14 @@ def start_workflow():
                 print(f"[WORKFLOW] Starting workflow: {' '.join(cmd)}", file=sys.stderr)
                 print(f"[WORKFLOW] Working directory: {PROJECT_ROOT}", file=sys.stderr)
 
-                # Check if this is run-workflow.sh (local mode) - needs bash execution
-                if cmd[0] == './run-workflow.sh':
-                    # Make sure script is executable
-                    script_path = PROJECT_ROOT / 'run-workflow.sh'
-                    if script_path.exists():
-                        import os
-                        os.chmod(script_path, 0o755)
-
-                    # Execute with bash to handle shebang and virtual env activation
-                    cmd = ['/bin/bash'] + cmd
+                # Validate command exists before executing
+                if cmd[0].startswith('./'):
+                    script_path = PROJECT_ROOT / cmd[0][2:]
+                    if not script_path.exists():
+                        error_msg = f"Workflow script not found: {script_path}"
+                        print(f"[WORKFLOW] ERROR: {error_msg}", file=sys.stderr)
+                        workflow_result['error'] = error_msg
+                        return
 
                 # Execute in project root directory as background process
                 # Don't use subprocess.run() - it blocks and waits for completion
@@ -721,16 +747,25 @@ def start_workflow():
                 print(f"[WORKFLOW] Workflow process started (PID: {process.pid})", file=sys.stderr)
                 print(f"[WORKFLOW] Command: {' '.join(cmd)}", file=sys.stderr)
 
+                workflow_result['success'] = True
+                workflow_result['pid'] = process.pid
+
             except FileNotFoundError as e:
-                print(f"[WORKFLOW] Workflow script not found: {e}", file=sys.stderr)
+                error_msg = f"Workflow script not found: {e}"
+                print(f"[WORKFLOW] {error_msg}", file=sys.stderr)
+                workflow_result['error'] = error_msg
                 import traceback
                 traceback.print_exc()
             except PermissionError as e:
-                print(f"[WORKFLOW] Permission denied executing workflow: {e}", file=sys.stderr)
+                error_msg = f"Permission denied executing workflow: {e}"
+                print(f"[WORKFLOW] {error_msg}", file=sys.stderr)
+                workflow_result['error'] = error_msg
                 import traceback
                 traceback.print_exc()
             except Exception as e:
-                print(f"[WORKFLOW] Error running workflow: {e}", file=sys.stderr)
+                error_msg = f"Error running workflow: {e}"
+                print(f"[WORKFLOW] {error_msg}", file=sys.stderr)
+                workflow_result['error'] = error_msg
                 import traceback
                 traceback.print_exc()
 
@@ -738,9 +773,20 @@ def start_workflow():
         thread = threading.Thread(target=run_workflow, daemon=True)
         thread.start()
 
+        # Give thread a moment to start and validate command
+        thread.join(timeout=1.0)
+
+        # Check if workflow started successfully
+        if workflow_result['error']:
+            return jsonify({
+                'success': False,
+                'error': workflow_result['error']
+            }), 500
+
         return jsonify({
             'success': True,
             'message': 'Workflow started in background',
+            'pid': workflow_result.get('pid'),
             'dashboard_url': workflow.get('dashboard_url', 'http://localhost:8765')
         })
 
@@ -1457,6 +1503,11 @@ def start_oauth_flow():
     """Trigger OAuth flow and stream progress via SSE."""
     def generate():
         try:
+            # Check if Google OAuth packages are available
+            if not GOOGLE_AUTH_AVAILABLE:
+                yield 'data: {"status": "error", "message": "Google OAuth packages not installed. Run: pip install google-auth-oauthlib google-auth google-api-python-client (or activate venv)"}\n\n'
+                return
+
             yield 'data: {"status": "starting", "message": "Initializing OAuth flow..."}\n\n'
 
             creds_dir = Path.home() / '.project-ape'
