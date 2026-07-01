@@ -239,7 +239,9 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] Checking if consolidation needed...")
             self.update_status("Checking for file changes...", 23)
 
-            needs_update, newest_file_time = self._check_consolidation_needed()
+            # Pass is_new_notebook flag to force consolidation for new notebooks
+            is_new_notebook = not is_existing
+            needs_update, newest_file_time = self._check_consolidation_needed(is_new_notebook=is_new_notebook)
 
             # If using existing notebook on new VM, timestamp file won't exist
             # In that case, force upload to ensure PDF is in notebook
@@ -285,6 +287,12 @@ class ClientPipeline:
                         logger.info(f"[{self.client_id}] ✅ Uploaded: {consolidated_filename}")
                         # Save timestamp for future comparison
                         self._save_consolidation_timestamp(newest_file_time)
+
+                        # Wait for NotebookLM to process the PDF before running research prompts
+                        source_wait = self.timings.get('source_processing_wait', 30)
+                        logger.info(f"[{self.client_id}] ⏱️  Waiting {source_wait}s for PDF processing...")
+                        self.update_status(f"Processing PDF ({source_wait}s)...", 29)
+                        time.sleep(source_wait)
                     else:
                         logger.warning(f"[{self.client_id}] ⚠️  Failed to upload consolidated PDF")
                 else:
@@ -587,9 +595,12 @@ class ClientPipeline:
             logger.error(f"[{self.client_id}] PDF consolidation failed: {e}")
             return None
 
-    def _check_consolidation_needed(self) -> tuple[bool, str]:
+    def _check_consolidation_needed(self, is_new_notebook: bool = False) -> tuple[bool, str]:
         """
         Check if files have changed since last consolidation using Drive API timestamps.
+
+        Args:
+            is_new_notebook: If True, forces consolidation regardless of file timestamps
 
         Returns:
             Tuple of (needs_update: bool, newest_drive_time: str)
@@ -637,6 +648,11 @@ class ClientPipeline:
             if newest_drive_time is None:
                 logger.warning(f"[{self.client_id}] Could not determine file timestamps")
                 return True, datetime.now().isoformat()
+
+            # CRITICAL: If this is a new notebook, always consolidate regardless of file timestamps
+            if is_new_notebook:
+                logger.info(f"[{self.client_id}] New notebook detected - will upload consolidated PDF")
+                return True, newest_drive_time.isoformat()
 
             # Check if we have a previous timestamp
             if not timestamp_file.exists():
