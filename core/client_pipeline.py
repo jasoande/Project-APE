@@ -36,6 +36,27 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def get_notebooklm_path() -> str:
+    """
+    Get the path to notebooklm command.
+
+    Checks venv bin directory first, falls back to PATH.
+    This ensures subprocess calls work even when venv is not activated.
+    """
+    # Check if running in venv
+    venv_bin = Path(sys.prefix) / 'bin' / 'notebooklm'
+    if venv_bin.exists():
+        return str(venv_bin)
+
+    # Check common venv location
+    home_venv = Path.home() / '.project-ape-venv' / 'bin' / 'notebooklm'
+    if home_venv.exists():
+        return str(home_venv)
+
+    # Fall back to PATH
+    return 'notebooklm'
+
+
 class ClientPipeline:
     """Executes complete pipeline for a single client."""
 
@@ -79,6 +100,7 @@ class ClientPipeline:
 
         self.notebook_id = None
         self.project_root = Path(__file__).parent.parent
+        self.notebooklm_cmd = get_notebooklm_path()
 
         # Select timing configuration based on mode
         self.timings = config.DEEP_TIMINGS if mode == "deep" else config.TIMINGS
@@ -716,7 +738,7 @@ class ClientPipeline:
             try:
                 # Get current source count
                 result = subprocess.run(
-                    ["notebooklm", "source", "list", "-n", self.notebook_id, "--json"],
+                    [self.notebooklm_cmd, "source", "list", "-n", self.notebook_id, "--json"],
                     capture_output=True,
                     text=True,
                     timeout=30
@@ -1033,7 +1055,7 @@ class ClientPipeline:
 
             # Get notebook sources
             result = subprocess.run(
-                ["notebooklm", "source", "list", "-n", self.notebook_id, "--json"],
+                [self.notebooklm_cmd, "source", "list", "-n", self.notebook_id, "--json"],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -1066,7 +1088,7 @@ class ClientPipeline:
 
             # Get notebook notes
             result = subprocess.run(
-                ["notebooklm", "note", "list", "-n", self.notebook_id, "--json"],
+                [self.notebooklm_cmd, "note", "list", "-n", self.notebook_id, "--json"],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -1085,7 +1107,7 @@ class ClientPipeline:
             # 5. Has mindmap (0-1 point)
             # Check if mindmap exists
             result = subprocess.run(
-                ["notebooklm", "artifact", "list", "-n", self.notebook_id],
+                [self.notebooklm_cmd, "artifact", "list", "-n", self.notebook_id],
                 capture_output=True,
                 text=True,
                 timeout=30
