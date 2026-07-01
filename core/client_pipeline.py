@@ -496,19 +496,12 @@ class ClientPipeline:
             logger.info(f"[{client_id}] Subsegments: {manual_subsegments}")
             return manual_industry, manual_subsegments
 
-        # Use Claude AI auto-detection
-        logger.info(f"[{client_id}] Using Claude AI for automatic industry detection")
-
-        # Import Claude industry detector
-        from core.claude_industry_detector import ClaudeIndustryDetector
-
-        # Check for API keys
-        if not os.getenv('ANTHROPIC_API_KEY') and not os.getenv('GEMINI_API_KEY'):
-            raise ValueError(
-                f"Client {client_id}: No industry/subsegments in vars.py "
-                "and no AI API keys (ANTHROPIC_API_KEY or GEMINI_API_KEY) found. "
-                "Please add an API key to your .env file or provide manual config in vars.py."
-            )
+        # If either industry or subsegments missing, require both in vars.py
+        # AI auto-detection is not supported - must configure manually
+        raise ValueError(
+            f"Client {client_id}: Missing industry/subsegments configuration. "
+            f"Please add both '{client_id}_industry' and '{client_id}_subsegments' to vars.py"
+        )
 
         # Initialize Claude detector (falls back to Gemini if Anthropic unavailable)
         detector = ClaudeIndustryDetector(config)

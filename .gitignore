@@ -75,6 +75,18 @@ temp/
 
 # Claude Code
 .claude/
+.agents/
+
+# Node.js / Remotion (development artifacts)
+node_modules/
+out/
+package-lock.json
+remotion.config.ts
+remotion/
+
+# Skills and TypeScript config (Claude Code specific)
+skills-lock.json
+tsconfig.json
 
 # Build logs (from container builds)
 build-logs/
@@ -85,8 +97,24 @@ deploy-*.sh
 verify-*.sh
 check-vm-*.sh
 
-# Temporary documentation
+# Temporary documentation and scripts
 *_COMPLETE.md
 *_FINAL.md
 *_INSTRUCTIONS.md
 *_SUMMARY.md
+*_FIX*.md
+*_TROUBLESHOOTING.md (in root only, keep in Docs/)
+*REMOTION*.md
+*VIDEO*.md
+*OAUTH*.md (temp fixes)
+*WORKFLOW*.md (temp)
+*DEPLOY*.md (temp)
+*DRIVE*.md (temp)
+*WEB_UI*.md (temp)
+diagnose-*.sh
+fix-*.sh
+test-*.sh (except in developer-docs/)
+quick-fix-*.sh
+generate-*.py (temp utilities)
+test-oauth-*.py
+workflow_detector.py (if moved from root)
