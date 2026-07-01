@@ -241,13 +241,15 @@ class ClientPipeline:
 
             needs_update, newest_file_time = self._check_consolidation_needed()
 
-            # Also check if consolidated PDF exists in notebook
-            # (may be missing if using existing notebook on new VM)
-            has_consolidated_pdf = self.source_manager.has_consolidated_pdf(self.client_name)
+            # If using existing notebook on new VM, timestamp file won't exist
+            # In that case, force upload to ensure PDF is in notebook
+            logs_dir = Path(self.config.LOGS_DIR if hasattr(self.config, 'LOGS_DIR') else './logs')
+            timestamp_file = logs_dir / '.consolidation_timestamps' / f"{self.client_id}.json"
+            force_upload_on_new_vm = is_existing and not timestamp_file.exists()
 
-            if needs_update or not has_consolidated_pdf:
-                if not has_consolidated_pdf:
-                    logger.info(f"[{self.client_id}] 📄 No consolidated PDF in notebook - creating...")
+            if needs_update or force_upload_on_new_vm:
+                if force_upload_on_new_vm:
+                    logger.info(f"[{self.client_id}] 📄 No local timestamp (new VM?) - uploading PDF to ensure notebook has it...")
                 else:
                     logger.info(f"[{self.client_id}] 🔄 Files changed - consolidating to PDF...")
 
