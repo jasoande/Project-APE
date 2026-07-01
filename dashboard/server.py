@@ -145,7 +145,7 @@ def stream_logs(client_token):
             yield f"data: Log file not found: {log_file}\n\n"
             return
 
-        max_idle_time = 300  # 5 minutes max with no new content
+        max_idle_time = 30  # 30 seconds max with no new content
         idle_iterations = 0
         max_iterations = max_idle_time * 2  # 0.5s sleep per iteration
 

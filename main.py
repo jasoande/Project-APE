@@ -100,6 +100,27 @@ class ProcessManager:
         """Start Flask dashboard server."""
         logger.info("\n📊 Starting dashboard server...")
 
+        # Kill any existing process on the dashboard port
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['lsof', '-ti', f':{DASHBOARD_PORT}'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.stdout.strip():
+                pids = result.stdout.strip().split('\n')
+                for pid in pids:
+                    try:
+                        logger.info(f"   Killing stale process on port {DASHBOARD_PORT} (PID: {pid})")
+                        subprocess.run(['kill', '-9', pid], timeout=2)
+                    except:
+                        pass
+                time.sleep(1)
+        except:
+            pass  # lsof might not be available on all systems
+
         dashboard_script = SCRIPT_DIR / "dashboard" / "server.py"
         dashboard_log = LOGS_DIR / "dashboard.log"
 
@@ -112,11 +133,33 @@ class ProcessManager:
             stderr=subprocess.STDOUT
         )
 
-        # Wait for server to start
+        # Wait for server to start and verify it's running
         time.sleep(3)
+
+        # Check if dashboard actually started
+        try:
+            import urllib.request
+            urllib.request.urlopen(f"http://localhost:{DASHBOARD_PORT}/status", timeout=2)
+            dashboard_running = True
+        except:
+            dashboard_running = False
+
+        if not dashboard_running:
+            logger.error(f"   ❌ Dashboard failed to start on port {DASHBOARD_PORT}")
+            logger.error(f"   Check {dashboard_log} for errors")
+            # Read first few lines of error log
+            try:
+                with open(dashboard_log, 'r') as f:
+                    error_lines = f.readlines()[-5:]
+                    for line in error_lines:
+                        logger.error(f"      {line.rstrip()}")
+            except:
+                pass
+            raise RuntimeError(f"Dashboard failed to start - check {dashboard_log}")
 
         dashboard_url = f"http://localhost:{DASHBOARD_PORT}"
         logger.info(f"   URL: {dashboard_url}")
+        logger.info("   ✅ Dashboard server running")
 
         # Open in browser
         try:
