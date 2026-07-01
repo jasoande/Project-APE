@@ -1434,7 +1434,8 @@ def oauth_status():
             'authenticated': False,
             'email': None,
             'scopes': [],
-            'ready_for_upload': True  # Always ready to accept credentials
+            'ready_for_upload': True,  # Always ready to accept credentials
+            'google_packages_available': GOOGLE_AUTH_AVAILABLE
         }
 
         # If token exists, check if it's valid
@@ -1515,7 +1516,7 @@ def start_oauth_flow():
         try:
             # Check if Google OAuth packages are available
             if not GOOGLE_AUTH_AVAILABLE:
-                yield 'data: {"status": "error", "message": "Google OAuth packages not installed. Activate virtual environment: source ~/.project-ape-venv/bin/activate"}\n\n'
+                yield 'data: {"status": "error", "message": "Google OAuth packages not available. Please restart the dashboard using: python3 launch-project-ape.py (This ensures the virtual environment is used)"}\n\n'
                 return
 
             yield 'data: {"status": "starting", "message": "Initializing OAuth flow..."}\n\n'

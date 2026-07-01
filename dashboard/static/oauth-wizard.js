@@ -86,6 +86,15 @@ async function checkOAuthStatusWizard() {
             return;
         }
 
+        // Check if Google OAuth packages are available
+        if (data.google_packages_available === false) {
+            showMessage('error', '⚠️ Google OAuth packages not available. Please restart dashboard using: python3 launch-project-ape.py');
+            updateStatusBadgeWizard('creds-status-badge', false);
+            updateStatusBadgeWizard('token-status-badge', false);
+            updateStatusBadgeWizard('access-status-badge', false);
+            return;
+        }
+
         // Update status badges
         updateStatusBadgeWizard('creds-status-badge', data.credentials_exist);
         updateStatusBadgeWizard('token-status-badge', data.token_exist);
