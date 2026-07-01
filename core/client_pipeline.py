@@ -287,12 +287,6 @@ class ClientPipeline:
                         logger.info(f"[{self.client_id}] ✅ Uploaded: {consolidated_filename}")
                         # Save timestamp for future comparison
                         self._save_consolidation_timestamp(newest_file_time)
-
-                        # Wait for NotebookLM to process the PDF before running research prompts
-                        source_wait = self.timings.get('source_processing_wait', 30)
-                        logger.info(f"[{self.client_id}] ⏱️  Waiting {source_wait}s for PDF processing...")
-                        self.update_status(f"Processing PDF ({source_wait}s)...", 29)
-                        time.sleep(source_wait)
                     else:
                         logger.warning(f"[{self.client_id}] ⚠️  Failed to upload consolidated PDF")
                 else:
