@@ -1509,7 +1509,7 @@ def upload_oauth_credentials():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/api/start-oauth-flow', methods=['POST'])
+@app.route('/api/start-oauth-flow', methods=['GET', 'POST'])
 def start_oauth_flow():
     """Trigger OAuth flow and stream progress via SSE."""
     def generate():
