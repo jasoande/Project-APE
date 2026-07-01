@@ -124,6 +124,35 @@ class SourceManager:
             logger.error(f"[{self.client_id}] Error deleting old consolidated PDFs: {e}")
             return deleted_count
 
+    def has_consolidated_pdf(self, client_name: str) -> bool:
+        """
+        Check if notebook has a consolidated PDF source.
+
+        Args:
+            client_name: Client name to match in consolidated PDF filenames
+
+        Returns:
+            True if consolidated PDF exists in notebook
+        """
+        try:
+            sources = self.list_sources()
+
+            for source in sources:
+                title = source.get('title', '')
+
+                # Match pattern: {ClientName}-Consolidated-{timestamp}.pdf
+                if f"{client_name}-Consolidated-" in title and title.endswith('.pdf'):
+                    logger.info(f"[{self.client_id}] ✅ Found consolidated PDF in notebook: {title}")
+                    return True
+
+            logger.info(f"[{self.client_id}] 📄 No consolidated PDF found in notebook")
+            return False
+
+        except Exception as e:
+            logger.warning(f"[{self.client_id}] Error checking for consolidated PDF: {e}")
+            # On error, assume PDF is missing (safer to re-upload)
+            return False
+
     def add_drive_url_source(self, file_id: str, file_name: str, mime_type: str) -> bool:
         """
         Add a Google Drive file as a source by URL.

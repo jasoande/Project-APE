@@ -241,8 +241,16 @@ class ClientPipeline:
 
             needs_update, newest_file_time = self._check_consolidation_needed()
 
-            if needs_update:
-                logger.info(f"[{self.client_id}] 🔄 Files changed - consolidating to PDF...")
+            # Also check if consolidated PDF exists in notebook
+            # (may be missing if using existing notebook on new VM)
+            has_consolidated_pdf = self.source_manager.has_consolidated_pdf(self.client_name)
+
+            if needs_update or not has_consolidated_pdf:
+                if not has_consolidated_pdf:
+                    logger.info(f"[{self.client_id}] 📄 No consolidated PDF in notebook - creating...")
+                else:
+                    logger.info(f"[{self.client_id}] 🔄 Files changed - consolidating to PDF...")
+
                 self.update_status("Consolidating files to PDF...", 25)
 
                 # Delete old consolidated PDFs first
