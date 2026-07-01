@@ -921,7 +921,7 @@ class ClientPipeline:
                         # Step 1: Get AI response with --json (preserves formatting)
                         result = subprocess.run(
                             [
-                                "notebooklm", "ask",
+                                self.notebooklm_cmd, "ask",
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
                                 "--json"
@@ -941,7 +941,7 @@ class ClientPipeline:
                                 # Create note with the markdown content
                                 create_result = subprocess.run(
                                     [
-                                        "notebooklm", "note", "create",
+                                        self.notebooklm_cmd, "note", "create",
                                         "--content", note_content,
                                         "-t", note_title,
                                         "-n", self.notebook_id
@@ -1020,7 +1020,7 @@ class ClientPipeline:
 
             result = subprocess.run(
                 [
-                    "notebooklm", "generate", "mind-map",
+                    self.notebooklm_cmd, "generate", "mind-map",
                     "-n", self.notebook_id
                 ],
                 capture_output=True,

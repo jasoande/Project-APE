@@ -237,7 +237,7 @@ class SourceManager:
                         if mode == "deep":
                             # Build command
                             cmd = [
-                                "notebooklm", "source", "add-research",
+                                self.notebooklm_cmd, "source", "add-research",
                                 "--mode", "deep",  # Use actual deep mode
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
@@ -256,7 +256,7 @@ class SourceManager:
                         else:
                             # Fast mode: standard fast research
                             cmd = [
-                                "notebooklm", "source", "add-research",
+                                self.notebooklm_cmd, "source", "add-research",
                                 "--mode", "fast",
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
