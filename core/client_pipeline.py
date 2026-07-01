@@ -36,27 +36,6 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def get_notebooklm_path() -> str:
-    """
-    Get the path to notebooklm command.
-
-    Checks venv bin directory first, falls back to PATH.
-    This ensures subprocess calls work even when venv is not activated.
-    """
-    # Check if running in venv
-    venv_bin = Path(sys.prefix) / 'bin' / 'notebooklm'
-    if venv_bin.exists():
-        return str(venv_bin)
-
-    # Check common venv location
-    home_venv = Path.home() / '.project-ape-venv' / 'bin' / 'notebooklm'
-    if home_venv.exists():
-        return str(home_venv)
-
-    # Fall back to PATH
-    return 'notebooklm'
-
-
 class ClientPipeline:
     """Executes complete pipeline for a single client."""
 
@@ -100,7 +79,6 @@ class ClientPipeline:
 
         self.notebook_id = None
         self.project_root = Path(__file__).parent.parent
-        self.notebooklm_cmd = get_notebooklm_path()
 
         # Select timing configuration based on mode
         self.timings = config.DEEP_TIMINGS if mode == "deep" else config.TIMINGS
@@ -300,14 +278,6 @@ class ClientPipeline:
             # Fast mode deduplicates once at the end (below)
             self._run_ask_prompts()
             self.update_status("Research complete", 60)
-
-            # Step 4.5: CRITICAL - Wait for all sources to finish importing
-            # NotebookLM processes source imports asynchronously
-            # Must verify sources are ready before deduplication or chat
-            logger.info(f"[{self.client_id}] Waiting for source imports to complete...")
-            if not self._wait_for_sources_ready():
-                logger.warning(f"[{self.client_id}] Source import verification timed out")
-            self.update_status("Sources ready", 62)
 
             # Step 5: Deduplicate Sources (Fast mode only - deep mode already did it)
             if self.mode == "fast":
@@ -518,12 +488,19 @@ class ClientPipeline:
             logger.info(f"[{client_id}] Subsegments: {manual_subsegments}")
             return manual_industry, manual_subsegments
 
-        # If either industry or subsegments missing, require both in vars.py
-        # AI auto-detection is not supported - must configure manually
-        raise ValueError(
-            f"Client {client_id}: Missing industry/subsegments configuration. "
-            f"Please add both '{client_id}_industry' and '{client_id}_subsegments' to vars.py"
-        )
+        # Use Claude AI auto-detection
+        logger.info(f"[{client_id}] Using Claude AI for automatic industry detection")
+
+        # Import Claude industry detector
+        from core.claude_industry_detector import ClaudeIndustryDetector
+
+        # Check for API keys
+        if not os.getenv('ANTHROPIC_API_KEY') and not os.getenv('GEMINI_API_KEY'):
+            raise ValueError(
+                f"Client {client_id}: No industry/subsegments in vars.py "
+                "and no AI API keys (ANTHROPIC_API_KEY or GEMINI_API_KEY) found. "
+                "Please add an API key to your .env file or provide manual config in vars.py."
+            )
 
         # Initialize Claude detector (falls back to Gemini if Anthropic unavailable)
         detector = ClaudeIndustryDetector(config)
@@ -710,67 +687,6 @@ class ClientPipeline:
         except Exception as e:
             logger.error(f"[{self.client_id}] PDF upload failed: {e}")
 
-    def _wait_for_sources_ready(self, timeout: int = 120, check_interval: int = 5) -> bool:
-        """
-        Wait for all research sources to finish importing and become queryable.
-
-        Verifies that:
-        1. Source count matches expected (based on research results)
-        2. Sources are actually indexed and searchable
-        3. No sources are in "pending" or "processing" state
-
-        Args:
-            timeout: Maximum seconds to wait
-            check_interval: Seconds between checks
-
-        Returns:
-            True if sources are ready, False if timeout
-        """
-        import subprocess
-        import json
-
-        start_time = time.time()
-        last_count = 0
-        stable_checks = 0
-        required_stable_checks = 3  # Need 3 consecutive checks with same count
-
-        while (time.time() - start_time) < timeout:
-            try:
-                # Get current source count
-                result = subprocess.run(
-                    [self.notebooklm_cmd, "source", "list", "-n", self.notebook_id, "--json"],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-
-                if result.returncode == 0:
-                    data = json.loads(result.stdout)
-                    sources = data.get('sources', [])
-                    current_count = len(sources)
-
-                    # Check if count has stabilized
-                    if current_count == last_count and current_count > 0:
-                        stable_checks += 1
-                        logger.debug(f"[{self.client_id}] Source count stable: {current_count} (check {stable_checks}/{required_stable_checks})")
-
-                        if stable_checks >= required_stable_checks:
-                            logger.info(f"[{self.client_id}] ✅ All {current_count} sources ready")
-                            return True
-                    else:
-                        stable_checks = 0
-                        logger.debug(f"[{self.client_id}] Source count changed: {last_count} → {current_count}")
-
-                    last_count = current_count
-
-            except Exception as e:
-                logger.debug(f"[{self.client_id}] Source check error: {e}")
-
-            time.sleep(check_interval)
-
-        logger.warning(f"[{self.client_id}] Source verification timeout after {timeout}s")
-        return False
-
     def _run_ask_prompts(self):
         """Run research (ask) prompts sequentially."""
         ask_prompts = sorted(self.project_root.glob("ask_*.txt"))
@@ -809,10 +725,10 @@ class ClientPipeline:
                     if result["success"]:
                         logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
                     else:
-                        # Log error but continue with remaining prompts (graceful degradation)
+                        # Critical failure: research failed after retries
                         error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
                         logger.error(f"[{self.client_id}] ❌ {error_msg}")
-                        logger.warning(f"[{self.client_id}] Continuing with remaining research prompts...")
+                        raise RuntimeError(error_msg)
 
                     # Deduplicate after EACH research prompt (deep mode only)
                     logger.info(f"[{self.client_id}] Deduplicating sources (after prompt {idx})...")
@@ -851,10 +767,10 @@ class ClientPipeline:
                     if result["success"]:
                         logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
                     else:
-                        # Log error but continue with remaining prompts (graceful degradation)
+                        # Critical failure: research failed after retries
                         error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
                         logger.error(f"[{self.client_id}] ❌ {error_msg}")
-                        logger.warning(f"[{self.client_id}] Continuing with remaining research prompts...")
+                        raise RuntimeError(error_msg)
 
                 except Exception as e:
                     logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")
@@ -921,7 +837,7 @@ class ClientPipeline:
                         # Step 1: Get AI response with --json (preserves formatting)
                         result = subprocess.run(
                             [
-                                self.notebooklm_cmd, "ask",
+                                "notebooklm", "ask",
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
                                 "--json"
@@ -941,7 +857,7 @@ class ClientPipeline:
                                 # Create note with the markdown content
                                 create_result = subprocess.run(
                                     [
-                                        self.notebooklm_cmd, "note", "create",
+                                        "notebooklm", "note", "create",
                                         "--content", note_content,
                                         "-t", note_title,
                                         "-n", self.notebook_id
@@ -1020,7 +936,7 @@ class ClientPipeline:
 
             result = subprocess.run(
                 [
-                    self.notebooklm_cmd, "generate", "mind-map",
+                    "notebooklm", "generate", "mind-map",
                     "-n", self.notebook_id
                 ],
                 capture_output=True,
@@ -1055,7 +971,7 @@ class ClientPipeline:
 
             # Get notebook sources
             result = subprocess.run(
-                [self.notebooklm_cmd, "source", "list", "-n", self.notebook_id, "--json"],
+                ["notebooklm", "source", "list", "-n", self.notebook_id, "--json"],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -1088,7 +1004,7 @@ class ClientPipeline:
 
             # Get notebook notes
             result = subprocess.run(
-                [self.notebooklm_cmd, "note", "list", "-n", self.notebook_id, "--json"],
+                ["notebooklm", "note", "list", "-n", self.notebook_id, "--json"],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -1107,7 +1023,7 @@ class ClientPipeline:
             # 5. Has mindmap (0-1 point)
             # Check if mindmap exists
             result = subprocess.run(
-                [self.notebooklm_cmd, "artifact", "list", "-n", self.notebook_id],
+                ["notebooklm", "artifact", "list", "-n", self.notebook_id],
                 capture_output=True,
                 text=True,
                 timeout=30

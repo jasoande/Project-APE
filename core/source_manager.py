@@ -9,33 +9,11 @@ import subprocess
 import logging
 import json
 import re
-import sys
 from typing import List, Set, Dict, Optional
 from pathlib import Path
 import time
 
 logger = logging.getLogger(__name__)
-
-
-def get_notebooklm_path() -> str:
-    """
-    Get the path to notebooklm command.
-
-    Checks venv bin directory first, falls back to PATH.
-    This ensures subprocess calls work even when venv is not activated.
-    """
-    # Check if running in venv
-    venv_bin = Path(sys.prefix) / 'bin' / 'notebooklm'
-    if venv_bin.exists():
-        return str(venv_bin)
-
-    # Check common venv location
-    home_venv = Path.home() / '.project-ape-venv' / 'bin' / 'notebooklm'
-    if home_venv.exists():
-        return str(home_venv)
-
-    # Fall back to PATH
-    return 'notebooklm'
 
 
 class SourceManager:
@@ -51,7 +29,6 @@ class SourceManager:
         """
         self.client_id = client_id
         self.notebook_id = notebook_id
-        self.notebooklm_cmd = get_notebooklm_path()
 
     def add_file_source(self, file_path: Path) -> bool:
         """
@@ -67,7 +44,7 @@ class SourceManager:
             logger.info(f"[{self.client_id}] Adding source: {file_path.name}")
 
             result = subprocess.run(
-                [self.notebooklm_cmd, "source", "add", str(file_path), "-n", self.notebook_id],
+                ["notebooklm", "source", "add", str(file_path), "-n", self.notebook_id],
                 capture_output=True,
                 text=True,
                 timeout=60
@@ -98,7 +75,7 @@ class SourceManager:
             logger.info(f"[{self.client_id}] Deleting source: {source_id}")
 
             result = subprocess.run(
-                [self.notebooklm_cmd, "source", "delete", source_id, "-n", self.notebook_id, "--yes"],
+                ["notebooklm", "source", "delete", source_id, "-n", self.notebook_id, "--yes"],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -166,7 +143,7 @@ class SourceManager:
             logger.info(f"[{self.client_id}] Adding Drive source: {file_name}")
 
             result = subprocess.run(
-                [self.notebooklm_cmd, "source", "add", drive_url, "--type", "url",
+                ["notebooklm", "source", "add", drive_url, "--type", "url",
                  "--title", file_name, "-n", self.notebook_id],
                 capture_output=True,
                 text=True,
@@ -235,14 +212,17 @@ class SourceManager:
                     try:
                         # Deep mode uses --mode deep with retry logic
                         if mode == "deep":
-                            # Build command
+                            # Build command - only import sources on first attempt to avoid duplicates
                             cmd = [
-                                self.notebooklm_cmd, "source", "add-research",
+                                "notebooklm", "source", "add-research",
                                 "--mode", "deep",  # Use actual deep mode
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
-                                "--import-all",  # Always import sources
                             ]
+
+                            # Only import sources on FIRST attempt to prevent duplicate imports on retry
+                            if attempt == 0:
+                                cmd.append("--import-all")
 
                             cmd.append("--timeout")
                             cmd.append("1200")  # 20 minutes for deep mode
@@ -256,12 +236,15 @@ class SourceManager:
                         else:
                             # Fast mode: standard fast research
                             cmd = [
-                                self.notebooklm_cmd, "source", "add-research",
+                                "notebooklm", "source", "add-research",
                                 "--mode", "fast",
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
-                                "--import-all",  # Always import sources
                             ]
+
+                            # Only import sources on FIRST attempt to prevent duplicate imports on retry
+                            if attempt == 0:
+                                cmd.append("--import-all")
 
                             cmd.append("--timeout")
                             cmd.append("600")
@@ -405,7 +388,7 @@ class SourceManager:
         """
         try:
             result = subprocess.run(
-                [self.notebooklm_cmd, "source", "list", "-n", self.notebook_id, "--json"],
+                ["notebooklm", "source", "list", "-n", self.notebook_id, "--json"],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -512,7 +495,7 @@ class SourceManager:
         """Delete a single source."""
         try:
             result = subprocess.run(
-                [self.notebooklm_cmd, "source", "delete", source_id, "-n", self.notebook_id, "-y"],
+                ["notebooklm", "source", "delete", source_id, "-n", self.notebook_id, "-y"],
                 capture_output=True,
                 text=True,
                 timeout=30

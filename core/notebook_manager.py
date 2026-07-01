@@ -9,32 +9,10 @@ import subprocess
 import logging
 import json
 import re
-import sys
 from typing import Optional, List, Dict
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-
-
-def get_notebooklm_path() -> str:
-    """
-    Get the path to notebooklm command.
-
-    Checks venv bin directory first, falls back to PATH.
-    This ensures subprocess calls work even when venv is not activated.
-    """
-    # Check if running in venv
-    venv_bin = Path(sys.prefix) / 'bin' / 'notebooklm'
-    if venv_bin.exists():
-        return str(venv_bin)
-
-    # Check common venv location
-    home_venv = Path.home() / '.project-ape-venv' / 'bin' / 'notebooklm'
-    if home_venv.exists():
-        return str(home_venv)
-
-    # Fall back to PATH
-    return 'notebooklm'
 
 
 class NotebookManager:
@@ -48,7 +26,6 @@ class NotebookManager:
             client_id: Client identifier
         """
         self.client_id = client_id
-        self.notebooklm_cmd = get_notebooklm_path()
 
     def find_notebook_by_name(self, name: str) -> Optional[str]:
         """
@@ -64,7 +41,7 @@ class NotebookManager:
             logger.info(f"[{self.client_id}] Checking for existing notebook: {name}")
 
             result = subprocess.run(
-                [self.notebooklm_cmd, "list", "--json"],
+                ["notebooklm", "list", "--json"],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -133,7 +110,7 @@ class NotebookManager:
             logger.info(f"[{self.client_id}] Creating new notebook: {name}")
 
             result = subprocess.run(
-                [self.notebooklm_cmd, "create", name],
+                ["notebooklm", "create", name],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -211,7 +188,7 @@ class NotebookManager:
         """
         try:
             result = subprocess.run(
-                [self.notebooklm_cmd, "use", notebook_id],
+                ["notebooklm", "use", notebook_id],
                 capture_output=True,
                 text=True,
                 timeout=10
