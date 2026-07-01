@@ -1,0 +1,63 @@
+09:57:47 | INFO | 📋 Configuration:
+09:57:47 | INFO |    Mode: FAST
+09:57:47 | INFO |    Clients: 6
+09:57:47 | INFO |    Dashboard: Enabled
+09:57:47 | INFO | 
+🧹 Cleaning up old status files...
+09:57:47 | INFO | 
+🆔 Run ID: 1781531867
+09:57:47 | INFO | 
+📝 Initializing status files...
+09:57:47 | INFO |    ✅ Initialized: Merck & Co., Inc.
+09:57:47 | INFO |    ✅ Initialized: Blue Yonder
+09:57:47 | INFO |    ✅ Initialized: Panasonic Avionics Corporation
+09:57:47 | INFO |    ✅ Initialized: The Hershey Company
+09:57:47 | INFO |    ✅ Initialized: Lord Abbett & Co.
+09:57:47 | INFO |    ✅ Initialized: Organon & Co.
+09:57:47 | INFO | 
+📊 Starting dashboard server...
+09:57:50 | INFO |    URL: http://localhost:8765
+09:57:50 | INFO |    ✅ Dashboard opened in browser
+09:57:50 | INFO | 
+🚀 Launching client processes...
+09:57:50 | INFO | 
+🚀 Starting: Merck & Co., Inc.
+09:57:50 | INFO |    Mode: FAST
+09:57:50 | INFO |    Log: merck.log
+09:57:52 | INFO | 
+🚀 Starting: Blue Yonder
+09:57:52 | INFO |    Mode: FAST
+09:57:52 | INFO |    Log: blue_yonder.log
+09:57:54 | INFO | 
+🚀 Starting: Panasonic Avionics Corporation
+09:57:54 | INFO |    Mode: FAST
+09:57:54 | INFO |    Log: panasonic_avionics.log
+09:57:56 | INFO | 
+🚀 Starting: The Hershey Company
+09:57:56 | INFO |    Mode: FAST
+09:57:56 | INFO |    Log: hershey.log
+09:57:58 | INFO | 
+🚀 Starting: Lord Abbett & Co.
+09:57:58 | INFO |    Mode: FAST
+09:57:58 | INFO |    Log: lord_abbett.log
+09:58:00 | INFO | 
+🚀 Starting: Organon & Co.
+09:58:00 | INFO |    Mode: FAST
+09:58:00 | INFO |    Log: organon.log
+09:58:02 | INFO | 
+============================================================
+09:58:02 | INFO | ⏳ Monitoring client processes...
+09:58:02 | INFO | ============================================================
+10:19:48 | INFO | 
+============================================================
+10:19:48 | INFO | 🏁 PIPELINE COMPLETE
+10:19:48 | INFO | ============================================================
+10:19:48 | INFO |    Total Clients: 6
+10:19:48 | INFO |    ✅ Successful: 6
+10:19:48 | INFO |    ❌ Failed: 0
+10:19:48 | INFO |    ⏱️  Duration: 22.0 minutes
+10:19:48 | INFO | ============================================================
+10:19:48 | INFO | 
+📊 Dashboard: http://localhost:8765
+10:19:48 | INFO |    Dashboard will remain running for review
+10:19:48 | INFO |    Press Ctrl+C to stop

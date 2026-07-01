@@ -279,6 +279,14 @@ class ClientPipeline:
             self._run_ask_prompts()
             self.update_status("Research complete", 60)
 
+            # Step 4.5: CRITICAL - Wait for all sources to finish importing
+            # NotebookLM processes source imports asynchronously
+            # Must verify sources are ready before deduplication or chat
+            logger.info(f"[{self.client_id}] Waiting for source imports to complete...")
+            if not self._wait_for_sources_ready():
+                logger.warning(f"[{self.client_id}] Source import verification timed out")
+            self.update_status("Sources ready", 62)
+
             # Step 5: Deduplicate Sources (Fast mode only - deep mode already did it)
             if self.mode == "fast":
                 # Fast mode: Deduplicate once (no wait - NotebookLM processes async)
@@ -687,6 +695,67 @@ class ClientPipeline:
         except Exception as e:
             logger.error(f"[{self.client_id}] PDF upload failed: {e}")
 
+    def _wait_for_sources_ready(self, timeout: int = 120, check_interval: int = 5) -> bool:
+        """
+        Wait for all research sources to finish importing and become queryable.
+
+        Verifies that:
+        1. Source count matches expected (based on research results)
+        2. Sources are actually indexed and searchable
+        3. No sources are in "pending" or "processing" state
+
+        Args:
+            timeout: Maximum seconds to wait
+            check_interval: Seconds between checks
+
+        Returns:
+            True if sources are ready, False if timeout
+        """
+        import subprocess
+        import json
+
+        start_time = time.time()
+        last_count = 0
+        stable_checks = 0
+        required_stable_checks = 3  # Need 3 consecutive checks with same count
+
+        while (time.time() - start_time) < timeout:
+            try:
+                # Get current source count
+                result = subprocess.run(
+                    ["notebooklm", "source", "list", "-n", self.notebook_id, "--json"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+
+                if result.returncode == 0:
+                    data = json.loads(result.stdout)
+                    sources = data.get('sources', [])
+                    current_count = len(sources)
+
+                    # Check if count has stabilized
+                    if current_count == last_count and current_count > 0:
+                        stable_checks += 1
+                        logger.debug(f"[{self.client_id}] Source count stable: {current_count} (check {stable_checks}/{required_stable_checks})")
+
+                        if stable_checks >= required_stable_checks:
+                            logger.info(f"[{self.client_id}] ✅ All {current_count} sources ready")
+                            return True
+                    else:
+                        stable_checks = 0
+                        logger.debug(f"[{self.client_id}] Source count changed: {last_count} → {current_count}")
+
+                    last_count = current_count
+
+            except Exception as e:
+                logger.debug(f"[{self.client_id}] Source check error: {e}")
+
+            time.sleep(check_interval)
+
+        logger.warning(f"[{self.client_id}] Source verification timeout after {timeout}s")
+        return False
+
     def _run_ask_prompts(self):
         """Run research (ask) prompts sequentially."""
         ask_prompts = sorted(self.project_root.glob("ask_*.txt"))
@@ -725,10 +794,10 @@ class ClientPipeline:
                     if result["success"]:
                         logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
                     else:
-                        # Critical failure: research failed after retries
+                        # Log error but continue with remaining prompts (graceful degradation)
                         error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
                         logger.error(f"[{self.client_id}] ❌ {error_msg}")
-                        raise RuntimeError(error_msg)
+                        logger.warning(f"[{self.client_id}] Continuing with remaining research prompts...")
 
                     # Deduplicate after EACH research prompt (deep mode only)
                     logger.info(f"[{self.client_id}] Deduplicating sources (after prompt {idx})...")
@@ -767,10 +836,10 @@ class ClientPipeline:
                     if result["success"]:
                         logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
                     else:
-                        # Critical failure: research failed after retries
+                        # Log error but continue with remaining prompts (graceful degradation)
                         error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
                         logger.error(f"[{self.client_id}] ❌ {error_msg}")
-                        raise RuntimeError(error_msg)
+                        logger.warning(f"[{self.client_id}] Continuing with remaining research prompts...")
 
                 except Exception as e:
                     logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")

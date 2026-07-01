@@ -212,17 +212,14 @@ class SourceManager:
                     try:
                         # Deep mode uses --mode deep with retry logic
                         if mode == "deep":
-                            # Build command - only import sources on first attempt to avoid duplicates
+                            # Build command
                             cmd = [
                                 "notebooklm", "source", "add-research",
                                 "--mode", "deep",  # Use actual deep mode
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
+                                "--import-all",  # Always import sources
                             ]
-
-                            # Only import sources on FIRST attempt to prevent duplicate imports on retry
-                            if attempt == 0:
-                                cmd.append("--import-all")
 
                             cmd.append("--timeout")
                             cmd.append("1200")  # 20 minutes for deep mode
@@ -240,11 +237,8 @@ class SourceManager:
                                 "--mode", "fast",
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
+                                "--import-all",  # Always import sources
                             ]
-
-                            # Only import sources on FIRST attempt to prevent duplicate imports on retry
-                            if attempt == 0:
-                                cmd.append("--import-all")
 
                             cmd.append("--timeout")
                             cmd.append("600")
