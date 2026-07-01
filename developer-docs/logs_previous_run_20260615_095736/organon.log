@@ -1,0 +1,58 @@
+09:15:48 | INFO | [organon] ========================================
+09:15:48 | INFO | [organon] Starting pipeline for Organon & Co.
+09:15:48 | INFO | [organon] Mode: FAST
+09:15:48 | INFO | [organon] ========================================
+09:15:48 | INFO | [organon] ⏱️  Anti-collision delay: 4.6s
+09:15:52 | INFO | [organon] Checking authentication status...
+09:15:53 | INFO | [organon] ✅ Already authenticated
+09:15:53 | INFO | [organon] Generated notebook name: DEV_Organon-TEST
+09:15:53 | INFO | [organon] Checking for existing notebook: DEV_Organon-TEST
+09:15:54 | INFO | [organon] No existing notebook found
+09:15:54 | INFO | [organon] Checking for existing notebook: DEV_Organon-TEST
+09:15:55 | INFO | [organon] No existing notebook found
+09:15:55 | INFO | [organon] Creating new notebook: DEV_Organon-TEST
+09:15:56 | INFO | [organon] ✅ Created notebook: a3eef9c8-eb9d-40fe-ad72-11bc6abf63d0
+09:15:57 | INFO | [organon] Set notebook context: a3eef9c8-eb9d-40fe-ad72-11bc6abf63d0
+09:15:57 | INFO | [organon] Consolidating all files to PDF...
+09:15:57 | INFO | [organon] Fast parallel PDF consolidation starting...
+09:15:57 | INFO | [organon] Found: 0 text, 0 images, 1 office, 1 PDFs
+09:15:57 | INFO | [organon] Converting 1 files in parallel...
+09:15:59 | INFO | [organon] Converted 1 files, merging...
+09:15:59 | INFO | [organon] ✅ Created: Organon & Co.-One.pdf
+09:15:59 | INFO | [organon] ✅ Consolidated PDF: Organon & Co.-One.pdf
+09:15:59 | INFO | [organon] Uploading consolidated PDF...
+09:15:59 | INFO | [organon] Adding source: Organon & Co.-One.pdf
+09:16:01 | INFO | [organon] ✅ Added source: Organon & Co.-One.pdf
+09:16:01 | INFO | [organon] Running 2 research prompts...
+09:16:03 | INFO | [organon] Research prompt: ask_prompt_01.txt
+09:16:03 | INFO | [organon] Running research: ask_prompt_01.txt (fast mode)
+09:16:41 | INFO | [organon] ✅ Research complete, imported 10 sources
+09:16:41 | INFO | [organon] ✅ Imported 10 sources
+09:16:57 | INFO | [organon] Research prompt: ask_prompt_02.txt
+09:16:57 | INFO | [organon] Running research: ask_prompt_02.txt (fast mode)
+09:17:32 | INFO | [organon] ✅ Research complete, imported 10 sources
+09:17:32 | INFO | [organon] ✅ Imported 10 sources
+09:17:41 | INFO | [organon] Waiting for source imports to complete...
+09:17:51 | INFO | [organon] Deduplicating sources...
+09:17:51 | INFO | [organon] Deduplicating sources...
+09:17:52 | INFO | [organon] ✅ Removed 0 duplicate sources
+09:17:52 | INFO | [organon] ✅ Removed 0 duplicates
+09:17:52 | INFO | [organon] Running 6 chat prompts...
+09:17:52 | INFO | [organon] ⏱️  Chat 01 anti-collision jitter: 6.3s
+09:17:58 | INFO | [organon] Chat prompt: chat_prompt_consolidated_01.txt
+09:19:18 | INFO | [organon] ✅ Created note: chat_prompt_consolidated_01
+09:19:23 | INFO | [organon] Chat prompt: chat_prompt_consolidated_02.txt
+09:20:30 | INFO | [organon] ✅ Created note: chat_prompt_consolidated_02
+09:20:34 | INFO | [organon] Chat prompt: chat_prompt_consolidated_03.txt
+09:22:13 | INFO | [organon] ✅ Created note: chat_prompt_consolidated_03
+09:22:18 | INFO | [organon] Chat prompt: chat_prompt_consolidated_04.txt
+09:23:30 | INFO | [organon] ✅ Created note: chat_prompt_consolidated_04
+09:23:34 | INFO | [organon] Chat prompt: chat_prompt_consolidated_05.txt
+09:24:51 | INFO | [organon] ✅ Created note: chat_prompt_consolidated_05
+09:24:55 | INFO | [organon] Chat prompt: chat_prompt_consolidated_06.txt
+09:26:34 | INFO | [organon] ✅ Created note: chat_prompt_consolidated_06
+09:26:37 | INFO | [organon] Generating mind map...
+09:26:43 | INFO | [organon] ✅ Mind map generated
+09:26:45 | INFO | [organon] Quality score breakdown: 8.0/10
+09:26:45 | INFO | [organon] ✅ Pipeline completed successfully!
+09:26:45 | INFO | [organon] 📊 Quality Score: 8.0/10
