@@ -736,12 +736,21 @@ def start_workflow():
                 # Execute in project root directory as background process
                 # Don't use subprocess.run() - it blocks and waits for completion
                 # Use Popen() so main.py can spawn its own client processes
+
+                # CRITICAL: Add venv bin to PATH so spawned process can find notebooklm
+                venv_bin = Path.home() / '.project-ape-venv' / 'bin'
+                env = os.environ.copy()
+                if venv_bin.exists():
+                    env['PATH'] = f"{venv_bin}:{env.get('PATH', '')}"
+                    print(f"[WORKFLOW] Added venv to PATH: {venv_bin}", file=sys.stderr)
+
                 process = subprocess.Popen(
                     cmd,
                     cwd=PROJECT_ROOT,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    text=True
+                    text=True,
+                    env=env  # Pass modified environment with venv in PATH
                 )
 
                 print(f"[WORKFLOW] Workflow process started (PID: {process.pid})", file=sys.stderr)
@@ -1064,8 +1073,17 @@ def notebooklm_logout():
     import subprocess
 
     try:
+        # Use full path to notebooklm in virtual environment
+        venv_notebooklm = Path.home() / '.project-ape-venv' / 'bin' / 'notebooklm'
+
+        if venv_notebooklm.exists():
+            notebooklm_cmd = str(venv_notebooklm)
+        else:
+            # Fallback to PATH (if venv is activated)
+            notebooklm_cmd = 'notebooklm'
+
         result = subprocess.run(
-            ['notebooklm', 'auth', 'logout'],
+            [notebooklm_cmd, 'auth', 'logout'],
             capture_output=True,
             text=True,
             timeout=10
