@@ -1889,7 +1889,7 @@ def run_server(port=8765, debug=False):
 
 
 if __name__ == "__main__":
-    # Create directories if needed
-    STATUS_DIR.mkdir(exist_ok=True)
-    LOGS_DIR.mkdir(exist_ok=True)
+    # Create directories if needed (including parent directories)
+    STATUS_DIR.mkdir(parents=True, exist_ok=True)
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
     run_server()
