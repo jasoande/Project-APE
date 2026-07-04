@@ -62,17 +62,44 @@ except ImportError as e:
     workflow_detector = None
 
 # Load configuration to get proper paths (for container compatibility)
+# Default paths relative to project root
+DEFAULT_STATUS_DIR = SCRIPT_DIR.parent / ".multi_process_status"
+DEFAULT_LOGS_DIR = SCRIPT_DIR.parent / "logs"
+
 try:
     config_path = SCRIPT_DIR.parent / "vars.py"
-    spec = importlib.util.spec_from_file_location("config", config_path)
-    config = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(config)
-    STATUS_DIR = getattr(config, 'STATUS_DIR', SCRIPT_DIR.parent / ".multi_process_status")
-    LOGS_DIR = getattr(config, 'LOGS_DIR', SCRIPT_DIR.parent / "logs")
-except Exception:
+    if config_path.exists():
+        spec = importlib.util.spec_from_file_location("config", config_path)
+        config = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config)
+        STATUS_DIR = getattr(config, 'STATUS_DIR', DEFAULT_STATUS_DIR)
+        LOGS_DIR = getattr(config, 'LOGS_DIR', DEFAULT_LOGS_DIR)
+
+        # Validate that configured paths are under project root or user's home
+        # This prevents issues when vars.py has test-specific paths
+        project_root = SCRIPT_DIR.parent
+        home = Path.home()
+
+        # If STATUS_DIR is absolute and not under home or project, use default
+        if STATUS_DIR.is_absolute():
+            if not (str(STATUS_DIR).startswith(str(home)) or str(STATUS_DIR).startswith(str(project_root))):
+                print(f"⚠️  Warning: STATUS_DIR '{STATUS_DIR}' is outside project/home, using default", file=sys.stderr)
+                STATUS_DIR = DEFAULT_STATUS_DIR
+
+        # Same validation for LOGS_DIR
+        if LOGS_DIR.is_absolute():
+            if not (str(LOGS_DIR).startswith(str(home)) or str(LOGS_DIR).startswith(str(project_root))):
+                print(f"⚠️  Warning: LOGS_DIR '{LOGS_DIR}' is outside project/home, using default", file=sys.stderr)
+                LOGS_DIR = DEFAULT_LOGS_DIR
+    else:
+        # No vars.py file, use defaults
+        STATUS_DIR = DEFAULT_STATUS_DIR
+        LOGS_DIR = DEFAULT_LOGS_DIR
+except Exception as e:
     # Fallback to default paths if config loading fails
-    STATUS_DIR = SCRIPT_DIR.parent / ".multi_process_status"
-    LOGS_DIR = SCRIPT_DIR.parent / "logs"
+    print(f"⚠️  Warning: Failed to load vars.py: {e}, using defaults", file=sys.stderr)
+    STATUS_DIR = DEFAULT_STATUS_DIR
+    LOGS_DIR = DEFAULT_LOGS_DIR
 
 app = Flask(__name__,
             template_folder=str(SCRIPT_DIR / 'templates'),

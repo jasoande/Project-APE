@@ -1,0 +1,92 @@
+"""
+Project APE Configuration - Example Template
+=============================================
+Copy this file to vars.py and customize for your environment.
+
+IMPORTANT: vars.py is git-ignored and will NOT be committed to the repository.
+This keeps your client data, API keys, and paths private.
+"""
+from pathlib import Path
+
+# ============================================================================
+# PATHS - Leave as defaults or customize for your environment
+# ============================================================================
+# These paths are relative to the Project-APE directory
+# The dashboard server will create these directories automatically
+
+STATUS_DIR = Path(__file__).parent / ".multi_process_status"
+LOGS_DIR = Path(__file__).parent / "logs"
+DASHBOARD_PORT = 8765
+
+# ============================================================================
+# CLIENT CONFIGURATION
+# ============================================================================
+# List your client IDs (lowercase, underscores, used for folder/file names)
+clients = ["example_client"]
+
+# Mode: "fast" (10-12 min) or "deep" (30-35 min)
+MODE = "fast"
+
+# ============================================================================
+# TIMING CONFIGURATION
+# ============================================================================
+# Fast mode timing (optimized for speed, ~5% retry rate)
+TIMINGS = {
+    'ask_prompt_delay': (8.0, 12.0),       # Delay between research queries
+    'chat_prompt_delay': (5.0, 8.0),       # Delay between analysis prompts
+    'source_processing_wait': 30,           # Wait for PDF processing
+    'initial_offset': (0, 30),              # Anti-thundering-herd offset
+}
+
+# Deep mode timing (conservative, ~30% retry rate acceptable for max coverage)
+DEEP_TIMINGS = {
+    'ask_prompt_delay': (15.0, 25.0),
+    'chat_prompt_delay': (10.0, 15.0),
+    'source_processing_wait': 45,
+    'initial_offset': (0, 45),
+}
+
+# ============================================================================
+# RETRY CONFIGURATION
+# ============================================================================
+RETRY_CONFIG = {
+    'max_attempts': 5,
+    'base_delay': 10,
+    'ask_max_attempts': 7,          # Research queries are quota-sensitive
+    'ask_base_delay': 30,
+}
+
+# ============================================================================
+# PERSONA - Your role/perspective for AI analysis
+# ============================================================================
+# This is substituted into chat prompts as $persona
+persona = "enterprise technology consultant"
+
+# ============================================================================
+# GOOGLE DRIVE CONFIGURATION (Optional)
+# ============================================================================
+# If using Google Drive for client data
+DRIVE_CONFIG = {
+    'cache_enabled': True,
+    'cache_ttl_hours': 24,
+}
+
+# ============================================================================
+# CLIENT DETAILS - One section per client
+# ============================================================================
+# For each client in the 'clients' list above, define:
+#   {client_id}_name        - Display name
+#   {client_id}_folder      - Local path or drive://FOLDER_ID
+#   {client_id}_industry    - Industry category
+#   {client_id}_subsegments - Comma-separated focus areas
+
+# Example client configuration:
+example_client_name = "Example Corporation"
+example_client_folder = "./client_data/example_client"  # or drive://FOLDER_ID
+example_client_industry = "technology"
+example_client_subsegments = "cloud computing, AI/ML, enterprise software"
+
+# ============================================================================
+# ADDITIONAL CLIENTS - Add your actual clients below
+# ============================================================================
+# Copy the example pattern above for each client in your 'clients' list
