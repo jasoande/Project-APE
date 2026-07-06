@@ -1,3 +1,0 @@
-file 'scene1_voiceover.mp3'
-file 'scene2_voiceover.mp3'
-file 'scene3_voiceover.mp3'
