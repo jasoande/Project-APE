@@ -90,6 +90,10 @@ tsconfig.json
 
 # Build logs (from container builds)
 build-logs/
+developer-docs/
+logs/
+logs_previous_run_*/
+media/
 
 # Temporary test/deployment scripts
 *-vm-*.sh
