@@ -1,4 +1,12 @@
-# CLAUDE.md
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="200"/>
+  
+  # CLAUDE.md
+  
+  **Developer Guidance for Claude Code**
+</div>
+
+---
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -6,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Project APE (Account Planning Engine)** - AI-powered enterprise account planning automation using Google's NotebookLM platform.
 
-- **Current Version:** 3.0.4
+- **Current Version:** 4.0.1
 - **Architecture:** Containerized Python application with multi-process orchestration
 - **Primary Use:** Automated account research, industry analysis, and intelligence generation for enterprise sales teams
 - **Deployment:** Podman containers (linux/amd64, linux/arm64), registry: quay.io/jasoande/project_ape/project-ape

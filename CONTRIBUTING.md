@@ -1,8 +1,14 @@
-# Contributing to Project APE
-
-Thank you for your interest in contributing! This guide will help you get started.
+<div align="center">
+  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="200"/>
+  
+  # Contributing to Project APE
+  
+  **Developer Contribution Guidelines**
+</div>
 
 ---
+
+Thank you for your interest in contributing! This guide will help you get started.
 
 ## Quick Start for Contributors
 

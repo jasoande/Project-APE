@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE Logo" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
   
   # Architecture Documentation
   **Project APE - Account Planning Engine**
