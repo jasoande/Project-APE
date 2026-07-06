@@ -23,12 +23,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Running the Application
 
-**Container execution (standard workflow):**
+**GUI launcher (recommended - zero terminal):**
 ```bash
-# Fast mode (10-12 minutes)
+# macOS: Double-click launch-project-ape.command
+# Windows/Linux: Double-click launch-project-ape.py
+# Or run manually:
+python3 launch-project-ape.py
+
+# Opens browser to http://localhost:8765/configure
+# Configure clients via web UI, then launch workflows
+```
+
+**Container execution (alternative workflow):**
+```bash
+# Fast mode (15-20 minutes)
 ./ape-run.sh --vars ./vars.py --clients yourclient --mode fast
 
-# Deep mode (30-35 minutes, 8-9x more sources)
+# Deep mode (45-60 minutes, 8-9x more sources)
 ./ape-run.sh --vars ./vars.py --clients yourclient --mode deep
 
 # Multiple clients in parallel
@@ -56,15 +67,32 @@ podman stop $(podman ps -aq --filter ancestor=project-ape)
 
 ### Authentication Setup
 
+**Via Web UI (recommended):**
 ```bash
-# Initial NotebookLM authentication (requires Chrome)
+# 1. Launch GUI
+python3 launch-project-ape.py
+
+# 2. Browser opens to http://localhost:8765/configure
+# 3. Follow 3-step setup wizard:
+#    - Click "Authenticate NotebookLM" button (OAuth flow)
+#    - Click "Setup Drive OAuth" button (upload credentials.json, generate token)
+#    - Environment validation (automatic)
+```
+
+**Via Terminal (alternative):**
+```bash
+# NotebookLM authentication (requires Chrome)
 notebooklm login
 
-# Setup container credentials volume
+# Google Drive OAuth setup
+python3 setup-oauth-drive.py
+
+# Setup container credentials volume (for container deployments)
 ./setup-credentials.sh
 
 # Copy credentials from another machine
 scp ~/.notebooklm/credentials.json user@remote:~/.notebooklm/
+scp credentials/token_drive.json user@remote:~/Project-APE-dev/credentials/
 ```
 
 ### Monitoring and Debugging
@@ -110,10 +138,41 @@ cat .multi_process_status/clientname.json
 - Container uses volume mount: `project-ape-credentials:/opt/app-root/src/.notebooklm`
 
 **Dashboard (`dashboard/server.py`):**
-- Flask app serving real-time status updates
+- Flask app serving real-time status updates and web-based configuration
+- Dual interface: `/configure` (setup wizard + client management) and `/status` (live monitoring)
+- Configuration wizard: NotebookLM auth, Drive OAuth setup, client addition
 - Reads status JSON files from `.multi_process_status/`
 - Streams logs, displays progress bars, shows execution metrics
-- Auto-refreshes every 2 seconds
+- Auto-refreshes every 2 seconds via server-sent events (SSE)
+
+### Web UI Components
+
+**`launch-project-ape.py` (Primary Entry Point):**
+- Cross-platform launcher (Windows, macOS, Linux)
+- Automatic virtual environment setup (`~/.project-ape-venv`)
+- Dependency installation on first run (Flask, notebooklm-py, pypdf, etc.)
+- Starts dashboard server in background
+- Opens browser to http://localhost:8765/configure
+- Designed for double-click execution (zero terminal required)
+
+**`dashboard/config_generator.py`:**
+- Generates `vars.py` configuration from web form input
+- Validates client IDs, Drive URLs, industry/subsegment selections
+- Preserves existing configuration when adding new clients
+- Writes Python-executable configuration with proper formatting
+
+**`dashboard/config_parser.py`:**
+- Parses existing `vars.py` to populate web UI forms
+- Extracts client configurations for editing
+- Handles both Drive URLs and local folder paths
+- Enables configuration round-tripping (web → file → web)
+
+**Web UI Routes:**
+- `/configure` - Setup wizard + client management (primary interface)
+- `/status` - Live workflow monitoring (auto-switches after launch)
+- `/stream-logs/{client_id}` - Server-sent events for log streaming
+- `/health` - Dashboard health check
+- `/api/*` - REST endpoints for configuration and control
 
 ### Module Responsibilities
 
@@ -138,14 +197,42 @@ cat .multi_process_status/clientname.json
 - Fast mode: simple concatenation (~30 seconds)
 - Deep mode variant (not currently in use): enhanced metadata
 
+**`core/drive_manager.py`:**
+- Google Drive API v3 integration for direct PDF downloads
+- Supports Drive folder URLs (extracts folder ID automatically)
+- 7-day intelligent caching (`.drive_cache/` directory)
+- Handles Google Docs/Sheets auto-conversion to PDF
+- OAuth 2.0 authentication via `credentials/token_drive.json`
+
+**`core/quality_scorer.py`:**
+- AI-powered quality validation using Gemini API
+- Scores completeness across 6 dimensions (industry, SWOT, tech, competitive, pain points, recommendations)
+- Generates overall quality score (1.0-10.0 scale)
+- Output: `docs_generated/{client_id}/Quality_Score.json`
+- Requires `GEMINI_API_KEY` environment variable (optional feature)
+
+**`core/claude_industry_detector.py`:**
+- Automatic industry classification from client documents
+- Analyzes consolidated PDF content via Claude API
+- Used when `industry` field left blank in configuration
+- Provides industry + subsegments for prompt targeting
+
 ### Configuration System
 
-**Configuration File (`vars.py`):**
-- Start from templates: `example-container.py` (single client), `container-vars.py` (multi-client)
-- Per-client attributes: `{client_id}_name`, `{client_id}_folder`, `{client_id}_industry`, `{client_id}_subsegments`
-- Global settings: `persona` (AI role, e.g., "Red Hat solutions architect"), `MODE`, `DASHBOARD_PORT`
-- Timing configurations: `TIMINGS` (fast mode), `DEEP_TIMINGS` (deep mode)
-- Retry settings: `RETRY_CONFIG` for API error handling
+**Configuration System (Two Approaches):**
+
+1. **Web UI Configuration (Recommended):**
+   - Browser-based form at http://localhost:8765/configure
+   - Add clients dynamically: name, Drive folder URL, industry, subsegments, mode
+   - Generates `vars.py` automatically via `dashboard/config_generator.py`
+   - Real-time validation and preview
+
+2. **Manual Configuration File (`vars.py`):**
+   - Start from templates: `example-container.py` (single client), `container-vars.py` (multi-client)
+   - Per-client attributes: `{client_id}_name`, `{client_id}_folder` (now supports Drive URLs), `{client_id}_industry`, `{client_id}_subsegments`
+   - Global settings: `persona` (AI role, e.g., "Red Hat solutions architect"), `MODE`, `DASHBOARD_PORT`
+   - Timing configurations: `TIMINGS` (fast mode), `DEEP_TIMINGS` (deep mode)
+   - Retry settings: `RETRY_CONFIG` for API error handling
 
 **Container Paths (for containerized execution):**
 - `PROJECT_ROOT = /app`
@@ -156,10 +243,13 @@ cat .multi_process_status/clientname.json
 
 ## Pipeline Workflow
 
-### Phase 1: PDF Consolidation (~30 seconds)
-1. Scan `{client_folder}` for PDFs
-2. Merge into single PDF with table of contents
-3. Save to `docs/{client_id}/{client_name}-One.pdf`
+### Phase 1: PDF Download & Consolidation (~30-60 seconds)
+1. Download PDFs from Google Drive folder (if Drive URL configured)
+   - 7-day cache check (skip download if cached)
+   - Auto-convert Google Docs/Sheets to PDF
+2. Or scan local `{client_folder}` for PDFs (legacy support)
+3. Merge all PDFs into single document with table of contents
+4. Save to `docs/{client_id}/{client_name}-One.pdf`
 
 ### Phase 2: Notebook Creation (~10 seconds)
 1. Check for existing notebook (deduplication via `notebook_manager.find_notebook_by_name()`)
@@ -179,10 +269,12 @@ cat .multi_process_status/clientname.json
 3. Persona substitution: `$persona` replaced with value from `vars.py`
 4. Delays: 5-8s between prompts (fast), 10-15s (deep)
 
-### Phase 5: Mind Map Generation (1-2 minutes)
-1. Request visual mind map generation
-2. Save outputs to `docs_generated/{client_id}/`
-3. Create summary document
+### Phase 5: Quality Validation (1-2 minutes)
+1. Analyze generated content for completeness
+2. Score across 6 dimensions via Gemini API (if configured)
+3. Generate overall quality score (1.0-10.0)
+4. Save `Quality_Score.json` to `docs_generated/{client_id}/`
+5. Create summary document with NotebookLM link
 
 ### Timing Strategy
 
@@ -257,20 +349,29 @@ Subsegments provide targeted research focus:
 
 ### Adding a New Client
 
-1. Create client data directory:
-   ```bash
-   mkdir -p client_data/NewClient
-   cp /path/to/pdfs/* client_data/NewClient/
-   ```
+**Via Web UI (Recommended):**
+1. Launch dashboard: `python3 launch-project-ape.py`
+2. Navigate to http://localhost:8765/configure
+3. Scroll to "Add New Client" form
+4. Fill in:
+   - Client Name: "New Client Corporation"
+   - Client ID: Auto-generated (or customize)
+   - Drive Folder URL: https://drive.google.com/drive/folders/1A2B3C...
+   - Industry: "technology" (or leave blank for auto-detect)
+   - Subsegments: "cloud, AI, enterprise software"
+   - Mode: Fast or Deep
+5. Click "Add Client" → "Save Configuration" → "Launch Workflow"
 
+**Via Manual Configuration (Alternative):**
+1. Upload PDFs to Google Drive folder, get shareable link
 2. Add to `vars.py`:
    ```python
    clients = ["newclient"]
    
    newclient_name = "New Client Corporation"
-   newclient_industry = "technology"
+   newclient_folder = "https://drive.google.com/drive/folders/1A2B3C..."  # Drive URL
+   newclient_industry = "technology"  # Or "" for auto-detect
    newclient_subsegments = "cloud, AI, enterprise software"
-   newclient_folder = "/app/client_data/NewClient"  # Container path
    ```
 
 3. Run pipeline:
@@ -339,8 +440,11 @@ podman push quay.io/jasoande/project_ape/project-ape:v3.0.4
 
 **Authentication:**
 - NotebookLM credentials are OAuth2, stored in `~/.notebooklm/credentials.json`
+- Google Drive OAuth tokens stored in `credentials/token_drive.json` (90-day expiry)
+- Gemini API key (optional) via `GEMINI_API_KEY` environment variable
 - Containers use volume mount to share host credentials
 - No embedded API keys or secrets in code/config
+- Web UI provides guided OAuth setup wizards
 
 **Status File Race Conditions:**
 - Status files (`.multi_process_status/*.json`) are single-writer (one client process)
@@ -354,6 +458,11 @@ podman push quay.io/jasoande/project_ape/project-ape:v3.0.4
 **Generated PDFs:** `{ClientName}-One.pdf`
 **Log files:** `{client_id}.log`
 **Status files:** `{client_id}.json`
+
+**Launcher Files:**
+- `launch-project-ape.py` - Universal Python launcher (cross-platform)
+- `launch-project-ape.command` - macOS double-click launcher (executes .py)
+- `project-ape-launcher.desktop` - Linux desktop integration file
 
 ## Troubleshooting
 
