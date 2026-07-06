@@ -122,3 +122,4 @@ quick-fix-*.sh
 generate-*.py (temp utilities)
 test-oauth-*.py
 workflow_detector.py (if moved from root)
+test_run_*.log
