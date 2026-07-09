@@ -1,0 +1,24 @@
+# Test Dependencies for Project APE Integration Tests
+# ====================================================
+
+# Core testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.0
+
+# Optional: Coverage reporting
+pytest-cov>=4.1.0
+
+# Optional: Parallel test execution
+pytest-xdist>=3.3.0
+
+# Optional: Better output formatting
+pytest-sugar>=0.9.7
+
+# Adapters already installed via main requirements
+# anthropic>=0.18.0
+# google-genai>=0.1.0
+# notebooklm-py>=1.0.0
+
+# Note: Install with:
+# pip install -r tests/requirements.txt

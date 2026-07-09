@@ -96,7 +96,8 @@ function addClient(client = null) {
         name: '',
         folder: '',
         industry: '',
-        subsegments: ''
+        subsegments: '',
+        platform: 'notebooklm'  // Default platform
     };
     clients.push(newClient);
     renderClients();
@@ -198,6 +199,23 @@ function renderClients() {
                     oninput="updateClient('${client.id}', 'subsegments', this.value)"
                 />
                 <div class="form-help">Optional - comma-separated research areas</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    AI Platform
+                    <span class="platform-badge ${client.platform || 'notebooklm'}">${(client.platform || 'notebooklm').toUpperCase()}</span>
+                </label>
+                <select
+                    class="form-select"
+                    id="${client.id}_platform"
+                    onchange="updateClient('${client.id}', 'platform', this.value)"
+                >
+                    <option value="notebooklm" ${(client.platform === 'notebooklm' || !client.platform) ? 'selected' : ''}>NotebookLM (Google)</option>
+                    <option value="claude" ${client.platform === 'claude' ? 'selected' : ''}>Claude (Anthropic)</option>
+                    <option value="gemini" ${client.platform === 'gemini' ? 'selected' : ''}>Gemini (Google AI)</option>
+                </select>
+                <div class="form-help" id="${client.id}_platform_status">Platform status: <span id="${client.id}_platform_indicator">Checking...</span></div>
             </div>
         `;
         grid.appendChild(card);
@@ -788,13 +806,14 @@ function exportCsv() {
         return;
     }
 
-    let csv = 'name,folder,industry,subsegments\n';
+    let csv = 'name,folder,industry,subsegments,platform\n';
     clients.forEach(client => {
         const name = client.name.replace(/"/g, '""');
         const folder = client.folder.replace(/"/g, '""');
         const industry = client.industry.replace(/"/g, '""');
         const subsegments = client.subsegments.replace(/"/g, '""');
-        csv += `"${name}","${folder}","${industry}","${subsegments}"\n`;
+        const platform = (client.platform || 'notebooklm').replace(/"/g, '""');
+        csv += `"${name}","${folder}","${industry}","${subsegments}","${platform}"\n`;
     });
 
     downloadFile(csv, 'clients.csv');
@@ -1989,6 +2008,50 @@ function toggleTheme() {
     }
 }
 
+// ========================================================================
+// Platform Availability Check
+// ========================================================================
+
+let platformsCache = null;
+
+async function checkPlatformAvailability() {
+    try {
+        const response = await fetch('/api/available-platforms');
+        const data = await response.json();
+
+        if (data.success) {
+            platformsCache = data.platforms;
+            updatePlatformIndicators();
+            return data;
+        }
+    } catch (error) {
+        console.error('Failed to check platform availability:', error);
+    }
+    return null;
+}
+
+function updatePlatformIndicators() {
+    if (!platformsCache) return;
+
+    clients.forEach(client => {
+        const indicator = document.getElementById(`${client.id}_platform_indicator`);
+        if (!indicator) return;
+
+        const platform = client.platform || 'notebooklm';
+        const platformInfo = platformsCache[platform];
+
+        if (platformInfo) {
+            if (platformInfo.authenticated) {
+                indicator.innerHTML = '<span style="color: #3fb950;">✓ Available</span>';
+            } else if (platformInfo.available) {
+                indicator.innerHTML = `<span style="color: #f0883e;">⚠ ${platformInfo.reason}</span>`;
+            } else {
+                indicator.innerHTML = `<span style="color: #f85149;">✗ ${platformInfo.reason}</span>`;
+            }
+        }
+    });
+}
+
 // Load system status on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize theme
@@ -1996,6 +2059,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load system status
     loadSystemStatus();
+
+    // Check platform availability
+    checkPlatformAvailability();
 
     // Add event listener for refresh button
     const refreshSystemStatusBtn = document.getElementById('refreshSystemStatusBtn');

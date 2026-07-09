@@ -1,959 +1,351 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
-  
+  <img src="../dashboard/static/kingkong.png" alt="Project APE" width="150"/>
+
   # User Guide
+
   **Project APE - Account Planning Engine**
+
+  Version 4.0.1 | July 2026
 </div>
 
 ---
 
 ## Table of Contents
 
-1. [Getting Started](#getting-started)
-2. [Workflow Overview](#workflow-overview)
-3. [Configuration](#configuration)
-4. [Running Workflows](#running-workflows)
-5. [Monitoring Progress](#monitoring-progress)
-6. [Understanding Outputs](#understanding-outputs)
-7. [Quality Scores](#quality-scores)
-8. [Execution Modes](#execution-modes)
-9. [Advanced Features](#advanced-features)
-10. [Best Practices](#best-practices)
+- [Getting Started](#getting-started)
+- [Configuration Wizard](#configuration-wizard)
+- [Adding Clients](#adding-clients)
+- [Running Workflows](#running-workflows)
+- [Monitoring with the Dashboard](#monitoring-with-the-dashboard)
+- [Stopping a Workflow](#stopping-a-workflow)
+- [Pre-flight Checks](#pre-flight-checks)
+- [Webhook Notifications](#webhook-notifications)
+- [Resuming from Checkpoint](#resuming-from-checkpoint)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Getting Started
 
-### Prerequisites Checklist
+### Launch the Application
 
-Before running your first workflow, ensure you have completed:
+The recommended way to start Project APE is with the GUI launcher. No terminal experience is required.
 
-- ✅ **Installation**: Python 3.10+, NotebookLM CLI installed
-- ✅ **NotebookLM Authentication**: `notebooklm login` completed
-- ✅ **Google Drive OAuth**: Credentials configured, token generated
-- ✅ **Client Data**: PDFs uploaded to Google Drive folders
-- ✅ **Configuration**: `vars.py` file created and configured
+**macOS:**
 
-If any item is incomplete, see [INSTALLATION.md](INSTALLATION.md) for setup instructions.
-
-### Quick Start Checklist
-
-1. **Prepare client data** - Upload PDFs to Google Drive folder
-2. **Configure client** - Add client details to `vars.py`
-3. **Launch workflow** - Run `ape-run.sh` with client name
-4. **Monitor progress** - Watch dashboard at http://localhost:8765
-5. **Review outputs** - Check `docs_generated/<client_id>/` for results
-
-**Total time**: 15-60 minutes depending on mode
-
----
-
-## Workflow Overview
-
-Project APE executes a five-phase workflow for each client:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      PROJECT APE WORKFLOW                        │
-└─────────────────────────────────────────────────────────────────┘
-
-Phase 1: Document Download (30-60 seconds)
-         ↓
-         • Connect to Google Drive via OAuth
-         • Download PDFs from client folder
-         • Convert Google Docs to PDF
-         • Cache files locally (7-day TTL)
-
-Phase 2: Notebook Creation (10-15 seconds)
-         ↓
-         • Create NotebookLM notebook
-         • Upload consolidated sources
-         • Wait for source processing
-
-Phase 3: Research Phase (3-8 minutes)
-         ↓
-         • Execute 2 research queries
-         • Import 20-180 external sources
-         • Analyze industry & competitive landscape
-
-Phase 4: Analysis Phase (8-12 minutes)
-         ↓
-         • Run 6 consolidated analysis prompts
-         • Generate strategic insights
-         • Identify opportunities and risks
-
-Phase 5: Quality Validation (1-2 minutes)
-         ↓
-         • Validate completeness
-         • Generate quality score (1-10)
-         • Create summary outputs
-
-         ↓
-    ✅ COMPLETE
-```
-
-### Total Execution Time
-
-- **Fast Mode**: 15-20 minutes (all clients in parallel)
-- **Deep Mode**: 45-60 minutes (all clients in parallel)
-
----
-
-## Configuration
-
-### Configuration File (vars.py)
-
-The `vars.py` file contains all client and system configuration.
-
-#### Creating Your Configuration
+Double-click `launch-project-ape.command` in Finder, or run from terminal:
 
 ```bash
-# Copy example configuration
-cp developer-docs/example-vars.py vars.py
-
-# Edit with your preferred editor
-vi vars.py
-# or
-nano vars.py
-# or
-code vars.py  # VS Code
+python3 launch-project-ape.py
 ```
 
-#### Basic Configuration Template
+**Windows / Linux:**
 
-```python
-# ============================================================
-# Project APE Configuration
-# ============================================================
+Double-click `launch-project-ape.py`, or run from terminal:
 
-# List of client IDs to process
-clients = ["acme_corp", "techstart_inc"]
-
-# ============================================================
-# Client 1: Acme Corporation
-# ============================================================
-
-acme_corp_name = "Acme Corporation"
-acme_corp_folder = "https://drive.google.com/drive/folders/1ABC123XYZ456"
-acme_corp_industry = ""  # Leave empty for auto-detection
-acme_corp_subsegments = "cloud, AI/ML, enterprise software"
-
-# ============================================================
-# Client 2: TechStart Inc
-# ============================================================
-
-techstart_inc_name = "TechStart Inc"
-techstart_inc_folder = "https://drive.google.com/drive/folders/2DEF789UVW012"
-techstart_inc_industry = "technology"
-techstart_inc_subsegments = "SaaS, DevOps, cybersecurity"
-
-# ============================================================
-# Global Settings
-# ============================================================
-
-# Persona for analysis (solutions architect, account executive, etc.)
-persona = "solutions architect"
-
-# Default execution mode (fast or deep)
-default_mode = "fast"
-
-# Dashboard port
-DASHBOARD_PORT = 8765
+```bash
+python3 launch-project-ape.py
 ```
 
-### Configuration Parameters
+On first run, the launcher will:
 
-#### Per-Client Parameters
+1. Create a virtual environment at `~/.project-ape-venv`
+2. Install all required dependencies (Flask, notebooklm-py, pypdf, etc.)
+3. Start the dashboard server on port 8765
+4. Open your browser to `http://localhost:8765/configure`
 
-| Parameter | Required | Description | Example |
-|-----------|----------|-------------|---------|
-| `{client_id}_name` | Yes | Full company name | `"Acme Corporation"` |
-| `{client_id}_folder` | Yes | Google Drive folder URL | `"https://drive.google.com/..."` |
-| `{client_id}_industry` | No | Industry (or "" for auto-detect) | `"technology"` |
-| `{client_id}_subsegments` | No | Industry subsegments | `"cloud, AI, SaaS"` |
+### Prerequisites
 
-#### Global Parameters
+- Python 3.10 or later
+- Google Chrome (required for NotebookLM authentication)
+- Internet connection for NotebookLM API access
+- Google Drive folder with client PDFs (or local PDF directory)
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `persona` | `"solutions architect"` | AI analysis perspective |
-| `default_mode` | `"fast"` | Default execution mode |
-| `DASHBOARD_PORT` | `8765` | Web dashboard port |
+---
 
-### Getting Google Drive Folder URLs
+## Configuration Wizard
 
-1. Open Google Drive in browser
-2. Navigate to your client folder
-3. Click "Share" button
-4. Copy the link (format: `https://drive.google.com/drive/folders/FOLDER_ID`)
-5. Paste into `{client_id}_folder` parameter
+When you first open the dashboard, you will see a 3-step setup wizard at `http://localhost:8765/configure`.
 
-**Important**: Ensure your Google account has access to the folder.
+### Step 1: Authenticate NotebookLM
 
-### Industry Auto-Detection
+Click the "Authenticate NotebookLM" button. This opens Chrome and walks you through Google OAuth. Once complete, the wizard shows a green check mark.
 
-Leave `{client_id}_industry` as empty string `""` for automatic industry detection:
+If you have already authenticated on another machine, you can copy the credentials:
 
-```python
-acme_corp_industry = ""  # AI will detect industry from documents
+```bash
+scp ~/.notebooklm/credentials.json user@this-machine:~/.notebooklm/
 ```
 
-Or specify manually:
+### Step 2: Setup Drive OAuth
 
-```python
-acme_corp_industry = "technology"  # Skip auto-detection
-```
+1. Click "Setup Drive OAuth"
+2. Upload your `credentials.json` file (downloaded from Google Cloud Console)
+3. A browser window opens for Google authorization
+4. Grant access to Google Drive
 
-Supported industries:
-- `technology`
-- `financial_services`
-- `healthcare`
-- `manufacturing`
-- `retail`
-- `energy`
-- `telecommunications`
-- `education`
-- `government`
+The resulting token is saved at `~/.project-ape/drive_token.json` and is valid for approximately 90 days.
 
-### Subsegments
+### Step 3: Environment Validation
 
-Subsegments provide targeted research focus. Examples:
+The wizard automatically checks that all required components are in place:
 
-**Technology:**
-```python
-subsegments = "cloud services, SaaS platforms, cybersecurity, AI/ML, DevOps"
-```
+- NotebookLM CLI installed and responsive
+- NotebookLM authentication valid
+- Google Drive token present
+- Virtual environment activated
 
-**Financial Services:**
-```python
-subsegments = "banking, insurance, wealth management, fintech, payments"
-```
+---
 
-**Healthcare:**
-```python
-subsegments = "hospitals, pharmaceuticals, medical devices, health IT, telehealth"
-```
+## Adding Clients
 
-**Manufacturing:**
-```python
-subsegments = "automotive, aerospace, electronics, supply chain, IoT"
-```
+### Via Web UI
+
+1. Navigate to `http://localhost:8765/configure`
+2. Scroll to the "Add New Client" form
+3. Fill in the required fields:
+
+| Field | Required | Description | Example |
+|-------|----------|-------------|---------|
+| Client Name | Yes | Display name for the client | `Acme Corporation` |
+| Client ID | Auto | Generated from name (editable) | `acme_corporation` |
+| Drive Folder URL | Yes | Google Drive folder with client PDFs | `https://drive.google.com/drive/folders/1ABC...` |
+| Industry | No | Leave blank for auto-detection | `technology` |
+| Subsegments | No | Comma-separated focus areas | `cloud, AI, enterprise software` |
+| Mode | Yes | Fast (15-20 min) or Deep (45-60 min) | `fast` |
+
+4. Click "Add Client"
+5. Click "Save Configuration" to write `vars.py`
+
+### Via CSV Import
+
+For batch setup, prepare a CSV file with columns: `name`, `folder`, `industry`, `subsegments`. Upload it through the web UI import form.
+
+### Common Industry/Subsegment Combinations
+
+| Industry | Subsegments |
+|----------|-------------|
+| Technology | cloud services, SaaS platforms, cybersecurity, AI/ML, DevOps |
+| Financial Services | banking, insurance, wealth management, fintech, payments |
+| Healthcare | hospitals, pharmaceuticals, medical devices, health IT, telehealth |
+| Manufacturing | automotive, aerospace, electronics, supply chain, IoT |
+| Retail | e-commerce, omnichannel, supply chain, customer analytics |
 
 ---
 
 ## Running Workflows
 
-### Container-Based Execution (Recommended)
+### Fast Mode (15-20 minutes)
 
-#### Single Client - Fast Mode
+Best for initial account planning and quick turnaround. Imports 10-25 external sources per research query with a retry rate of approximately 5%.
 
-```bash
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode fast
-```
+### Deep Mode (45-60 minutes)
 
-#### Single Client - Deep Mode
+Best for thorough analysis with maximum source coverage. Imports 45-90 sources per query. Accepts a higher retry rate (~30%) to achieve broader coverage.
 
-```bash
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode deep
-```
+### Starting a Workflow
 
-#### Multiple Clients (Parallel Execution)
+**From the Web UI:**
 
-```bash
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp,techstart_inc,globalbank --mode fast
-```
+1. Configure your clients at `/configure`
+2. Click "Launch Workflow"
+3. The dashboard automatically switches to the monitoring view at `/status`
 
-Project APE processes all clients **in parallel**, so 3 clients take the same time as 1 client.
-
-#### Force Cache Refresh
+**From the Terminal:**
 
 ```bash
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode fast --refresh
-```
-
-Use `--refresh` to force re-download of all Drive files (ignores 7-day cache).
-
-### Native Python Execution
-
-```bash
-# Activate virtual environment
-source ~/.project-ape-venv/bin/activate
-
-# Run workflow
-python3 main.py --mode fast --clients acme_corp
-
-# Multiple clients
-python3 main.py --mode fast --clients acme_corp,techstart_inc
+# Fast mode
+./run-workflow.sh fast
 
 # Deep mode
-python3 main.py --mode deep --clients acme_corp
+./run-workflow.sh deep
 ```
 
-### Command-Line Options
+**Container execution:**
 
-| Option | Description | Example |
-|--------|-------------|---------|
-| `--vars` | Path to configuration file | `--vars ./vars.py` |
-| `--clients` | Comma-separated client IDs | `--clients acme_corp,techstart_inc` |
-| `--mode` | Execution mode (fast/deep) | `--mode fast` |
-| `--refresh` | Force cache refresh | `--refresh` |
+```bash
+./ape-run.sh --vars ./vars.py --clients client_a,client_b --mode fast
+```
+
+### What Happens During a Workflow
+
+Each client goes through 5 phases:
+
+1. **PDF Download & Consolidation (30-60s):** Downloads PDFs from Google Drive (with 7-day caching), merges into a single document with table of contents.
+2. **Notebook Creation (10s):** Creates a NotebookLM notebook (or reuses an existing one), uploads the consolidated PDF.
+3. **Research (3-5 min):** Executes 2 research queries that trigger web research and import external sources.
+4. **Analysis (8-12 min):** Runs 6 chat prompts covering industry overview, technology trends, competitive positioning, pain points, decision makers, value proposition, and strategic recommendations.
+5. **Quality Validation (1-2 min):** Scores output quality across 4 dimensions, generates a mind map artifact, and creates a summary document.
 
 ---
 
-## Monitoring Progress
+## Monitoring with the Dashboard
 
-### Web Dashboard
+The dashboard at `http://localhost:8765` provides real-time monitoring:
 
-Open the dashboard in your browser:
+- **Progress bars:** Per-client progress (0-100%) with current phase description
+- **Status indicators:** RUNNING, COMPLETE, FAILED, or CANCELLED
+- **Live log streaming:** Click on a client to view real-time log output via SSE
+- **Quality scores:** Displayed upon completion (1.0-10.0 scale)
+- **Execution metrics:** Start time, elapsed time, mode
 
-```
-http://localhost:8765
-```
+The dashboard auto-refreshes every 2 seconds via server-sent events.
 
-The dashboard auto-opens when using `ape-run.sh`.
+### Status File Structure
 
-### Dashboard Layout
-
-#### Header Section
-
-- **Logo**: Project APE King Kong logo
-- **Timer**: Total execution time
-- **Counts**: Total/Running/Complete/Failed clients
-- **Progress Bar**: Overall workflow progress
-
-#### Client Cards
-
-Each client shows:
-
-- **Client Name**: Full company name
-- **Status**: RUNNING, COMPLETE, or FAILED
-- **Phase**: Current pipeline phase
-- **Progress**: Phase-specific progress percentage
-- **Quality Score**: 1-10 score (when complete)
-- **NotebookLM Link**: Direct link to notebook (clickable)
-- **Timing**: Phase and total elapsed time
-
-#### Logs Section (Collapsible)
-
-- **Real-Time Logs**: Live log streaming
-- **Controls**: Pause, Resume, Clear, Download
-- **Auto-Scroll**: Automatically scrolls to latest logs
-- **Visual Indicators**: Color-coded log levels
-
-### Dashboard Features
-
-**Auto-Refresh:**
-- Updates every 2 seconds
-- Continues for 5 minutes after all clients complete
-- Graceful shutdown when finished
-
-**Log Controls:**
-- **⏸ Pause**: Stop log auto-scroll
-- **▶ Resume**: Resume auto-scroll
-- **🗑 Clear**: Clear log display (doesn't delete files)
-- **📥 Download**: Download complete log file
-
-### Monitoring from Terminal
-
-If you prefer terminal monitoring:
-
-```bash
-# Watch overall log
-tail -f logs/overall.log
-
-# Watch specific client
-tail -f logs/acme_corp.log
-
-# Monitor all clients
-tail -f logs/*.log
-
-# Search for errors
-grep -i error logs/*.log
-grep -i failed logs/*.log
-```
-
-### Status Files
-
-Real-time status files are stored in `.multi_process_status/`:
-
-```bash
-# View client status (JSON)
-cat .multi_process_status/acme_corp.json
-
-# Watch status updates
-watch -n 2 cat .multi_process_status/acme_corp.json
-```
-
-Example status file:
+Each client's status is tracked in `.multi_process_status/{client_id}.json`:
 
 ```json
 {
-  "client_id": "acme_corp",
-  "client_name": "Acme Corporation",
+  "name": "Client Corp",
+  "token": "client_corp",
+  "step": "Running chat prompts (4/6)",
+  "progress": 65,
   "status": "RUNNING",
-  "current_phase": "Research Phase",
-  "progress": 45,
+  "mode": "fast",
+  "notebook_id": "nb_abc123",
+  "last_update": 1720000000.0,
+  "start_time": 1719999000.0,
   "quality_score": null,
-  "notebook_url": "https://notebooklm.google.com/notebook/abc123",
-  "start_time": "2026-06-30T10:15:00",
-  "phase_timings": {
-    "download": 42,
-    "notebook_creation": 12,
-    "research": 187
-  }
+  "run_id": "run_20260708_120000"
 }
 ```
 
 ---
 
-## Understanding Outputs
+## Stopping a Workflow
 
-### Output Directory Structure
+To cancel a running workflow:
 
-```
-docs_generated/
-├── acme_corp/
-│   ├── Acme_Corporation_Research.txt
-│   ├── Acme_Corporation_Analysis.txt
-│   ├── Quality_Score.json
-│   ├── NotebookLM_Link.txt
-│   └── Execution_Summary.json
-├── techstart_inc/
-│   └── ...
-└── ...
-```
+1. Click the "Stop Workflow" button on the dashboard
+2. The system sends SIGTERM to the workflow process group
+3. If processes do not terminate within a few seconds, SIGKILL is used as a fallback
+4. Running clients are marked as `CANCELLED` in their status files
 
-### Generated Files
-
-#### 1. Research Output (`{Client_Name}_Research.txt`)
-
-Contains research query responses:
-
-- Industry analysis and trends
-- Competitive landscape overview
-- Market positioning insights
-- Technology adoption patterns
-
-**Example excerpt:**
-
-```
-=== RESEARCH QUERY 1: Industry Analysis ===
-
-Industry: Technology - Cloud Services
-
-Key Trends:
-- Multi-cloud adoption accelerating (65% of enterprises)
-- Hybrid cloud architectures becoming standard
-- Edge computing integration with cloud platforms
-- AI/ML workload optimization focus
-
-Market Dynamics:
-...
-```
-
-#### 2. Analysis Output (`{Client_Name}_Analysis.txt`)
-
-Contains analysis prompt responses:
-
-- Strategic challenges and opportunities
-- Decision maker profiles
-- Buying process insights
-- Value proposition recommendations
-- Risk factors and mitigation strategies
-
-**Example excerpt:**
-
-```
-=== ANALYSIS: Strategic Challenges ===
-
-Current Challenges:
-1. Legacy system modernization
-   - Aging infrastructure (10+ year old systems)
-   - Technical debt accumulation
-   - Limited cloud integration
-   
-2. Skills gap in emerging technologies
-   - Container orchestration expertise
-   - Cloud-native architecture knowledge
-   
-...
-```
-
-#### 3. Quality Score (`Quality_Score.json`)
-
-Automated quality validation:
-
-```json
-{
-  "overall_score": 8.5,
-  "metrics": {
-    "source_count": 127,
-    "source_quality": 9.0,
-    "content_completeness": 8.5,
-    "research_depth": 8.0,
-    "analysis_coverage": 9.0
-  },
-  "validation_timestamp": "2026-06-30T10:45:32",
-  "mode": "fast"
-}
-```
-
-#### 4. NotebookLM Link (`NotebookLM_Link.txt`)
-
-Direct link to NotebookLM notebook:
-
-```
-https://notebooklm.google.com/notebook/abc123xyz456
-```
-
-Open this link to:
-- View all imported sources
-- Ask additional questions
-- Generate mind maps
-- Export notes and insights
-
-#### 5. Execution Summary (`Execution_Summary.json`)
-
-Workflow execution details:
-
-```json
-{
-  "client_id": "acme_corp",
-  "client_name": "Acme Corporation",
-  "execution_mode": "fast",
-  "total_duration_seconds": 1247,
-  "phase_timings": {
-    "download": 42,
-    "notebook_creation": 12,
-    "research": 187,
-    "analysis": 623,
-    "validation": 89
-  },
-  "sources_imported": 127,
-  "queries_executed": 8,
-  "completion_timestamp": "2026-06-30T10:45:32"
-}
-```
+From the terminal, press `Ctrl+C` to trigger a graceful shutdown.
 
 ---
 
-## Quality Scores
+## Pre-flight Checks
 
-### Scoring Scale
+Before launching a workflow, the system can run pre-flight checks to validate that all prerequisites are met. Access this from the dashboard or via the API:
 
-Quality scores range from **1 to 10**:
+```
+GET /api/preflight-check
+```
 
-| Score | Quality | Description |
-|-------|---------|-------------|
-| 9-10 | Excellent | Comprehensive research, high source quality |
-| 8-8.9 | Very Good | Strong coverage, good source diversity |
-| 7-7.9 | Good | Adequate research, acceptable sources |
-| 6-6.9 | Fair | Limited coverage, some gaps |
-| Below 6 | Poor | Insufficient research, re-run recommended |
+The following checks are performed:
 
-### Score Components
+| Check | What It Validates |
+|-------|-------------------|
+| NotebookLM CLI | The `notebooklm` command is installed and responds |
+| NotebookLM Auth | OAuth credentials are present and valid |
+| Drive Auth | Drive token exists with a valid `token` key |
+| Config Valid | `vars.py` has a non-empty `clients` list with required attributes |
 
-Quality scores are calculated from five metrics:
-
-1. **Source Count** (weight: 20%)
-   - Fast mode target: 50+ sources
-   - Deep mode target: 120+ sources
-
-2. **Source Quality** (weight: 25%)
-   - Authoritative domains (e.g., company websites, industry publications)
-   - Recent publications (within 2 years)
-   - Diverse source types
-
-3. **Content Completeness** (weight: 25%)
-   - All analysis prompts answered
-   - Sufficient detail in responses
-   - No missing sections
-
-4. **Research Depth** (weight: 15%)
-   - Research query quality
-   - Citation coverage
-   - External source integration
-
-5. **Analysis Coverage** (weight: 15%)
-   - All strategic dimensions addressed
-   - Actionable insights provided
-   - Risk assessment included
-
-### Interpreting Scores
-
-**Score: 8.5+** ✅
-- High-quality output, ready for use
-- Comprehensive research coverage
-- Strong source diversity
-- No action needed
-
-**Score: 7.0-8.4** ⚠️
-- Good quality, usable output
-- Consider deep mode for critical accounts
-- Review for any gaps
-
-**Score: Below 7.0** ❌
-- Insufficient quality
-- Re-run in deep mode
-- Check client folder for adequate source documents
-- Verify NotebookLM research completed successfully
-
-### Improving Quality Scores
-
-**Low source count:**
-- Add more PDFs to client Drive folder
-- Use deep mode for more web research
-- Ensure Drive folder is accessible
-
-**Low content completeness:**
-- Verify all prompts executed successfully
-- Check logs for errors
-- Re-run workflow if failures occurred
-
-**Low research depth:**
-- Switch to deep mode
-- Add industry subsegments to `vars.py`
-- Provide more detailed source documents
+All checks must pass before a workflow can proceed.
 
 ---
 
-## Execution Modes
+## Webhook Notifications
 
-### Fast Mode
-
-**Duration**: 15-20 minutes (all clients)
-
-**Characteristics:**
-- Aggressive timing (shorter delays)
-- 20-50 sources per client
-- ~5% retry rate
-- Quality target: 8.0+
-
-**Best for:**
-- Quick account overviews
-- Initial research scoping
-- Time-sensitive situations
-- Multiple account batches
-
-**When to use:**
-- First-time account research
-- Pre-meeting preparation
-- Quarterly account reviews
-- Pipeline research
-
-### Deep Mode
-
-**Duration**: 45-60 minutes (all clients)
-
-**Characteristics:**
-- Conservative timing (longer delays)
-- 90-180 sources per client
-- ~30% retry rate (acceptable)
-- Quality target: 8.5+
-
-**Best for:**
-- High-value accounts
-- Strategic planning
-- Comprehensive analysis
-- Critical opportunities
-
-**When to use:**
-- Strategic account planning
-- Major deal preparation
-- Executive briefings
-- Competitive analysis
-
-### Mode Comparison
-
-| Aspect | Fast Mode | Deep Mode |
-|--------|-----------|-----------|
-| Duration | 15-20 min | 45-60 min |
-| Sources | 20-50 | 90-180 |
-| Research queries | 2 | 2 |
-| Analysis prompts | 6 | 6 |
-| Query delays | 8-12s | 15-25s |
-| Prompt delays | 5-8s | 10-15s |
-| Quality target | 8.0+ | 8.5+ |
-
-### Choosing a Mode
-
-**Use Fast Mode when:**
-- ✅ You need results quickly (< 30 minutes)
-- ✅ Processing multiple accounts
-- ✅ Initial research phase
-- ✅ Score 8.0+ is acceptable
-
-**Use Deep Mode when:**
-- ✅ Account is high-value or strategic
-- ✅ You need maximum source coverage
-- ✅ Preparing for executive meetings
-- ✅ Score 8.5+ is required
-- ✅ Time is not critical
-
----
-
-## Advanced Features
-
-### Cache Management
-
-Project APE caches Drive files for 7 days to improve performance.
-
-**View cache status:**
-
-```bash
-# Check cache directory
-ls -lah ~/.project-ape/drive_cache/
-
-# View cache metadata
-cat ~/.project-ape/drive_cache/cache_metadata.json
-```
-
-**Force cache refresh:**
-
-```bash
-./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode fast --refresh
-```
-
-Use `--refresh` when:
-- Client added new documents to Drive
-- You need latest versions of files
-- Cache may be stale
-
-### Parallel Processing
-
-Project APE processes multiple clients simultaneously:
-
-```bash
-# Process 5 clients in parallel (recommended maximum)
-./developer-docs/ape-run.sh --vars ./vars.py --clients client1,client2,client3,client4,client5 --mode fast
-```
-
-**Anti-Thundering-Herd Protection:**
-- Random initial offset (0-30s) per client
-- Prevents synchronized API calls
-- Improves success rate
-
-**Resource Considerations:**
-- Recommended: 1-5 clients
-- Maximum tested: 6 clients
-- Each client uses ~500MB RAM
-
-### Custom Personas
-
-Customize the AI analysis perspective:
+Project APE can send a notification when a workflow completes. Add the following to your `vars.py`:
 
 ```python
-# vars.py
-persona = "Red Hat solutions architect specializing in OpenShift"
+NOTIFICATION_WEBHOOK_URL = "https://hooks.slack.com/services/T.../B.../xxx"
 ```
 
-Examples:
-- `"solutions architect"`
-- `"account executive"`
-- `"sales engineer"`
-- `"business development manager"`
-- `"enterprise architect"`
+When a workflow finishes (whether all clients succeed or some fail), a Slack Block Kit message is sent to the webhook with:
 
-The persona influences analysis tone and focus.
+- Total number of clients processed
+- Successful / failed counts
+- Total workflow duration
 
-### Custom Timing
+The notification fires once per workflow run. If the webhook URL is not configured, no notification is sent.
 
-Adjust timing for your environment:
-
-```python
-# vars.py - Custom fast mode timing
-TIMINGS = {
-    'ask_prompt_delay': (10.0, 15.0),     # Slower research queries
-    'chat_prompt_delay': (6.0, 9.0),      # Slightly slower prompts
-    'source_processing_wait': 35,          # Longer source wait
-}
-
-# Custom deep mode timing
-DEEP_TIMINGS = {
-    'ask_prompt_delay': (20.0, 30.0),     # Very conservative
-    'chat_prompt_delay': (12.0, 18.0),    # Extra safe
-    'source_processing_wait': 50,          # Extended wait
-}
-```
-
-**When to adjust:**
-- Experiencing high retry rates (> 10% in fast mode)
-- API quota limitations
-- Network latency issues
+Compatible with any webhook endpoint that accepts JSON POST requests with Slack Block Kit format.
 
 ---
 
-## Best Practices
+## Resuming from Checkpoint
 
-### Before Running Workflows
+If a workflow is interrupted (network failure, system crash, quota exhaustion), you can resume from the last completed phase using the `--resume` flag:
 
-**✅ Organize Client Data**
-- Create dedicated Drive folders per client
-- Upload relevant PDFs (annual reports, presentations, case studies)
-- Ensure your Google account has access
-- Aim for 5-20 documents per client
-
-**✅ Test Authentication**
 ```bash
-# Verify NotebookLM
-notebooklm list
-
-# Verify Drive access
-python3 -c "from core.drive_manager import DriveManager; dm = DriveManager(); print('OK')"
+./run-workflow.sh fast --resume
 ```
 
-**✅ Start Small**
-- First run: 1 client, fast mode
-- Verify outputs and quality
-- Then scale to multiple clients
+The checkpoint system:
 
-### During Execution
+- Saves progress after each of the 8 pipeline phases
+- Stores checkpoint files in `logs/.checkpoints/{client_id}.json`
+- Skips already-completed phases on resume
+- Clears the checkpoint file upon successful completion
 
-**✅ Monitor Dashboard**
-- Keep dashboard open: http://localhost:8765
-- Watch for errors or stalled progress
-- Review logs for warnings
+### Checkpoint Phases
 
-**✅ Don't Interrupt**
-- Let workflows complete fully
-- Interrupting can create partial outputs
-- Use Ctrl+C only if necessary
+1. `setup_folder` - Download/locate client documents
+2. `determine_industry` - Industry classification
+3. `check_auth` - Authentication validation
+4. `create_notebook` - Notebook creation
+5. `consolidate_pdf` - PDF merging
+6. `run_research` - Research queries
+7. `run_chat` - Analysis prompts
+8. `generate_mindmap` - Mind map generation
 
-**❌ Avoid**
-- Running multiple workflows simultaneously
-- Closing terminal/browser mid-execution
-- Modifying `vars.py` during execution
-
-### After Completion
-
-**✅ Review Quality Scores**
-- Target: 8.0+ (fast), 8.5+ (deep)
-- Re-run if score < 7.0
-
-**✅ Access NotebookLM**
-- Open link from `NotebookLM_Link.txt`
-- Ask follow-up questions
-- Generate mind maps
-
-**✅ Archive Outputs**
-```bash
-# Create timestamped backup
-tar -czf outputs_$(date +%Y%m%d).tar.gz docs_generated/
-```
-
-### Workflow Optimization
-
-**For Regular Use:**
-
-1. **Batch Processing**
-   ```bash
-   # Process all clients weekly
-   ./developer-docs/ape-run.sh --vars ./vars.py --clients all --mode fast
-   ```
-
-2. **Incremental Updates**
-   ```bash
-   # Refresh specific client with new data
-   ./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode fast --refresh
-   ```
-
-3. **Quality-First Approach**
-   - Start with fast mode
-   - If score < 8.0, re-run in deep mode
-   - Archive high-quality outputs
-
-**For High-Value Accounts:**
-
-1. Always use deep mode
-2. Review outputs manually before use
-3. Ask follow-up questions in NotebookLM
-4. Generate multiple perspectives (re-run with different personas)
-
-### Troubleshooting Workflow
-
-If workflow fails:
-
-1. **Check logs**
-   ```bash
-   tail -f logs/overall.log
-   grep -i error logs/*.log
-   ```
-
-2. **Verify authentication**
-   ```bash
-   notebooklm list
-   ls -la ~/.project-ape/*.json
-   ```
-
-3. **Check Drive access**
-   - Open Drive folder URL in browser
-   - Verify PDFs are accessible
-
-4. **Re-run with verbose logging**
-   ```bash
-   # Add debug logging
-   export LOG_LEVEL=DEBUG
-   ./developer-docs/ape-run.sh --vars ./vars.py --clients acme_corp --mode fast
-   ```
-
-5. **Consult troubleshooting guide**
-   - See: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+If a failure occurs during phase 6 (research), resuming will skip phases 1-5 and pick up at phase 6.
 
 ---
 
-## Getting Help
+## Troubleshooting
 
-### Documentation
+### Authentication Issues
 
-- **Installation Issues**: [INSTALLATION.md](INSTALLATION.md)
-- **Technical Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
-- **Container Deployment**: [developer-docs/DEPLOYMENT.md](../developer-docs/DEPLOYMENT.md)
-- **Common Problems**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+**"Authentication failed" or "NotebookLM authentication not found"**
 
-### Support Channels
+- Run `notebooklm login` on a machine with Chrome
+- Or copy credentials: `scp ~/.notebooklm/credentials.json user@remote:~/.notebooklm/`
+- Verify the file exists: `ls -la ~/.notebooklm/credentials.json`
 
-- **GitHub Issues**: https://github.com/yourusername/project-ape/issues
-- **GitHub Discussions**: https://github.com/yourusername/project-ape/discussions
+**"Drive token not found"**
 
-### Reporting Issues
+- Complete the Drive OAuth setup in the configuration wizard
+- Or run: `python3 setup-oauth-drive.py`
+- Verify: `ls -la ~/.project-ape/drive_token.json`
 
-When reporting issues, include:
+### Dashboard Issues
 
-1. **System Information**
-   ```bash
-   python3 --version
-   podman --version  # or docker --version
-   uname -a
-   ```
+**"Dashboard not accessible" at localhost:8765**
 
-2. **Error Logs**
-   ```bash
-   # Upload complete logs
-   tar -czf logs_$(date +%Y%m%d).tar.gz logs/
-   ```
+- Check the server is running: `ps aux | grep server.py`
+- Check port availability: `lsof -i :8765`
+- Try restarting: `./restart-dashboard.sh`
 
-3. **Configuration** (sanitized)
-   - `vars.py` with sensitive data removed
-   - Execution command used
+### Workflow Issues
 
-4. **Steps to Reproduce**
-   - Exact commands run
-   - Expected vs. actual behavior
+**High retry rate in fast mode**
 
----
+- Normal rate is approximately 5%. If higher, increase delays in `TIMINGS` configuration.
+- Consider switching to deep mode for accounts with many sources.
 
-## Next Steps
+**"Research timeout" errors**
 
-**You're now ready to use Project APE effectively!**
+- Normal for large accounts in deep mode (~30% retry rate is acceptable)
+- The system retries automatically with exponential backoff
+- Check network connectivity if retries are consistently failing
 
-1. **Configure your first client** - Edit `vars.py`
-2. **Run a test workflow** - Fast mode, single client
-3. **Review outputs** - Check quality score and outputs
-4. **Scale up** - Add more clients, try deep mode
-5. **Integrate into workflow** - Weekly/monthly account research
+**Workflow hangs or no progress**
 
-Return to: [README.md](../README.md) | See also: [ARCHITECTURE.md](ARCHITECTURE.md)
+- Check logs: `tail -f logs/{client_id}.log`
+- Look for errors: `grep "ERROR" logs/*.log`
+- Check status files: `cat .multi_process_status/{client_id}.json`
 
----
+### Output Verification
 
-**Happy researching with Project APE! 🦍**
+After a successful run, verify outputs:
+
+- Check `docs_generated/{client_id}/` for generated documents
+- Review `Quality_Score.json` for quality metrics
+- Open the NotebookLM link in the summary document to view the notebook
+
+For comprehensive troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

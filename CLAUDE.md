@@ -217,6 +217,56 @@ cat .multi_process_status/clientname.json
 - Used when `industry` field left blank in configuration
 - Provides industry + subsegments for prompt targeting
 
+**`core/retry_strategy.py`:**
+- Shared retry logic with exponential backoff for NotebookLM CLI operations
+- `RetryConfig` dataclass, `is_retryable_error()`, `execute_with_retry()` orchestrator
+- Canonical `RETRYABLE_PATTERNS` list (rate limit, quota, RPC codes, auth errors)
+- `RetryableError` / `NonRetryableError` exception classes
+
+**`core/checkpoint_manager.py`:**
+- Pipeline checkpoint/resume for crash recovery
+- `PipelineCheckpoint` dataclass tracks completed phases, notebook_id, PDF path
+- `CheckpointManager` persists checkpoints as JSON in `logs/.checkpoints/`
+- Used with `--resume` flag to skip completed pipeline phases
+
+**`core/health_checks.py`:**
+- Pre-flight validation before pipeline execution
+- Checks: NotebookLM CLI available, NotebookLM authenticated, Drive OAuth valid, config valid
+- `run_preflight_checks()` aggregates all checks
+- Called from main.py before spawning client processes
+
+**`core/notification_manager.py`:**
+- Webhook notifications on workflow completion
+- `send_webhook()` via urllib.request (no external dependency)
+- `format_slack_payload()` for Slack Block Kit messages
+- Configured via `NOTIFICATION_WEBHOOK_URL` in vars.py
+
+### Security Features
+
+- **CSRF Protection:** flask-wtf CSRFProtect on all POST endpoints (SSE streaming endpoints exempted)
+- **Path Traversal Prevention:** Regex validation on `/logs/<client_token>` with `is_relative_to()` check
+- **No shell=True:** All subprocess calls use explicit argument lists
+- **Error Sanitization:** `_safe_error()` helper logs full errors server-side, returns generic messages to client
+- **Non-root Container:** Runs as `apeuser` (UID 1000)
+
+### Testing
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage
+pytest --cov=core --cov=dashboard --cov-report=term-missing
+
+# Run specific test file
+pytest tests/test_retry_strategy.py -v
+
+# Skip slow/integration tests
+pytest tests/ -m "not slow and not integration"
+```
+
+Test files: `test_retry_strategy.py`, `test_checkpoint_manager.py`, `test_health_checks.py`, `test_notification_manager.py`, `test_config_generator.py`, `test_config_parser.py`, `test_server_security.py`, `test_client_pipeline.py`
+
 ### Configuration System
 
 **Configuration System (Two Approaches):**

@@ -1818,6 +1818,81 @@ def system_status():
         }), 500
 
 
+@app.route('/api/available-platforms', methods=['GET'])
+def available_platforms():
+    """
+    Detect available platforms based on environment variables and authentication.
+
+    Returns:
+        JSON with platform availability and recommendations
+    """
+    try:
+        platforms = {
+            'notebooklm': {
+                'available': False,
+                'authenticated': False,
+                'reason': ''
+            },
+            'claude': {
+                'available': False,
+                'authenticated': False,
+                'reason': ''
+            },
+            'gemini': {
+                'available': False,
+                'authenticated': False,
+                'reason': ''
+            }
+        }
+
+        # Check NotebookLM
+        auth_manager = AuthManager()
+        if auth_manager.is_authenticated():
+            platforms['notebooklm']['available'] = True
+            platforms['notebooklm']['authenticated'] = True
+        else:
+            platforms['notebooklm']['available'] = True
+            platforms['notebooklm']['reason'] = 'Not authenticated - click "Login to NotebookLM" above'
+
+        # Check Claude (ANTHROPIC_API_KEY)
+        anthropic_key = os.environ.get('ANTHROPIC_API_KEY')
+        if anthropic_key and anthropic_key.startswith('sk-ant-'):
+            platforms['claude']['available'] = True
+            platforms['claude']['authenticated'] = True
+        else:
+            platforms['claude']['available'] = False
+            platforms['claude']['reason'] = 'ANTHROPIC_API_KEY not configured'
+
+        # Check Gemini (GEMINI_API_KEY)
+        gemini_key = os.environ.get('GEMINI_API_KEY')
+        if gemini_key:
+            platforms['gemini']['available'] = True
+            platforms['gemini']['authenticated'] = True
+        else:
+            platforms['gemini']['available'] = False
+            platforms['gemini']['reason'] = 'GEMINI_API_KEY not configured'
+
+        # Determine default platform (NotebookLM if authenticated, otherwise first available)
+        default_platform = 'notebooklm'
+        if not platforms['notebooklm']['authenticated']:
+            if platforms['claude']['authenticated']:
+                default_platform = 'claude'
+            elif platforms['gemini']['authenticated']:
+                default_platform = 'gemini'
+
+        return jsonify({
+            'success': True,
+            'platforms': platforms,
+            'default_platform': default_platform
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/cache-files/<client_id>', methods=['GET'])
 def get_cache_files(client_id):
     """List individual cached files for a client."""

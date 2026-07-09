@@ -290,6 +290,33 @@
         .pill-DEGRADED { background: rgba(240,136,62,0.2); color: #f0883e; border: 1px solid #f0883e; }
         .pill-PENDING { background: rgba(88,166,255,0.2); color: #58a6ff; border: 1px solid #58a6ff; }
 
+        /* Platform Badges */
+        .platform-pill {
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            margin-left: 8px;
+        }
+        .platform-notebooklm {
+            background: rgba(59,130,246,0.2);
+            color: #93c5fd;
+            border: 1px solid #3b82f6;
+        }
+        .platform-claude {
+            background: rgba(168,85,247,0.2);
+            color: #c4b5fd;
+            border: 1px solid #a855f7;
+        }
+        .platform-gemini {
+            background: rgba(34,197,94,0.2);
+            color: #86efac;
+            border: 1px solid #22c55e;
+        }
+
         /* Progress Bar in Card */
         .card-progress {
             margin: 16px 0;
@@ -791,10 +818,14 @@
                                 actionsHtml = `<div class="actions">${actionsHtml}</div>`;
                             }
 
+                            // Platform badge
+                            const platform = client.platform || 'notebooklm';
+                            const platformBadge = `<span class="platform-pill platform-${platform}">${platform}</span>`;
+
                             return `
                             <div class="card">
                                 <div class="card-header">
-                                    <div class="client-name">${client.name}</div>
+                                    <div class="client-name">${client.name}${platformBadge}</div>
                                     <div class="status-pill pill-${client.status}">${client.status}</div>
                                 </div>
                                 <div class="card-progress">

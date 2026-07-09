@@ -24,6 +24,7 @@ wheels/
 venv/
 ENV/
 env/
+skill/
 
 # IDE
 .vscode/

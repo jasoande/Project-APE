@@ -55,7 +55,7 @@ def extract_client_configs(config_module) -> List[Dict[str, str]]:
         config_module: Loaded Python module
 
     Returns:
-        List of client dicts with keys: id, name, folder, industry, subsegments
+        List of client dicts with keys: id, name, folder, industry, subsegments, platform
     """
     clients = []
 
@@ -72,7 +72,8 @@ def extract_client_configs(config_module) -> List[Dict[str, str]]:
             'name': getattr(config_module, f'{client_id}_name', client_id),
             'folder': getattr(config_module, f'{client_id}_folder', ''),
             'industry': getattr(config_module, f'{client_id}_industry', ''),
-            'subsegments': getattr(config_module, f'{client_id}_subsegments', '')
+            'subsegments': getattr(config_module, f'{client_id}_subsegments', ''),
+            'platform': getattr(config_module, f'{client_id}_platform', 'notebooklm')  # Default to notebooklm
         }
         clients.append(client)
 

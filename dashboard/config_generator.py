@@ -43,7 +43,7 @@ def validate_client_data(client: Dict) -> Tuple[bool, str]:
     Validate single client configuration.
 
     Args:
-        client: Client configuration dict with keys: id, name, folder, industry, subsegments
+        client: Client configuration dict with keys: id, name, folder, industry, subsegments, platform
 
     Returns:
         Tuple of (valid, error_message). error_message is empty string if valid.
@@ -60,6 +60,12 @@ def validate_client_data(client: Dict) -> Tuple[bool, str]:
         # Allow empty industry/subsegments (can be auto-detected)
         if field in ['id', 'name', 'folder'] and not client[field].strip():
             return False, f"Field '{field}' cannot be empty"
+
+    # Validate platform field (optional, defaults to notebooklm)
+    if 'platform' in client:
+        valid_platforms = ['notebooklm', 'claude', 'gemini']
+        if client['platform'] not in valid_platforms:
+            return False, f"Platform must be one of: {', '.join(valid_platforms)}"
 
     # Validate client ID format (must be valid Python identifier)
     client_id = client['id']
@@ -96,7 +102,7 @@ def escape_python_string(value: str) -> str:
 
 def format_client_section(client: Dict) -> str:
     """
-    Format 4-line client configuration section.
+    Format 5-line client configuration section (added platform field).
 
     Args:
         client: Client configuration dict
@@ -109,12 +115,14 @@ def format_client_section(client: Dict) -> str:
     folder = escape_python_string(client['folder'])
     industry = escape_python_string(client.get('industry', ''))
     subsegments = escape_python_string(client.get('subsegments', ''))
+    platform = escape_python_string(client.get('platform', 'notebooklm'))
 
     section = f'''# --- {client['name']} ---
 {client_id}_name = "{name}"
 {client_id}_folder = "{folder}"
 {client_id}_industry = "{industry}"
 {client_id}_subsegments = "{subsegments}"
+{client_id}_platform = "{platform}"
 '''
 
     return section

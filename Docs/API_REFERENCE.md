@@ -1,9 +1,10 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
-  
+  <img src="../dashboard/static/kingkong.png" alt="Project APE" width="150"/>
+
   # API Reference
+
   **Dashboard REST API and Integration Endpoints**
-  
+
   Version 4.0.1 | July 2026
 </div>
 
@@ -11,458 +12,614 @@
 
 ## Table of Contents
 
-1. [API Overview](#api-overview)
-2. [Dashboard Endpoints](#dashboard-endpoints)
-3. [Status File API](#status-file-api)
-4. [Configuration API](#configuration-api)
-5. [WebSocket/SSE Streaming](#websocketsse-streaming)
-6. [Error Handling](#error-handling)
-7. [Integration Examples](#integration-examples)
+- [Overview](#overview)
+- [Health and Status](#health-and-status)
+- [Configuration](#configuration)
+- [Workflow Control](#workflow-control)
+- [Log Streaming](#log-streaming)
+- [Authentication](#authentication)
+- [Google Drive](#google-drive)
+- [System](#system)
 
 ---
 
-## API Overview
+## Overview
 
-### Base URL
+The Project APE dashboard exposes a REST API at `http://localhost:8765`. All endpoints return JSON unless otherwise noted. SSE (Server-Sent Events) endpoints stream `text/event-stream` responses.
 
-```
-http://localhost:8765
-```
+**Base URL:** `http://localhost:8765`
 
-**Note:** Dashboard binds to `127.0.0.1` (localhost only) by default for security.
-
-### Authentication
-
-**Current:** None (localhost-only access)
-
-**Future (v4.1+):** Optional API key authentication for remote access
-
-### Response Format
-
-**Success responses:**
-```json
-{
-  "success": true,
-  "data": { ... },
-  "timestamp": "2026-07-06T14:30:15.123Z"
-}
-```
-
-**Error responses:**
-```json
-{
-  "success": false,
-  "error": "Error message",
-  "code": "ERROR_CODE",
-  "timestamp": "2026-07-06T14:30:15.123Z"
-}
-```
+**CSRF:** All POST endpoints require a CSRF token (via flask-wtf) except SSE streaming endpoints, which are explicitly exempt.
 
 ---
 
-## Dashboard Endpoints
+## Health and Status
 
 ### GET /health
 
-**Description:** Health check endpoint for monitoring
+Health check endpoint for monitoring.
 
-**Request:**
-```bash
-curl -i http://localhost:8765/health
-```
+**Response:**
 
-**Response (200 OK):**
 ```json
 {
   "status": "healthy",
   "pid": 12345,
-  "uptime_seconds": 3600,
-  "version": "4.0.1"
+  "active_threads": 4,
+  "memory_mb": 45.2,
+  "status_dir_exists": true,
+  "logs_dir_exists": true
 }
 ```
 
-**Use cases:**
-- Load balancer health checks
-- Monitoring systems (Prometheus, Datadog)
-- Deployment validation
-
----
-
-### GET /
-
-**Description:** Main dashboard UI (redirects to /configure or /status)
-
-**Request:**
-```bash
-curl -L http://localhost:8765/
-```
-
-**Response:** HTML page (redirects based on state)
-- No workflows running → Redirects to `/configure`
-- Workflows active → Redirects to `/status`
-
----
-
-### GET /configure
-
-**Description:** Configuration wizard and client management UI
-
-**Request:**
-```bash
-curl http://localhost:8765/configure
-```
-
-**Response:** HTML page with:
-- Authentication setup steps
-- Client addition form
-- Existing client list
-- Launch workflow button
-
-**UI Components:**
-- NotebookLM OAuth button
-- Drive OAuth setup wizard
-- Client configuration form (name, Drive URL, industry, subsegments, mode)
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `"healthy"` or `"unhealthy"` |
+| `pid` | int | Server process ID |
+| `active_threads` | int | Number of active threads |
+| `memory_mb` | float | Memory usage in megabytes |
+| `status_dir_exists` | bool | Whether `.multi_process_status/` directory exists |
+| `logs_dir_exists` | bool | Whether `logs/` directory exists |
 
 ---
 
 ### GET /status
 
-**Description:** Real-time workflow monitoring dashboard
+Aggregated client status from all status files.
 
-**Request:**
-```bash
-curl http://localhost:8765/status
-```
+**Response:**
 
-**Response:** HTML page with:
-- Live progress bars for each client
-- Streaming logs via Server-Sent Events (SSE)
-- Workflow statistics (time elapsed, quality scores)
-- Status indicators (PENDING, IN_PROGRESS, COMPLETE, FAILED)
-
----
-
-### GET /api/status
-
-**Description:** JSON status summary for all workflows
-
-**Request:**
-```bash
-curl http://localhost:8765/api/status
-```
-
-**Response (200 OK):**
 ```json
 {
-  "total_clients": 3,
-  "running": 2,
-  "completed": 1,
-  "failed": 0,
+  "total": 3,
+  "running": 1,
+  "complete": 1,
+  "failed": 1,
   "clients": [
     {
-      "client_id": "acme_corp",
-      "client_name": "Acme Corporation",
-      "status": "COMPLETE",
-      "progress": 100,
-      "phase": "Phase 5: Quality Validation",
-      "quality_score": 8.5,
-      "execution_time_min": 18.5,
-      "sources_imported": 82,
-      "mode": "fast"
-    },
-    {
-      "client_id": "techco",
-      "client_name": "TechCo Industries",
-      "status": "IN_PROGRESS",
+      "name": "Client Corp",
+      "token": "client_corp",
+      "step": "Running chat prompts",
       "progress": 65,
-      "phase": "Phase 4: Analysis Prompts",
+      "status": "RUNNING",
+      "mode": "fast",
+      "notebook_id": "nb_abc123",
+      "last_update": 1720000000.0,
+      "start_time": 1719999000.0,
       "quality_score": null,
-      "execution_time_min": 12.3,
-      "sources_imported": 75,
-      "mode": "fast"
+      "log_file": "client_corp.log",
+      "run_id": "run_20260708_120000"
     }
   ]
 }
 ```
 
-**Polling interval:** 2-5 seconds recommended
+| Field | Type | Description |
+|-------|------|-------------|
+| `total` | int | Total number of clients |
+| `running` | int | Clients currently executing |
+| `complete` | int | Successfully completed clients |
+| `failed` | int | Failed clients |
+| `clients` | array | Per-client status objects |
 
 ---
 
-### GET /stream-logs/{client_id}
+### GET /api/system-status
 
-**Description:** Server-Sent Events (SSE) stream for real-time logs
+System resource information.
 
-**Request:**
-```bash
-curl -N http://localhost:8765/stream-logs/acme_corp
-```
-
-**Response:** SSE stream
-```
-event: log
-data: {"timestamp": "2026-07-06T14:30:15.123Z", "level": "INFO", "message": "Starting workflow for Acme Corporation"}
-
-event: log
-data: {"timestamp": "2026-07-06T14:30:20.456Z", "level": "INFO", "message": "Phase 1: Downloading PDFs from Drive"}
-
-event: log
-data: {"timestamp": "2026-07-06T14:30:45.789Z", "level": "INFO", "message": "Downloaded 8 PDFs (42 MB total)"}
-
-event: status
-data: {"status": "IN_PROGRESS", "progress": 15, "phase": "Phase 2: Creating NotebookLM Notebook"}
-
-event: complete
-data: {"status": "COMPLETE", "quality_score": 8.5, "execution_time_min": 18.5}
-```
-
-**Client-side JavaScript example:**
-```javascript
-const eventSource = new EventSource('/stream-logs/acme_corp');
-
-eventSource.addEventListener('log', (event) => {
-  const log = JSON.parse(event.data);
-  console.log(`[${log.level}] ${log.message}`);
-});
-
-eventSource.addEventListener('status', (event) => {
-  const status = JSON.parse(event.data);
-  updateProgressBar(status.progress, status.phase);
-});
-
-eventSource.addEventListener('complete', (event) => {
-  const result = JSON.parse(event.data);
-  console.log(`Workflow complete! Quality score: ${result.quality_score}`);
-  eventSource.close();
-});
-
-eventSource.addEventListener('error', (event) => {
-  console.error('SSE connection error');
-  eventSource.close();
-});
-```
-
----
-
-### POST /api/launch-workflow
-
-**Description:** Launch workflow for configured clients
-
-**Request:**
-```bash
-curl -X POST http://localhost:8765/api/launch-workflow \
-  -H "Content-Type: application/json" \
-  -d '{
-    "clients": ["acme_corp", "techco"],
-    "mode": "fast"
-  }'
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Workflow launched for 2 clients",
-  "clients": ["acme_corp", "techco"],
-  "mode": "fast",
-  "estimated_completion_min": 20
-}
-```
-
-**Response (400 Bad Request):**
-```json
-{
-  "success": false,
-  "error": "Client 'invalid_client' not found in configuration",
-  "code": "CLIENT_NOT_FOUND"
-}
-```
-
----
-
-### POST /api/stop-workflow/{client_id}
-
-**Description:** Stop running workflow for specific client
-
-**Request:**
-```bash
-curl -X POST http://localhost:8765/api/stop-workflow/acme_corp
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Workflow stopped for acme_corp",
-  "client_id": "acme_corp"
-}
-```
-
----
-
-## Status File API
-
-### File Location
-
-```
-.multi_process_status/{client_id}.json
-```
-
-### Status File Schema
+**Response:**
 
 ```json
 {
-  "client_id": "acme_corp",
-  "client_name": "Acme Corporation",
-  "status": "COMPLETE",
-  "progress": 100,
-  "phase": "Phase 5: Quality Validation",
-  "phase_number": 5,
-  "total_phases": 5,
-  "start_time": "2026-07-06T14:12:30.123Z",
-  "end_time": "2026-07-06T14:31:15.456Z",
-  "execution_time_seconds": 1125,
-  "mode": "fast",
-  "error": null,
-  "phases": {
-    "phase_1": {
-      "name": "PDF Download & Consolidation",
-      "status": "COMPLETE",
-      "start_time": "2026-07-06T14:12:30.123Z",
-      "end_time": "2026-07-06T14:13:15.456Z",
-      "duration_seconds": 45,
-      "details": {
-        "pdfs_downloaded": 8,
-        "total_size_mb": 42,
-        "consolidated_pdf": "docs/acme_corp/Acme Corporation-One.pdf"
-      }
-    },
-    "phase_2": {
-      "name": "Notebook Creation",
-      "status": "COMPLETE",
-      "start_time": "2026-07-06T14:13:15.456Z",
-      "end_time": "2026-07-06T14:13:30.789Z",
-      "duration_seconds": 15,
-      "details": {
-        "notebook_id": "notebook_abc123xyz",
-        "sources_uploaded": 1
-      }
-    },
-    "phase_3": {
-      "name": "Research Queries",
-      "status": "COMPLETE",
-      "start_time": "2026-07-06T14:13:30.789Z",
-      "end_time": "2026-07-06T14:18:45.123Z",
-      "duration_seconds": 314,
-      "details": {
-        "queries_executed": 2,
-        "sources_imported": 82
-      }
-    },
-    "phase_4": {
-      "name": "Analysis Prompts",
-      "status": "COMPLETE",
-      "start_time": "2026-07-06T14:18:45.123Z",
-      "end_time": "2026-07-06T14:30:30.456Z",
-      "duration_seconds": 705,
-      "details": {
-        "prompts_executed": 6,
-        "analysis_generated": true
-      }
-    },
-    "phase_5": {
-      "name": "Quality Validation",
-      "status": "COMPLETE",
-      "start_time": "2026-07-06T14:30:30.456Z",
-      "end_time": "2026-07-06T14:31:15.456Z",
-      "duration_seconds": 45,
-      "details": {
-        "quality_score": 8.5,
-        "completeness_checks": {
-          "industry_analysis": "complete",
-          "swot_analysis": "complete",
-          "technology_trends": "complete",
-          "competitive_analysis": "complete",
-          "pain_points": "complete",
-          "recommendations": "complete"
-        }
-      }
-    }
+  "disk_usage": {
+    "total_gb": 500.0,
+    "used_gb": 250.0,
+    "free_gb": 250.0,
+    "percent": 50.0
   },
-  "outputs": {
-    "analysis_file": "docs_generated/acme_corp/Acme Corporation_Analysis.txt",
-    "notebooklm_link": "docs_generated/acme_corp/NotebookLM_Link.txt",
-    "quality_score": "docs_generated/acme_corp/Quality_Score.json"
-  }
+  "python_version": "3.12.4",
+  "venv_active": true,
+  "is_container": false
 }
-```
-
-### Reading Status Files
-
-**Python example:**
-```python
-import json
-from pathlib import Path
-
-def get_client_status(client_id):
-    status_file = Path(f".multi_process_status/{client_id}.json")
-    
-    if not status_file.exists():
-        return {"error": "Status file not found"}
-    
-    with open(status_file) as f:
-        return json.load(f)
-
-# Usage
-status = get_client_status("acme_corp")
-print(f"Status: {status['status']}")
-print(f"Progress: {status['progress']}%")
-print(f"Quality Score: {status['phases']['phase_5']['details']['quality_score']}")
-```
-
-**Bash example:**
-```bash
-# Check if workflow complete
-if jq -e '.status == "COMPLETE"' .multi_process_status/acme_corp.json > /dev/null; then
-  echo "Workflow complete!"
-  quality=$(jq '.phases.phase_5.details.quality_score' .multi_process_status/acme_corp.json)
-  echo "Quality score: $quality"
-fi
 ```
 
 ---
 
-## Configuration API
+### GET /api/preflight-check
 
-### GET /api/config
+Run pre-flight health checks before workflow launch.
 
-**Description:** Get current vars.py configuration
+**Response:**
 
-**Request:**
-```bash
-curl http://localhost:8765/api/config
+```json
+{
+  "all_passed": true,
+  "checks": [
+    {
+      "check": "notebooklm_cli",
+      "passed": true,
+      "message": "NotebookLM CLI is available"
+    },
+    {
+      "check": "notebooklm_auth",
+      "passed": true,
+      "message": "NotebookLM authentication is valid"
+    },
+    {
+      "check": "drive_auth",
+      "passed": true,
+      "message": "Google Drive authentication is valid"
+    },
+    {
+      "check": "config_valid",
+      "passed": true,
+      "message": "Config valid with 2 client(s): client_a, client_b"
+    }
+  ],
+  "summary": "4/4 checks passed"
+}
 ```
 
-**Response (200 OK):**
+| Check | What It Validates |
+|-------|-------------------|
+| `notebooklm_cli` | NotebookLM CLI is installed and responds to `notebooklm list --json` |
+| `notebooklm_auth` | NotebookLM OAuth credentials are present and valid |
+| `drive_auth` | Google Drive token exists at `~/.project-ape/drive_token.json` with a `token` key |
+| `config_valid` | `vars.py` exists, has a non-empty `clients` list, and each client has `_name` and `_folder` attributes |
+
+---
+
+## Configuration
+
+### GET /api/config-status
+
+Check whether `vars.py` exists and is valid.
+
+**Response:**
+
+```json
+{
+  "configured": true,
+  "client_count": 2,
+  "clients": ["client_a", "client_b"]
+}
+```
+
+---
+
+### GET /api/load-config
+
+Load and parse the current `vars.py` configuration.
+
+**Response:**
+
 ```json
 {
   "success": true,
-  "config": {
-    "clients": ["acme_corp", "techco"],
-    "mode": "fast",
-    "persona": "Red Hat solutions architect",
-    "dashboard_port": 8765,
-    "acme_corp": {
-      "name": "Acme Corporation",
-      "folder": "https://drive.google.com/drive/folders/1A2B3C...",
-      "industry": "pharmaceuticals",
-      "subsegments": "drug discovery, clinical trials"
-    },
-    "techco": {
-      "name": "TechCo Industries",
-      "folder": "https://drive.google.com/drive/folders/1F7G8H...",
+  "clients": [
+    {
+      "id": "client_a",
+      "name": "Client A Corp",
+      "folder": "https://drive.google.com/drive/folders/1ABC...",
       "industry": "technology",
-      "subsegments": "cloud, AI, DevOps"
+      "subsegments": "cloud, AI"
+    }
+  ],
+  "settings": {
+    "persona": "Red Hat solutions architect",
+    "default_mode": "fast",
+    "DASHBOARD_PORT": 8765,
+    "TIMINGS": { "..." : "..." },
+    "DEEP_TIMINGS": { "..." : "..." },
+    "RETRY_CONFIG": { "..." : "..." }
+  },
+  "file_info": {
+    "modified": 1720000000.0,
+    "size": 2048
+  }
+}
+```
+
+---
+
+### POST /api/generate-config
+
+Generate `vars.py` content from client data without writing to disk.
+
+**Request body:**
+
+```json
+{
+  "clients": [
+    {
+      "id": "client_a",
+      "name": "Client A Corp",
+      "folder": "https://drive.google.com/drive/folders/1ABC...",
+      "industry": "technology",
+      "subsegments": "cloud, AI"
+    }
+  ],
+  "settings": {
+    "persona": "solutions architect",
+    "default_mode": "fast"
+  }
+}
+```
+
+**Response (success):**
+
+```json
+{
+  "success": true,
+  "content": "# Generated vars.py content...",
+  "client_count": 1
+}
+```
+
+**Response (error):**
+
+```json
+{
+  "success": false,
+  "error": "Validation failed: ..."
+}
+```
+
+---
+
+### POST /api/save-config
+
+Save configuration to `vars.py`. Creates an automatic timestamped backup before writing.
+
+**Request body:** Same format as `/api/generate-config`.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Configuration saved",
+  "backup": "vars.py.backup.20260708_120000"
+}
+```
+
+Validates Python syntax before writing. Restores backup on syntax error.
+
+---
+
+### POST /api/preview-config
+
+Generate `vars.py` preview without saving to disk. Same request format as `/api/generate-config`.
+
+---
+
+### POST /api/validate-drive-url
+
+Validate a Google Drive URL format (no API call).
+
+**Request body:**
+
+```json
+{
+  "url": "https://drive.google.com/drive/folders/1ABC123..."
+}
+```
+
+**Response:**
+
+```json
+{
+  "valid": true,
+  "folder_id": "1ABC123..."
+}
+```
+
+---
+
+### POST /api/import-csv
+
+Parse an uploaded CSV file and return validated client data.
+
+**Request:** Multipart form data with a `file` field containing the CSV.
+
+**Expected CSV columns:** `name`, `folder`, `industry`, `subsegments`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "clients": [ { "id": "...", "name": "...", "folder": "...", "industry": "...", "subsegments": "..." } ],
+  "errors": [],
+  "total_rows": 5,
+  "valid_rows": 5
+}
+```
+
+---
+
+## Workflow Control
+
+### POST /api/start-workflow
+
+Launch the pipeline workflow in the background. Validates authentication before execution.
+
+**Request body:**
+
+```json
+{
+  "mode": "fast",
+  "clients": ["client_a", "client_b"]
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Workflow started",
+  "pid": 12345
+}
+```
+
+The workflow runs as a background process. Monitor progress via `/status` or `/logs/<client_token>`.
+
+---
+
+### POST /api/stop-workflow
+
+Cancel a running workflow and all child processes.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Workflow stopped"
+}
+```
+
+Uses SIGTERM with SIGKILL fallback for process group termination. Updates status of running clients to `CANCELLED`.
+
+---
+
+### POST /api/shutdown
+
+Gracefully shut down the dashboard server.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Shutting down"
+}
+```
+
+Includes a 2-second delay before forced exit to allow the response to be delivered.
+
+---
+
+## Log Streaming
+
+### GET /logs/\<client_token\>
+
+Stream logs for a specific client via Server-Sent Events (SSE).
+
+**Content-Type:** `text/event-stream`
+
+**Path parameter:** `client_token` must match `^[a-zA-Z0-9_-]+$` (max 128 characters).
+
+**Event format:**
+
+```
+data: {"line": "14:30:00 | INFO | [client_a] Creating notebook...", "timestamp": 1720000000.0}
+
+data: {"heartbeat": true}
+```
+
+- Sends heartbeat events every 10 seconds to prevent proxy timeouts.
+- Times out after 60 seconds of idle (no new log lines).
+
+---
+
+### GET /logs/overall
+
+Stream combined logs from all components via SSE. Same event format as client-specific streaming. Longer timeout (600s) to accommodate deep mode workflows.
+
+---
+
+### GET /api/available-logs
+
+List available log files with metadata.
+
+**Response:**
+
+```json
+{
+  "logs": [
+    {
+      "name": "client_a.log",
+      "type": "client",
+      "path": "/path/to/logs/client_a.log",
+      "size": 45678
+    }
+  ]
+}
+```
+
+---
+
+## Authentication
+
+### GET /api/check-auth-status
+
+Check NotebookLM authentication status.
+
+**Response:**
+
+```json
+{
+  "authenticated": true,
+  "message": "NotebookLM authentication is valid"
+}
+```
+
+---
+
+### POST /api/notebooklm-login
+
+Trigger the NotebookLM OAuth login flow. Opens a browser window for user authentication.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Login completed successfully"
+}
+```
+
+Uses 300-second timeout. On Linux headless environments, uses `xvfb-run` for browser automation.
+
+---
+
+### POST /api/notebooklm-logout
+
+Clear NotebookLM authentication credentials.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+### GET /api/oauth-status
+
+Check Google Drive OAuth credential and token status.
+
+**Response:**
+
+```json
+{
+  "credentials_exist": true,
+  "token_exists": true,
+  "token_valid": true,
+  "client_id": "1234567890-abc..."
+}
+```
+
+---
+
+### POST /api/upload-oauth-credentials
+
+Upload a Google OAuth `client_secret.json` file.
+
+**Request:** Multipart form data with a `file` field.
+
+**Validation:** Requires `installed.client_id` keys in the JSON structure.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Credentials saved",
+  "client_id": "1234567890-abcdef..."
+}
+```
+
+Saves with `0o600` permissions (owner-only read/write).
+
+---
+
+### GET/POST /api/start-oauth-flow
+
+Start the Google Drive OAuth authorization flow via SSE.
+
+**Content-Type:** `text/event-stream`
+
+Opens a browser for user authorization. Streams progress events. Saves the resulting token with `0o600` permissions.
+
+---
+
+### GET /api/test-drive-access
+
+Verify Google Drive API access by listing sample files.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Drive access verified",
+  "file_count": 10
+}
+```
+
+Auto-refreshes expired tokens before testing.
+
+---
+
+## Google Drive
+
+### POST /api/refresh-sources
+
+Refresh cached Google Drive sources via SSE. CSRF-exempt.
+
+**Request body:**
+
+```json
+{
+  "clients": ["client_a", "client_b"]
+}
+```
+
+**Content-Type:** `text/event-stream`
+
+Streams progress events as each client's Drive folder is re-downloaded. Omitting `clients` refreshes all configured clients.
+
+---
+
+### POST /api/update-notebook-sources
+
+Update sources in existing NotebookLM notebooks via SSE. CSRF-exempt.
+
+**Request body:**
+
+```json
+{
+  "clients": ["client_a"]
+}
+```
+
+**Content-Type:** `text/event-stream`
+
+Performs a 5-step process per client: download from Drive, consolidate PDFs, find existing notebook, delete old sources, add new consolidated PDF.
+
+---
+
+### GET /api/cache-stats
+
+Return cache statistics for all configured clients.
+
+**Response:**
+
+```json
+{
+  "clients": {
+    "client_a": {
+      "cached": true,
+      "file_count": 12,
+      "total_size_mb": 8.5,
+      "last_refresh": "2026-07-08T12:00:00"
     }
   }
 }
@@ -470,268 +627,74 @@ curl http://localhost:8765/api/config
 
 ---
 
-### POST /api/config/add-client
+### GET /api/cache-files/\<client_id\>
 
-**Description:** Add new client to configuration
+List individual cached files for a specific client.
 
-**Request:**
-```bash
-curl -X POST http://localhost:8765/api/config/add-client \
-  -H "Content-Type: application/json" \
-  -d '{
-    "client_id": "newcorp",
-    "client_name": "NewCorp Inc",
-    "folder_url": "https://drive.google.com/drive/folders/1X2Y3Z...",
-    "industry": "financial services",
-    "subsegments": "banking, fintech",
-    "mode": "fast"
-  }'
+**Response:**
+
+```json
+{
+  "files": [
+    {
+      "name": "report.pdf",
+      "size": 1048576,
+      "cached_at": "2026-07-08T12:00:00"
+    }
+  ]
+}
 ```
 
-**Response (200 OK):**
+---
+
+### POST /api/clear-cache
+
+Clear cached Drive files for selected clients.
+
+**Request body:**
+
+```json
+{
+  "clients": ["client_a"]
+}
+```
+
+**Response:**
+
 ```json
 {
   "success": true,
-  "message": "Client 'newcorp' added to configuration",
-  "client_id": "newcorp"
+  "cleared": ["client_a"],
+  "freed_mb": 8.5
 }
 ```
 
 ---
 
-## WebSocket/SSE Streaming
+## System
 
-### Server-Sent Events (SSE)
+### GET/POST /api/run-setup
 
-**Connection:**
-```javascript
-const eventSource = new EventSource(`http://localhost:8765/stream-logs/${clientId}`);
-```
+Execute the `setup-environment.sh` script with real-time SSE progress streaming. CSRF-exempt.
 
-**Event Types:**
-- `log` - Log message
-- `status` - Status update
-- `progress` - Progress percentage
-- `complete` - Workflow completion
-- `error` - Error occurred
+**Content-Type:** `text/event-stream`
 
-**Reconnection:**
-```javascript
-eventSource.addEventListener('error', (event) => {
-  console.error('Connection lost, reconnecting in 3s...');
-  setTimeout(() => {
-    eventSource = new EventSource(`/stream-logs/${clientId}`);
-  }, 3000);
-});
-```
+Strips ANSI color codes from output before streaming. 300-second timeout. Uses `yes |` to auto-answer interactive prompts.
 
 ---
 
-## Error Handling
+### GET / 
 
-### HTTP Status Codes
-
-| Code | Meaning | Example |
-|------|---------|---------|
-| 200 | Success | Workflow launched successfully |
-| 400 | Bad Request | Invalid client ID or missing parameters |
-| 404 | Not Found | Client not found in configuration |
-| 500 | Internal Server Error | Dashboard crash or Python exception |
-| 503 | Service Unavailable | Dashboard not running |
-
-### Error Response Format
-
-```json
-{
-  "success": false,
-  "error": "Human-readable error message",
-  "code": "ERROR_CODE",
-  "details": {
-    "parameter": "client_id",
-    "value": "invalid_client",
-    "expected": "One of: ['acme_corp', 'techco']"
-  },
-  "timestamp": "2026-07-06T14:30:15.123Z"
-}
-```
-
-### Common Error Codes
-
-| Code | Description | Resolution |
-|------|-------------|------------|
-| `CLIENT_NOT_FOUND` | Client ID not in vars.py | Add client via /configure or edit vars.py |
-| `AUTH_FAILED` | OAuth tokens invalid | Re-authenticate via /configure |
-| `DRIVE_ACCESS_DENIED` | Cannot access Drive folder | Check folder permissions and OAuth scopes |
-| `WORKFLOW_RUNNING` | Workflow already in progress | Wait for completion or stop existing workflow |
-| `QUOTA_EXCEEDED` | NotebookLM API quota exceeded | Wait for quota reset or increase delays |
-| `INVALID_MODE` | Mode not 'fast' or 'deep' | Use valid mode value |
+Serves the main dashboard HTML page (status monitoring view).
 
 ---
 
-## Integration Examples
+### GET /configure
 
-### Slack Notification Webhook
-
-```python
-import requests
-import json
-
-def send_slack_notification(client_id, status):
-    """Send workflow completion notification to Slack"""
-    
-    # Read status
-    with open(f'.multi_process_status/{client_id}.json') as f:
-        workflow = json.load(f)
-    
-    # Prepare Slack message
-    message = {
-        "text": f"Project APE Workflow Complete: {workflow['client_name']}",
-        "blocks": [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*{workflow['client_name']}* workflow completed"
-                }
-            },
-            {
-                "type": "section",
-                "fields": [
-                    {"type": "mrkdwn", "text": f"*Status:*\n{workflow['status']}"},
-                    {"type": "mrkdwn", "text": f"*Quality Score:*\n{workflow['phases']['phase_5']['details']['quality_score']}"},
-                    {"type": "mrkdwn", "text": f"*Execution Time:*\n{workflow['execution_time_seconds']/60:.1f} min"},
-                    {"type": "mrkdwn", "text": f"*Sources:*\n{workflow['phases']['phase_3']['details']['sources_imported']}"}
-                ]
-            }
-        ]
-    }
-    
-    # Send to Slack
-    webhook_url = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-    response = requests.post(webhook_url, json=message)
-    
-    return response.status_code == 200
-
-# Usage
-send_slack_notification("acme_corp", "COMPLETE")
-```
+Serves the configuration wizard HTML page.
 
 ---
 
-### Salesforce Integration
+### GET /launch
 
-```python
-from simple_salesforce import Salesforce
-
-def upload_to_salesforce(client_id, opportunity_id):
-    """Upload Project APE analysis to Salesforce Opportunity"""
-    
-    # Read generated analysis
-    with open(f'docs_generated/{client_id}/Analysis.txt') as f:
-        analysis = f.read()
-    
-    # Read quality score
-    with open(f'docs_generated/{client_id}/Quality_Score.json') as f:
-        quality = json.load(f)
-    
-    # Connect to Salesforce
-    sf = Salesforce(
-        username='user@company.com',
-        password='password',
-        security_token='token'
-    )
-    
-    # Update Opportunity
-    sf.Opportunity.update(opportunity_id, {
-        'Project_APE_Analysis__c': analysis[:32000],  # Text field limit
-        'Quality_Score__c': quality['overall_score'],
-        'Sources_Imported__c': quality['sources']['total'],
-        'Analysis_Date__c': datetime.now().isoformat()
-    })
-    
-    print(f"Uploaded analysis to Opportunity {opportunity_id}")
-
-# Usage
-upload_to_salesforce("acme_corp", "006XXXXXXXXXXXXXXX")
-```
-
----
-
-### Monitoring with Prometheus
-
-```python
-from prometheus_client import Counter, Histogram, Gauge, start_http_server
-import time
-import json
-
-# Metrics
-workflow_total = Counter('project_ape_workflows_total', 'Total workflows executed', ['client_id', 'mode', 'status'])
-workflow_duration = Histogram('project_ape_workflow_duration_seconds', 'Workflow execution time', ['client_id', 'mode'])
-quality_score = Gauge('project_ape_quality_score', 'Quality score', ['client_id'])
-sources_imported = Gauge('project_ape_sources_imported', 'External sources imported', ['client_id'])
-
-def collect_metrics():
-    """Collect metrics from status files"""
-    status_dir = Path('.multi_process_status')
-    
-    for status_file in status_dir.glob('*.json'):
-        with open(status_file) as f:
-            status = json.load(f)
-        
-        client_id = status['client_id']
-        mode = status['mode']
-        
-        # Increment workflow counter
-        workflow_total.labels(
-            client_id=client_id,
-            mode=mode,
-            status=status['status']
-        ).inc()
-        
-        # Record duration
-        if status['status'] == 'COMPLETE':
-            workflow_duration.labels(
-                client_id=client_id,
-                mode=mode
-            ).observe(status['execution_time_seconds'])
-            
-            # Update quality score
-            quality_score.labels(client_id=client_id).set(
-                status['phases']['phase_5']['details']['quality_score']
-            )
-            
-            # Update sources
-            sources_imported.labels(client_id=client_id).set(
-                status['phases']['phase_3']['details']['sources_imported']
-            )
-
-# Start Prometheus metrics server
-start_http_server(9090)
-
-# Collect metrics every 60 seconds
-while True:
-    collect_metrics()
-    time.sleep(60)
-```
-
-**Prometheus config:**
-```yaml
-scrape_configs:
-  - job_name: 'project-ape'
-    static_configs:
-      - targets: ['localhost:9090']
-```
-
----
-
-<div align="center">
-  
-  **API Integration**
-  
-  Use with [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) for detailed integration examples.
-  
-  ---
-  
-  *Last Updated: July 2026 | Version 4.0.1*
-  
-</div>
+Serves the launch confirmation page with workflow summary details.

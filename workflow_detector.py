@@ -90,6 +90,11 @@ def detect_workflow(vars_module) -> Dict[str, Any]:
     if not cache_enabled:
         command_parts.append('--refresh')
 
+    # CRITICAL: Skip pre-flight checks when launched from GUI
+    # The GUI already validates auth in the configuration wizard
+    # Running checks again causes main.py to exit before creating status files
+    command_parts.append('--skip-preflight')
+
     # Join into single command string
     command = ' '.join(command_parts)
 

@@ -1,971 +1,336 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
-  
+  <img src="../dashboard/static/kingkong.png" alt="Project APE" width="150"/>
+
   # Architecture Documentation
+
   **Project APE - Account Planning Engine**
-  
-  Version 4.0.1 | June 30, 2026
+
+  Version 4.0.1 | July 2026
 </div>
 
 ---
 
 ## Table of Contents
 
-1. [System Overview](#system-overview)
-2. [Architecture Diagrams](#architecture-diagrams)
-3. [Component Overview](#component-overview)
-4. [Data Flow](#data-flow)
-5. [Multi-Process Execution Model](#multi-process-execution-model)
-6. [Status Tracking and Dashboard](#status-tracking-and-dashboard)
-7. [Container Architecture](#container-architecture)
-8. [Security Model](#security-model)
-9. [Technology Stack](#technology-stack)
-10. [Design Decisions](#design-decisions)
+- [System Overview](#system-overview)
+- [Core Components Diagram](#core-components-diagram)
+- [Module Reference](#module-reference)
+- [Pipeline Flow](#pipeline-flow)
+- [Checkpoint and Resume](#checkpoint-and-resume)
+- [Configuration System](#configuration-system)
+- [Data Flow](#data-flow)
+- [Deployment Architecture](#deployment-architecture)
 
 ---
 
 ## System Overview
 
-Project APE is a **multi-process, containerized Python application** that orchestrates AI-powered account research using Google NotebookLM. The architecture is designed for:
+Project APE is a containerized Python application that automates enterprise account planning using Google's NotebookLM platform. The system uses a multi-process orchestrator pattern: `main.py` spawns independent client pipeline processes (one per client), each running through a 5-phase workflow. A Flask/Waitress dashboard provides real-time monitoring via Server-Sent Events (SSE) and JSON status files.
 
-- **Parallel execution**: Process multiple accounts simultaneously
-- **Real-time monitoring**: Web dashboard with live progress tracking
-- **Containerized deployment**: Consistent execution across platforms
-- **OAuth security**: No embedded credentials or API keys
-- **Fault tolerance**: Retry logic, graceful degradation, error recovery
+Key architectural properties:
 
-### Key Architectural Principles
-
-1. **Process Isolation**: Each client runs in independent Python process
-2. **Stateless Execution**: No shared memory between processes
-3. **File-Based IPC**: JSON status files for inter-process communication
-4. **Container-First**: Primary deployment target is containerized
-5. **API-Driven**: All NotebookLM interactions via official SDK
+- **Process isolation:** Each client runs in its own Python process with independent logs, status files, and error handling.
+- **Single-writer status files:** Each client process exclusively writes its own `.multi_process_status/{client_id}.json` file. The dashboard reads these files without locking.
+- **Anti-thundering-herd protection:** Random initial offsets (0-30s) prevent synchronized API calls when multiple clients start simultaneously.
+- **Checkpoint/resume:** Pipeline state persists to disk after each phase, allowing interrupted runs to resume from where they left off.
 
 ---
 
-## Architecture Diagrams
-
-### High-Level System Architecture
+## Core Components Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          USER INTERACTION LAYER                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  CLI Launcher            Web Dashboard (Flask)       Container Runtime  │
-│  ./ape-run.sh    ←────→  http://localhost:8765  ←→   podman/docker     │
-│                                                                          │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │
-┌────────────────────────────────▼────────────────────────────────────────┐
-│                        ORCHESTRATION LAYER                               │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  main.py (Multi-Process Orchestrator)                                   │
-│  ├─ ProcessManager: Lifecycle, status tracking, cleanup                 │
-│  ├─ Flask Dashboard Server (background process)                         │
-│  └─ Client Pipeline Processes (1-5 parallel)                            │
-│                                                                          │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │
-┌────────────────────────────────▼────────────────────────────────────────┐
-│                        EXECUTION LAYER                                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                  │
-│  │  Process 1   │  │  Process 2   │  │  Process N   │                  │
-│  │  Client A    │  │  Client B    │  │  Client N    │                  │
-│  │              │  │              │  │              │                  │
-│  │  Pipeline:   │  │  Pipeline:   │  │  Pipeline:   │                  │
-│  │  1. Download │  │  1. Download │  │  1. Download │                  │
-│  │  2. Notebook │  │  2. Notebook │  │  2. Notebook │                  │
-│  │  3. Research │  │  3. Research │  │  3. Research │                  │
-│  │  4. Analysis │  │  4. Analysis │  │  4. Analysis │                  │
-│  │  5. Validate │  │  5. Validate │  │  5. Validate │                  │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘                  │
-│         │                 │                 │                           │
-│         └─────────────────┴─────────────────┘                           │
-│                           │                                              │
-│                  Writes status.json                                      │
-│                           ↓                                              │
-│              .multi_process_status/                                      │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-                                 │
-┌────────────────────────────────▼────────────────────────────────────────┐
-│                        CORE COMPONENTS                                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│  │  DriveManager    │  │ NotebookManager  │  │  SourceManager   │      │
-│  │  • OAuth auth    │  │  • Create NB     │  │  • Upload PDFs   │      │
-│  │  • Download PDFs │  │  • Find by name  │  │  • Research      │      │
-│  │  • Cache (7-day) │  │  • Delete        │  │  • Parse results │      │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
-│                                                                          │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│  │  GeminiAgent     │  │  QualityScorer   │  │  AuthManager     │      │
-│  │  • Auto-detect   │  │  • Validate      │  │  • Check creds   │      │
-│  │  • Error recovery│  │  • Score 1-10    │  │  • Fail fast     │      │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
-│                                                                          │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │
-┌────────────────────────────────▼────────────────────────────────────────┐
-│                        EXTERNAL SERVICES                                 │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│  │  Google Drive    │  │  NotebookLM      │  │  Gemini API      │      │
-│  │  API             │  │  API             │  │  (optional)      │      │
-│  │  • OAuth 2.0     │  │  • Research      │  │  • AI agent      │      │
-│  │  • File download │  │  • Analysis      │  │  • Industry ID   │      │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Client Pipeline Flow
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      CLIENT PIPELINE FLOW                            │
-└─────────────────────────────────────────────────────────────────────┘
-
-START (main.py spawns process)
-  │
-  ├─> Anti-thundering-herd offset (0-30s random delay)
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 1: Document Download (30-60 seconds)                          │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  1. Parse Drive folder URL                                          │
-│  2. OAuth authentication check                                      │
-│  3. List files in folder (recursive)                                │
-│  4. Check cache (7-day TTL)                                         │
-│     ├─> Cache hit: Use cached files                                │
-│     └─> Cache miss: Download from Drive                            │
-│  5. Convert Google Docs to PDF                                      │
-│  6. Save to local cache                                             │
-│                                                                      │
-│  Output: PDFs in ~/.project-ape/drive_cache/{client_id}/           │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 2: Notebook Creation (10-15 seconds)                          │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  1. Check for existing notebook (by name)                           │
-│     ├─> Found: Reuse existing notebook                             │
-│     └─> Not found: Create new notebook                             │
-│  2. Upload PDFs as sources                                          │
-│  3. Wait for source processing (30s fast, 45s deep)                │
-│  4. Verify sources ready                                            │
-│                                                                      │
-│  Output: NotebookLM notebook with uploaded sources                  │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 3: Research Phase (3-8 minutes)                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  For each research query (2 queries):                               │
-│    1. Load prompt from ask_prompt_0X.txt                           │
-│    2. Substitute variables ($name, $industry, $subsegments)        │
-│    3. Execute NotebookLM "Ask" query                               │
-│    4. Parse response and citations                                 │
-│    5. Import cited sources (10-90 sources per query)               │
-│    6. Wait (8-12s fast, 15-25s deep)                               │
-│    7. Retry on quota errors (exponential backoff)                  │
-│                                                                      │
-│  Prompts:                                                            │
-│    • ask_prompt_01.txt: Industry analysis & trends                 │
-│    • ask_prompt_02.txt: Competitive landscape                      │
-│                                                                      │
-│  Output: Research responses + 20-180 imported sources               │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 4: Analysis Phase (8-12 minutes)                              │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  For each analysis prompt (6 prompts):                              │
-│    1. Load prompt from chat_prompt_consolidated_0X.txt             │
-│    2. Substitute variables ($name, $industry, $subsegments,        │
-│       $persona)                                                     │
-│    3. Execute NotebookLM "Chat" query                              │
-│    4. Parse response                                                │
-│    5. Wait (5-8s fast, 10-15s deep)                                │
-│    6. Retry on errors (exponential backoff)                        │
-│                                                                      │
-│  Prompts:                                                            │
-│    • 01: Industry overview + key challenges                        │
-│    • 02: Technology trends + competitive positioning               │
-│    • 03: Pain points + opportunity areas                           │
-│    • 04: Decision makers + buying process                          │
-│    • 05: Value proposition + success metrics                       │
-│    • 06: Risk factors + strategic recommendations                  │
-│                                                                      │
-│  Output: Strategic analysis covering 12 dimensions                  │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 5: Quality Validation (1-2 minutes)                           │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  1. Count imported sources                                          │
-│  2. Validate content completeness                                   │
-│  3. Assess source quality                                           │
-│  4. Calculate quality score (1-10)                                  │
-│  5. Generate execution summary                                      │
-│  6. Write outputs to docs_generated/{client_id}/                   │
-│                                                                      │
-│  Quality Metrics:                                                    │
-│    • Source count (20%)                                             │
-│    • Source quality (25%)                                           │
-│    • Content completeness (25%)                                     │
-│    • Research depth (15%)                                           │
-│    • Analysis coverage (15%)                                        │
-│                                                                      │
-│  Output: Quality score + summary files                              │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-END (mark status as COMPLETE)
+                          +---------------------------+
+                          |   launch-project-ape.py    |
+                          |  (cross-platform launcher) |
+                          +-------------+-------------+
+                                        |
+                                        v
++-----------------------------------------------------------------------+
+|                          main.py (Orchestrator)                        |
+|                                                                        |
+|  - Loads vars.py configuration                                         |
+|  - Starts dashboard server (Flask/Waitress, port 8765)                 |
+|  - Spawns N client_pipeline.py processes (max 5 concurrent)            |
+|  - Monitors process lifecycle                                          |
+|  - Sends completion notifications (webhook)                            |
++---+----------+----------+----------+----------+-----------------------+
+    |          |          |          |          |
+    v          v          v          v          v
++--------+ +--------+ +--------+ +--------+ +--------+
+|Client 1| |Client 2| |Client 3| |Client 4| |Client 5|
+|Pipeline| |Pipeline| |Pipeline| |Pipeline| |Pipeline|
++--------+ +--------+ +--------+ +--------+ +--------+
+    |          |          |          |          |
+    +----------+----------+----------+----------+
+                          |
+                          v
+              +------------------------+
+              | .multi_process_status/  |
+              |   client1.json          |
+              |   client2.json          |       +------------------+
+              |   ...                   | <---- | dashboard/server |
+              +------------------------+       | (reads status)   |
+                                               +--------+---------+
+                                                        |
+                                                        v
+                                               +------------------+
+                                               |     Browser      |
+                                               | localhost:8765    |
+                                               +------------------+
 ```
 
 ---
 
-## Component Overview
+## Module Reference
 
-### 1. Main Orchestrator (`main.py`)
+### Orchestration
 
-**Responsibilities:**
-- Parse command-line arguments and configuration
-- Validate authentication (NotebookLM, Drive)
-- Spawn Flask dashboard server (background process)
-- Spawn client pipeline processes (parallel)
-- Monitor process health
-- Aggregate status from all clients
-- Handle graceful shutdown
+| Module | Description |
+|--------|-------------|
+| `main.py` | Multi-process orchestrator. Loads configuration, starts the dashboard server, spawns client pipeline processes, monitors their lifecycle, and triggers completion notifications. |
+| `launch-project-ape.py` | Cross-platform GUI launcher. Sets up virtual environment, installs dependencies, starts the dashboard server, and opens the browser. Designed for double-click execution. |
 
-**Key Functions:**
-- `spawn_dashboard_server()`: Launch Flask app in subprocess
-- `spawn_client_process(client_id)`: Create isolated process per client
-- `monitor_processes()`: Check process health, aggregate status
-- `cleanup()`: Terminate processes, close resources
+### Core Pipeline
 
-**Process Model:**
+| Module | Description |
+|--------|-------------|
+| `core/client_pipeline.py` | Single-client 5-phase pipeline execution. Handles PDF consolidation, notebook creation, research queries, analysis prompts, and quality scoring. Supports fast, deep, update, and agent-orchestrated modes. Integrates with checkpoint/resume for fault tolerance. |
+| `core/auth_manager.py` | NotebookLM authentication validation. Checks credential file existence and validity (`~/.notebooklm/profiles/default/storage_state.json`). Includes retry logic with anti-collision delays for multi-client scenarios. |
+| `core/notebook_manager.py` | Notebook lifecycle management. Creates, finds, and deletes NotebookLM notebooks. Supports deduplication by name to avoid re-creating existing notebooks. |
+| `core/source_manager.py` | Source addition with retry logic. Adds file sources (consolidated PDFs) to notebooks, executes research queries (Ask prompts), and imports discovered URLs/sources with automatic retry on quota errors. |
+| `core/pdf_consolidator_fast.py` | PDF merging with table of contents. Consolidates all client PDFs (and exported Google Workspace files) into a single document. |
+| `core/drive_manager.py` | Google Drive API v3 integration with OAuth 2.0. Downloads files from Drive folders, exports Google Docs/Sheets to PDF, and implements a TTL-based cache (`~/.project-ape/drive_cache/`). Supports timestamp-based change detection. |
+
+### Quality and Intelligence
+
+| Module | Description |
+|--------|-------------|
+| `core/quality_scorer.py` | Quality validation with optional Gemini AI enhancement. Scores output across source quality (0-3), research depth (0-2), note completeness (0-4), and mind map presence (0-1) for a total of 10.0. |
+| `core/claude_industry_detector.py` | Automatic industry classification from client documents. Analyzes consolidated PDF content via Claude API when the industry field is left blank. |
+| `core/gemini_agent.py` | Gemini AI agent for orchestrating pipeline steps with quality monitoring. Used in agent-orchestrated execution mode. |
+| `core/gemini_manager.py` | Gemini API session management and configuration. |
+| `core/error_analyzer.py` | Pipeline error analysis and classification. |
+| `core/artifact_verifier.py` | Notebook artifact verification (sources, notes, mind maps). |
+
+### Reliability
+
+| Module | Description |
+|--------|-------------|
+| `core/retry_strategy.py` | Shared retry logic with exponential backoff. Provides `RetryConfig` dataclass, `RetryableError`/`NonRetryableError` exceptions, pattern-based error classification, and the `execute_with_retry()` orchestrator. Retryable patterns include rate limits, quota exhaustion, RPC errors, and authentication failures. |
+| `core/checkpoint_manager.py` | Pipeline checkpoint/resume capability. `PipelineCheckpoint` tracks 8 phases of execution. `CheckpointManager` saves/loads checkpoints as JSON, determines which phases to skip on resume, and clears checkpoints on completion. |
+| `core/health_checks.py` | Pre-flight validation before pipeline execution. Checks NotebookLM CLI availability, NotebookLM authentication, Google Drive OAuth token, and configuration file validity. `run_preflight_checks()` aggregates all results. |
+| `core/notification_manager.py` | Webhook notifications for pipeline completion. Sends Slack Block Kit formatted payloads via `NOTIFICATION_WEBHOOK_URL`. Fires only when configured. |
+
+### Dashboard
+
+| Module | Description |
+|--------|-------------|
+| `dashboard/server.py` | Flask application served by Waitress. Provides REST API endpoints, SSE log streaming, configuration wizard, and real-time status monitoring. CSRF protection via flask-wtf, path traversal prevention, and error message sanitization. |
+| `dashboard/config_generator.py` | Generates `vars.py` configuration from web form input. Validates client data, sanitizes client IDs, and formats Python-executable configuration. |
+| `dashboard/config_parser.py` | Parses existing `vars.py` to populate web UI forms. Extracts client configurations and global settings. Enables round-trip editing (web to file to web). |
+
+### Utilities
+
+| Module | Description |
+|--------|-------------|
+| `core/notebooklm_cmd.py` | NotebookLM CLI command wrapper. |
+| `core/notebooklm_utils.py` | NotebookLM utility functions. |
+| `core/research_queue.py` | Research query queue management. |
+| `core/update_manager.py` | Application update management. |
+| `workflow_detector.py` | Workflow configuration detection and validation. |
+
+---
+
+## Pipeline Flow
+
+Each client pipeline executes 5 sequential phases, with checkpoint persistence between phases:
+
 ```
-main.py (PID 1000)
-├─> dashboard/server.py (PID 1001) - Flask app
-├─> client_pipeline.py client_a (PID 1002)
-├─> client_pipeline.py client_b (PID 1003)
-└─> client_pipeline.py client_c (PID 1004)
+Phase 1                Phase 2              Phase 3
+PDF Download &         Notebook             Research
+Consolidation          Creation             (Ask Prompts)
+(30-60s)               (10s)                (3-5 min)
++------------------+   +----------------+   +------------------+
+| Download PDFs    |   | Check for      |   | Execute 2 ask    |
+| from Drive       |-->| existing       |-->| prompts          |
+| (7-day cache)    |   | notebook       |   | Import 10-90     |
+| Merge into       |   | Create/reuse   |   | external sources |
+| single PDF + TOC |   | Upload PDF     |   | per query        |
++------------------+   +----------------+   +------------------+
+                                                     |
+                  +----------------------------------+
+                  |
+                  v
+Phase 4                              Phase 5
+Analysis                             Quality Validation
+(Chat Prompts)                       & Mind Map
+(8-12 min)                           (1-2 min)
++------------------------------+     +------------------+
+| Execute 6 consolidated       |     | Score across 4   |
+| chat prompts with            |---->| dimensions       |
+| variable substitution        |     | Generate mind    |
+| ($name, $industry,           |     | map artifact     |
+|  $subsegments, $persona)     |     | Create summary   |
++------------------------------+     +------------------+
 ```
 
-### 2. Client Pipeline (`core/client_pipeline.py`)
+### Execution Modes
 
-**Responsibilities:**
-- Execute complete workflow for single client
-- Update status file at each phase
-- Handle errors and retries
-- Write outputs to `docs_generated/`
+| Mode | Duration | Sources Imported | Retry Rate | Use Case |
+|------|----------|------------------|------------|----------|
+| Fast | 15-20 min | 10-25 per query | ~5% | Quick account planning, initial runs |
+| Deep | 45-60 min | 45-90 per query | ~30% (acceptable) | Maximum source coverage, thorough analysis |
+| Update | Variable | Refreshes existing | Variable | Refresh notebook with new web data |
 
-**Key Functions:**
-- `run_pipeline(client_id, config, mode)`: Main entry point
-- `execute_phase_1_download()`: Drive file download
-- `execute_phase_2_notebook()`: Notebook creation
-- `execute_phase_3_research()`: Research queries
-- `execute_phase_4_analysis()`: Analysis prompts
-- `execute_phase_5_validation()`: Quality validation
+---
 
-**State Management:**
-- Writes status to `.multi_process_status/{client_id}.json`
-- Updates every 5 seconds during execution
-- Final status: COMPLETE, FAILED, or ERROR
+## Checkpoint and Resume
 
-### 3. Drive Manager (`core/drive_manager.py`)
+The checkpoint system enables fault-tolerant pipeline execution. When a pipeline is interrupted (crash, network failure, quota exhaustion), it can resume from the last completed phase.
 
-**Responsibilities:**
-- Google Drive API integration
-- OAuth 2.0 authentication
-- File download with caching
-- Google Docs → PDF conversion
+### Phase Order
 
-**Key Functions:**
-- `__init__()`: Initialize OAuth flow, load credentials
-- `authenticate()`: Complete OAuth flow, save token
-- `list_files(folder_id)`: Recursive folder traversal
-- `download_file(file_id, dest_path)`: Download with caching
-- `export_google_doc(file_id)`: Convert Docs to PDF
+1. `setup_folder` - Download/locate client documents
+2. `determine_industry` - Detect or load industry classification
+3. `check_auth` - Validate NotebookLM authentication
+4. `create_notebook` - Create or find existing notebook
+5. `consolidate_pdf` - Merge PDFs into single document
+6. `run_research` - Execute Ask prompts for web research
+7. `run_chat` - Execute Chat prompts for analysis
+8. `generate_mindmap` - Create notebook mind map artifact
 
-**Caching Strategy:**
-- Cache location: `~/.project-ape/drive_cache/{client_id}/`
-- TTL: 7 days (configurable)
-- Cache key: Drive file ID + modification timestamp
-- Invalidation: TTL expiry or `--refresh` flag
+### How It Works
 
-### 4. Notebook Manager (`core/notebook_manager.py`)
+```
+Pipeline Start
+     |
+     v
+Load checkpoint (if --resume flag)
+     |
+     +---> No checkpoint found: start from phase 1
+     |
+     +---> Checkpoint found: skip completed phases
+           |
+           v
+     For each phase:
+       1. Check should_skip_phase() against completed_phases
+       2. If skipped, log and continue
+       3. If not skipped, execute phase
+       4. On success, save checkpoint with updated completed_phases
+       5. On failure, checkpoint preserves progress for next resume
+     |
+     v
+Pipeline Complete: clear checkpoint file
+```
 
-**Responsibilities:**
-- NotebookLM API wrapper
-- Notebook lifecycle management
-- Deduplication (find by name)
-- Error handling and retries
+Checkpoint files are stored as JSON in `logs/.checkpoints/{client_id}.json` and track: client_id, run_id, mode, current phase, completed phases, notebook_id, industry, subsegments, quality_score, and last_update timestamp.
 
-**Key Functions:**
-- `create_notebook(name)`: Create new notebook
-- `find_notebook_by_name(name)`: Search for existing notebook
-- `delete_notebook(notebook_id)`: Remove notebook
-- `list_notebooks()`: Get all user notebooks
-- `add_source(notebook_id, file_path)`: Upload source
+---
 
-**API Integration:**
-- Uses `notebooklm` CLI subprocess calls
-- Parses JSON output from CLI
-- Handles authentication errors
-- Implements retry logic (5 attempts, exponential backoff)
+## Configuration System
 
-### 5. Source Manager (`core/source_manager.py`)
+Project APE supports two configuration approaches:
 
-**Responsibilities:**
-- Source upload to NotebookLM
-- Research query execution ("Ask" prompts)
-- Analysis query execution ("Chat" prompts)
-- Citation parsing and source import
+### 1. Web UI Configuration (Recommended)
 
-**Key Functions:**
-- `upload_sources(notebook_id, file_paths)`: Batch upload
-- `execute_research_query(notebook_id, prompt)`: Run Ask prompt
-- `execute_analysis_query(notebook_id, prompt)`: Run Chat prompt
-- `parse_citations(response)`: Extract source URLs
-- `import_cited_sources(notebook_id, citations)`: Add web sources
+The browser-based form at `http://localhost:8765/configure` provides:
 
-**Prompt Processing:**
-1. Load prompt template from file
-2. Substitute variables:
-   - `$name` → client name
-   - `$industry` → client industry
-   - `$subsegments` → industry subsegments
-   - `$persona` → AI analysis persona (Chat prompts only)
-3. Execute via NotebookLM API
-4. Parse response and metadata
-5. Import cited sources (research queries only)
+- Client management (add, edit, remove)
+- Google Drive URL validation
+- Industry and subsegment selection
+- Mode selection (fast/deep)
+- Real-time validation and preview
+- CSV import for batch client setup
 
-### 6. Gemini Agent (`core/gemini_agent.py`)
+Configuration is generated by `dashboard/config_generator.py` and written to `vars.py`.
 
-**Responsibilities:**
-- Industry auto-detection
-- Error analysis and recovery
-- Quality validation assistance
+### 2. Manual Configuration (`vars.py`)
 
-**Key Functions:**
-- `detect_industry(client_name, documents)`: AI-powered industry classification
-- `analyze_error(error_message, context)`: Error diagnosis
-- `suggest_recovery(error_analysis)`: Recovery recommendations
+Direct Python file with per-client attributes:
 
-**Optional Feature:**
-- Requires Gemini API key
-- Gracefully degrades if unavailable
-- Used for advanced features only
-
-### 7. Quality Scorer (`core/quality_scorer.py`)
-
-**Responsibilities:**
-- Validate research completeness
-- Calculate quality scores
-- Generate validation reports
-
-**Key Functions:**
-- `calculate_score(notebook_data)`: Compute 1-10 score
-- `validate_sources(source_count, mode)`: Check source adequacy
-- `validate_completeness(responses)`: Check all prompts answered
-- `assess_source_quality(sources)`: Evaluate source authority
-
-**Scoring Algorithm:**
 ```python
-score = (
-    source_count_score * 0.20 +
-    source_quality_score * 0.25 +
-    completeness_score * 0.25 +
-    research_depth_score * 0.15 +
-    analysis_coverage_score * 0.15
-)
+clients = ["client_a", "client_b"]
+
+client_a_name = "Client A Corporation"
+client_a_folder = "https://drive.google.com/drive/folders/1ABC..."
+client_a_industry = "technology"
+client_a_subsegments = "cloud, AI, enterprise software"
+
+persona = "Red Hat solutions architect"
+default_mode = "fast"
 ```
 
-### 8. Dashboard Server (`dashboard/server.py`)
+### Key Configuration Sections
 
-**Responsibilities:**
-- Flask web application
-- Real-time status aggregation
-- Log streaming (Server-Sent Events)
-- API endpoints for control
-
-**Routes:**
-- `GET /` - Main dashboard
-- `GET /configure` - Configuration UI
-- `GET /status` - JSON status endpoint
-- `GET /stream-logs` - SSE log stream
-- `POST /api/start-workflow` - Launch pipeline
-- `POST /api/shutdown` - Graceful shutdown
-
-**Status Aggregation:**
-1. Read all `.multi_process_status/*.json` files
-2. Aggregate overall progress
-3. Calculate counts (total, running, complete, failed)
-4. Serve as JSON every 2 seconds
+| Section | Purpose |
+|---------|---------|
+| `clients` | List of client IDs to process |
+| `{id}_name`, `{id}_folder`, etc. | Per-client attributes |
+| `persona` | AI role/perspective for chat prompts |
+| `TIMINGS` / `DEEP_TIMINGS` | Mode-specific delay configurations |
+| `RETRY_CONFIG` | Retry behavior (max attempts, delays) |
+| `DRIVE_CONFIG` | Drive download settings (cache TTL, file size limit) |
+| `GEMINI_AGENT_CONFIG` | Gemini AI agent settings |
+| `QUALITY_THRESHOLDS` | Minimum quality standards |
+| `NOTIFICATION_WEBHOOK_URL` | Webhook URL for completion notifications |
 
 ---
 
 ## Data Flow
 
-### Authentication Flow
-
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                      AUTHENTICATION FLOW                          │
-└──────────────────────────────────────────────────────────────────┘
-
-NotebookLM Authentication:
-  1. User runs: notebooklm login
-  2. CLI opens Chrome browser
-  3. User signs in with Google
-  4. OAuth callback saves credentials
-  5. Credentials saved: ~/.notebooklm/credentials.json
-  6. Container mounts as volume
-
-Google Drive Authentication:
-  1. User runs: setup-oauth-drive-improved.py
-  2. Script guides through GCP setup:
-     a. Create/select project
-     b. Enable Drive API
-     c. Create OAuth credentials
-     d. Download client_secret_*.json
-  3. Script finds and moves credentials
-  4. Script launches OAuth flow
-  5. Browser consent screen
-  6. Token saved: ~/.project-ape/drive_token.json
-  7. Credentials: ~/.project-ape/drive_credentials.json
-```
-
-### Document Processing Flow
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                   DOCUMENT PROCESSING FLOW                        │
-└──────────────────────────────────────────────────────────────────┘
-
-1. Drive Folder → DriveManager
-   ├─> Parse folder URL
-   ├─> Authenticate with OAuth
-   ├─> List files (recursive)
-   └─> Download PDFs
-       ├─> Check cache (7-day TTL)
-       ├─> Download if cache miss
-       └─> Convert Google Docs to PDF
-
-2. Local Files → NotebookManager
-   ├─> Check for existing notebook (by name)
-   └─> Create new notebook if needed
-
-3. Files → SourceManager
-   ├─> Upload PDFs to notebook
-   ├─> Wait for processing (30-45s)
-   └─> Verify sources ready
-
-4. Research Phase → SourceManager
-   ├─> Execute Ask queries (2)
-   ├─> Parse citations from responses
-   ├─> Import cited web sources (20-180 sources)
-   └─> Save research outputs
-
-5. Analysis Phase → SourceManager
-   ├─> Execute Chat queries (6)
-   ├─> Parse analysis responses
-   └─> Save analysis outputs
-
-6. Quality Validation → QualityScorer
-   ├─> Count sources
-   ├─> Validate completeness
-   ├─> Calculate score (1-10)
-   └─> Generate summary
-
-7. Outputs → docs_generated/{client_id}/
-   ├─> Research_Output.txt
-   ├─> Analysis_Output.txt
-   ├─> Quality_Score.json
-   ├─> NotebookLM_Link.txt
-   └─> Execution_Summary.json
+Google Drive Folder         Local PDFs
+        |                       |
+        v                       v
+  +----------------------------+
+  |   core/drive_manager.py    |
+  |   (download + cache)       |
+  +-------------+--------------+
+                |
+                v
+  +----------------------------+
+  | core/pdf_consolidator_fast |
+  | Merge into {Name}-One.pdf  |
+  +-------------+--------------+
+                |
+                v
+  +----------------------------+
+  |   NotebookLM (via CLI)     |
+  |   Create notebook          |
+  |   Upload consolidated PDF  |
+  |   Run Ask prompts          |   <-- ask_prompt_01.txt, ask_prompt_02.txt
+  |   Run Chat prompts         |   <-- chat_prompt_consolidated_01-06.txt
+  |   Generate mind map        |
+  +-------------+--------------+
+                |
+                v
+  +----------------------------+
+  | core/quality_scorer.py     |
+  | Score 4 dimensions (0-10)  |
+  +-------------+--------------+
+                |
+                v
+  docs_generated/{client_id}/
+    Quality_Score.json
+    Summary document
 ```
 
 ---
 
-## Multi-Process Execution Model
+## Deployment Architecture
 
-### Process Architecture
+### Container Layout
 
-**Main Process (main.py):**
-- Orchestrates all workflows
-- Does NOT execute client pipelines directly
-- Spawns child processes
-- Monitors child health
-- Aggregates status
-
-**Child Processes:**
-- One process per client
-- Completely isolated (no shared memory)
-- Independent execution
-- Writes status to JSON file
-- Exits on completion or error
-
-### Inter-Process Communication (IPC)
-
-**Method**: File-based JSON status files
-
-**Status File Location**: `.multi_process_status/{client_id}.json`
-
-**Status File Schema**:
-```json
-{
-  "client_id": "acme_corp",
-  "client_name": "Acme Corporation",
-  "status": "RUNNING",
-  "current_phase": "Research Phase",
-  "progress": 45,
-  "quality_score": null,
-  "notebook_url": "https://notebooklm.google.com/notebook/abc123",
-  "start_time": "2026-06-30T10:15:00",
-  "phase_timings": {
-    "download": 42,
-    "notebook_creation": 12,
-    "research": 187,
-    "analysis": null,
-    "validation": null
-  },
-  "sources_imported": 67,
-  "errors": []
-}
+```
+/app (PROJECT_ROOT)
+  /client_data/       (host: ./client_data/, mounted read-only)
+  /docs_generated/    (host: ./docs_generated/)
+  /logs/              (host: ./logs/, writable)
+  /vars.py            (host: ./vars.py, mounted read-only)
 ```
 
-**Update Frequency**: Every 5 seconds (during execution)
-
-**Readers**: Main process, Dashboard server
-
-**Writers**: Client pipeline process (single writer per file)
-
-### Concurrency Model
-
-**Parallel Execution:**
-- Up to 5 clients recommended
-- Each client: independent process
-- No synchronization required
-- No race conditions (single writer per status file)
-
-**Anti-Thundering-Herd:**
-```python
-# Random offset before starting (0-30 seconds)
-import random
-import time
-
-offset = random.uniform(0, 30)
-time.sleep(offset)
-
-# Then start pipeline
-run_pipeline(client_id, config, mode)
-```
-
-This prevents all clients from hitting APIs simultaneously.
-
----
-
-## Status Tracking and Dashboard
-
-### Status File Lifecycle
-
-**1. Initialization (main.py):**
-```python
-status = {
-    "client_id": client_id,
-    "client_name": config[f"{client_id}_name"],
-    "status": "PENDING",
-    "current_phase": "Initializing",
-    "progress": 0,
-    "start_time": datetime.now().isoformat()
-}
-write_status(client_id, status)
-```
-
-**2. Updates (client_pipeline.py):**
-```python
-# Phase transition
-update_status(client_id, {
-    "status": "RUNNING",
-    "current_phase": "Research Phase",
-    "progress": 35
-})
-
-# Progress within phase
-update_status(client_id, {
-    "progress": 45
-})
-```
-
-**3. Completion:**
-```python
-update_status(client_id, {
-    "status": "COMPLETE",
-    "current_phase": "Finished",
-    "progress": 100,
-    "quality_score": 8.5,
-    "completion_time": datetime.now().isoformat()
-})
-```
-
-### Dashboard Real-Time Updates
-
-**Server-Sent Events (SSE) for Logs:**
-
-```python
-# dashboard/server.py
-@app.route('/stream-logs')
-def stream_logs():
-    def generate():
-        with open('logs/overall.log', 'r') as f:
-            f.seek(0, 2)  # Seek to end
-            while True:
-                line = f.readline()
-                if line:
-                    yield f"data: {line}\n\n"
-                time.sleep(0.1)
-    
-    return Response(generate(), mimetype='text/event-stream')
-```
-
-**Client-Side Auto-Refresh:**
-
-```javascript
-// Auto-refresh every 2 seconds
-setInterval(async () => {
-    const response = await fetch('/status');
-    const status = await response.json();
-    updateDashboard(status);
-}, 2000);
-```
-
----
-
-## Container Architecture
-
-### Container Image Structure
-
-**Base Image**: `registry.access.redhat.com/ubi9/python-311`
-
-**Layers:**
-1. Base UBI 9 + Python 3.11
-2. System dependencies (git, gcc)
-3. Python packages (requirements.txt)
-4. NotebookLM CLI
-5. Application code
-6. Entrypoint script
-
-**User**: `apeuser` (UID 1000, non-root)
-
-### Volume Mounts
-
-**Production Container Run:**
-```bash
-podman run -it --rm \
-  -v ./vars.py:/app/vars.py:ro,z \
-  -v ./logs:/app/logs:z \
-  -v ./docs_generated:/app/docs_generated:z \
-  -v project-ape-credentials:/opt/app-root/src/.notebooklm:z \
-  -p 8765:8765 \
-  quay.io/jasoande/project_ape/project-ape:4.0.1 \
-  --clients acme_corp --mode fast
-```
-
-**Volume Purposes:**
-
-| Volume | Purpose | Permissions |
-|--------|---------|-------------|
-| `vars.py` | Configuration | Read-only (`:ro`) |
-| `logs/` | Execution logs | Read-write |
-| `docs_generated/` | Outputs | Read-write |
-| `project-ape-credentials` | NotebookLM credentials | Read-only |
-
-**SELinux Labels (`:z`):**
-- Required on RHEL/Fedora systems
-- Applies private unshared label
-- Allows container access to host files
-
-### Multi-Architecture Support
-
-**Supported Platforms:**
-- `linux/amd64` (x86_64)
-- `linux/arm64` (Apple Silicon, ARM servers)
-
-**Build Command:**
-```bash
-podman build \
-  --platform linux/amd64,linux/arm64 \
-  -t quay.io/jasoande/project_ape/project-ape:4.0.1 \
-  -f Containerfile.debian .
-```
-
----
-
-## Security Model
-
-### Authentication Security
-
-**NotebookLM:**
-- OAuth 2.0 flow via official SDK
-- Credentials: `~/.notebooklm/credentials.json`
-- No API keys in code or config
-- Container: volume mount (not copied into image)
-
-**Google Drive:**
-- OAuth 2.0 Desktop app flow
-- Client secrets: `~/.project-ape/drive_credentials.json`
-- Access tokens: `~/.project-ape/drive_token.json`
-- Scopes: `drive.readonly` (minimum required)
-- Token refresh: automatic (90-day expiry)
-
-### Container Security
-
-**Non-Root Execution:**
-```dockerfile
-# Create non-root user
-RUN useradd -u 1000 -r -g 0 -m -d /opt/app-root -s /sbin/nologin apeuser
-
-# Switch to non-root
-USER 1000
-```
-
-**Read-Only Mounts:**
-- Configuration: mounted as `:ro`
-- Credentials: mounted as `:ro`
-- Application code: immutable in image
-
-**No Secrets in Image:**
-- No API keys baked into image
-- No credentials in environment variables
-- All secrets via volume mounts
-
-### Data Security
-
-**Credentials Storage:**
-- Host: `~/.project-ape/` and `~/.notebooklm/`
-- Permissions: `chmod 600` (owner read/write only)
-- Never committed to version control (`.gitignore`)
-
-**Output Data:**
-- Written to `docs_generated/` (user-owned)
-- No sensitive data in logs
-- Client names sanitized in file paths
-
-**Cache Security:**
-- Drive cache: `~/.project-ape/drive_cache/`
-- 7-day TTL (automatic cleanup)
-- No sensitive data cached
-
----
-
-## Technology Stack
-
-### Backend
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Python** | 3.11+ | Core application language |
-| **Flask** | 3.0+ | Web dashboard server |
-| **NotebookLM SDK** | Latest | NotebookLM API integration |
-| **Google API Client** | Latest | Drive API integration |
-| **PyPDF2** | Latest | PDF processing |
-| **Requests** | Latest | HTTP client |
-
-### Frontend
-
-| Technology | Purpose |
-|------------|---------|
-| **HTML5** | Dashboard structure |
-| **CSS3** | Styling and responsive design |
-| **Vanilla JavaScript** | Client-side logic (no frameworks) |
-| **Server-Sent Events** | Real-time log streaming |
-| **Fetch API** | AJAX requests |
-
-### Infrastructure
-
-| Technology | Purpose |
-|------------|---------|
-| **Podman/Docker** | Containerization |
-| **UBI 9** | Base container image |
-| **Quay.io** | Container registry |
-| **Git** | Version control |
-
-### External Services
-
-| Service | Purpose | Authentication |
-|---------|---------|----------------|
-| **Google Drive API** | File download | OAuth 2.0 |
-| **Google NotebookLM** | AI research | OAuth 2.0 |
-| **Google Gemini API** | Advanced AI (optional) | API key |
-
----
-
-## Design Decisions
-
-### Why Multi-Process (not Multi-Threading)?
-
-**Decision**: Use Python multiprocessing for parallel execution
-
-**Rationale**:
-1. **GIL Avoidance**: Multiprocessing bypasses Python's Global Interpreter Lock
-2. **True Parallelism**: Each process uses separate CPU core
-3. **Isolation**: Process crashes don't affect other clients
-4. **Simplicity**: No need for locks, semaphores, or shared memory
-5. **Scalability**: Easy to distribute across machines (future)
-
-**Trade-Off**: Higher memory usage vs. threads (acceptable for 1-5 clients)
-
-### Why File-Based IPC?
-
-**Decision**: Use JSON files for status sharing between processes
-
-**Rationale**:
-1. **Simplicity**: No need for message queues or shared memory
-2. **Debuggability**: Status files are human-readable
-3. **Persistence**: Status survives process crashes
-4. **Single Writer**: No race conditions (one writer per file)
-5. **Framework Independence**: Works with any language/runtime
-
-**Trade-Off**: Slightly slower than in-memory (acceptable for 2-second refresh rate)
-
-### Why Container-First?
-
-**Decision**: Design for containerized deployment as primary target
-
-**Rationale**:
-1. **Consistency**: Same environment across dev/test/prod
-2. **Portability**: Runs on any platform with Podman/Docker
-3. **Isolation**: Clean separation from host system
-4. **Versioning**: Immutable deployments via tags
-5. **Security**: Non-root execution, minimal attack surface
-
-**Trade-Off**: Additional complexity for native execution (acceptable)
-
-### Why OAuth (not Service Accounts)?
-
-**Decision**: Use OAuth 2.0 for Google APIs instead of service accounts
-
-**Rationale**:
-1. **User Context**: Access user's Drive folders (not shared folders)
-2. **Simpler Setup**: No domain admin required
-3. **Revocability**: Users can revoke access anytime
-4. **Scope Limitation**: Minimal scopes (`drive.readonly`)
-5. **Security**: No long-lived credentials in repositories
-
-**Trade-Off**: Requires browser for initial auth (acceptable one-time setup)
-
-### Why Flask (not FastAPI)?
-
-**Decision**: Use Flask for dashboard server
-
-**Rationale**:
-1. **Simplicity**: Lightweight, easy to understand
-2. **Maturity**: Stable, well-documented, large ecosystem
-3. **SSE Support**: Native support for Server-Sent Events
-4. **Template Engine**: Built-in Jinja2 for HTML rendering
-5. **Deployment**: Works well in containers
-
-**Alternative Considered**: FastAPI (async, modern, but overkill for this use case)
-
----
-
-## Extension Points
-
-### Adding New Prompts
-
-**Location**: Project root (e.g., `ask_prompt_03.txt`, `chat_prompt_consolidated_07.txt`)
-
-**Integration**: Update `core/source_manager.py`:
-```python
-# Add new prompt to list
-RESEARCH_PROMPTS = ['ask_prompt_01.txt', 'ask_prompt_02.txt', 'ask_prompt_03.txt']
-ANALYSIS_PROMPTS = ['chat_prompt_consolidated_01.txt', ..., 'chat_prompt_consolidated_07.txt']
-```
-
-### Adding New Phases
-
-**Location**: `core/client_pipeline.py`
-
-**Implementation**:
-```python
-def execute_phase_6_custom(client_id, config):
-    update_status(client_id, {
-        "current_phase": "Custom Phase",
-        "progress": 85
-    })
-    
-    # Custom logic here
-    
-    update_status(client_id, {"progress": 95})
-```
-
-### Adding New Quality Metrics
-
-**Location**: `core/quality_scorer.py`
-
-**Implementation**:
-```python
-def calculate_custom_metric(data):
-    # Custom scoring logic
-    return score
-
-def calculate_score(notebook_data):
-    scores = {
-        'source_count': calculate_source_count_score(notebook_data),
-        'custom_metric': calculate_custom_metric(notebook_data),
-        # ... other metrics
-    }
-    
-    # Update weights
-    overall_score = (
-        scores['source_count'] * 0.15 +
-        scores['custom_metric'] * 0.10 +
-        # ... other weights
-    )
-    
-    return overall_score
-```
-
-### Adding New Dashboard Views
-
-**Location**: `dashboard/templates/`
-
-**Route Definition** (`dashboard/server.py`):
-```python
-@app.route('/custom-view')
-def custom_view():
-    data = get_custom_data()
-    return render_template('custom_view.html', data=data)
-```
-
----
-
-**For implementation details, see source code in `/core` and `/dashboard` directories.**
-
-Return to: [README.md](../README.md) | See also: [USER_GUIDE.md](USER_GUIDE.md)
+- Container runs as `apeuser` (UID 1000, non-root)
+- Host directories mounted with `:z` SELinux label for RHEL/Fedora compatibility
+- Credentials via volume mount: `project-ape-credentials:/opt/app-root/src/.notebooklm`
+- Multi-arch support: `linux/amd64`, `linux/arm64`
+- Registry: `quay.io/jasoande/project_ape/project-ape`
