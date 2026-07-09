@@ -106,20 +106,21 @@ app = Flask(__name__,
             static_folder=str(SCRIPT_DIR / 'static'))
 
 # --- Security: CSRF Protection ---
-# TEMPORARILY DISABLED for debugging - workflow not starting
 try:
-    from flask_wtf.csrf import CSRFProtect
+    from flask_wtf.csrf import CSRFProtect, generate_csrf
     app.config['SECRET_KEY'] = os.urandom(32).hex()
     app.config['WTF_CSRF_TIME_LIMIT'] = None
-    # csrf = CSRFProtect(app)  # DISABLED
-    csrf = None  # FORCE DISABLED
-    print("⚠️  CSRF protection DISABLED for debugging", file=sys.stderr)
+    csrf = CSRFProtect(app)
+    print("✅ CSRF protection enabled", file=sys.stderr)
 except ImportError:
     print("⚠️  flask-wtf not installed, CSRF protection disabled", file=sys.stderr)
     csrf = None
+    generate_csrf = None
 
 @app.context_processor
 def inject_csrf_token():
+    if generate_csrf:
+        return {'csrf_token': generate_csrf}
     return {'csrf_token': lambda: ''}
 
 # --- Security: Path Traversal Protection ---
@@ -2599,14 +2600,10 @@ def setup_install_notebooklm():
         return jsonify({'success': False, 'error': _safe_error(e, "NotebookLM CLI installation")}), 500
 
 
-# --- CSRF Exemptions for SSE streaming endpoints and workflow launch ---
-# DISABLED - csrf is None for debugging
-# if csrf:
-#     csrf.exempt(run_setup)
-#     csrf.exempt(refresh_sources)
-#     csrf.exempt(update_notebook_sources)
-#     csrf.exempt(start_oauth_flow)
-#     csrf.exempt(start_workflow)
+# --- CSRF Exemptions ---
+# SSE streaming endpoints accessed via EventSource (GET) are naturally exempt.
+# No POST endpoints are exempted — all JS callers include X-CSRFToken via
+# the fetch interceptor or explicit XHR header.
 
 
 def run_server(port=8765, debug=False):

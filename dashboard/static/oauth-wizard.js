@@ -275,8 +275,12 @@ async function handleOAuthFileUpload(file) {
             showMessage('error', '❌ Upload cancelled');
         });
 
-        // Send the request
+        // Send the request with CSRF token
         xhr.open('POST', '/api/upload-oauth-credentials');
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfMeta) {
+            xhr.setRequestHeader('X-CSRFToken', csrfMeta.content);
+        }
         xhr.send(formData);
 
     } catch (error) {
