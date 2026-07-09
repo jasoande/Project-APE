@@ -39,7 +39,8 @@ logger = logging.getLogger(__name__)
 class ClientPipeline:
     """Executes complete pipeline for a single client."""
 
-    def __init__(self, client_id: str, config, status_file: Path, mode: str = "fast", force_refresh: bool = False):
+    def __init__(self, client_id: str, config, status_file: Path, mode: str = "fast",
+                 force_refresh: bool = False, resume: bool = False):
         """
         Initialize client pipeline.
 
@@ -49,19 +50,32 @@ class ClientPipeline:
             status_file: Path to status JSON file
             mode: Execution mode (fast or deep)
             force_refresh: Force refresh of Google Drive cache
+            resume: Resume from last checkpoint
         """
         self.client_id = client_id
         self.config = config
         self.status_file = status_file
         self.mode = mode
         self.force_refresh = force_refresh
+        self.resume = resume
+
+        # Initialize checkpoint manager
+        try:
+            from core.checkpoint_manager import CheckpointManager, PipelineCheckpoint
+            logs_dir = Path(getattr(config, 'LOGS_DIR', './logs'))
+            self.checkpoint_mgr = CheckpointManager(logs_dir, client_id, str(int(time.time())))
+            self._PipelineCheckpoint = PipelineCheckpoint
+        except ImportError:
+            self.checkpoint_mgr = None
+            self._PipelineCheckpoint = None
 
         # Get client details from config
         self.client_name = getattr(config, f"{client_id}_name", client_id)
-        client_folder_spec = getattr(config, f"{client_id}_folder", "")
+        self.client_folder_spec = getattr(config, f"{client_id}_folder", "")
 
-        # Handle Google Drive folders - download before pipeline starts
-        self.client_folder = self._setup_client_folder(client_folder_spec)
+        # Defer Drive download until execute() to avoid OAuth race condition
+        # Will be set in execute() after staggered launch
+        self.client_folder = None
 
         # Industry and subsegments will be determined in execute()
         # Either from manual config or Gemini AI detection
@@ -177,6 +191,39 @@ class ClientPipeline:
         else:
             return self._execute_standard()
 
+    def _should_skip(self, phase_name: str) -> bool:
+        """Check if a phase should be skipped due to checkpoint resume."""
+        if not self.resume or not self.checkpoint_mgr:
+            return False
+        checkpoint = self.checkpoint_mgr.load()
+        if checkpoint and self.checkpoint_mgr.should_skip_phase(phase_name, checkpoint):
+            logger.info(f"[{self.client_id}] Resuming: skipping {phase_name} (already done)")
+            return True
+        return False
+
+    def _save_checkpoint(self, phase_name: str, **kwargs):
+        """Save checkpoint after completing a phase."""
+        if not self.checkpoint_mgr or not self._PipelineCheckpoint:
+            return
+        checkpoint = self.checkpoint_mgr.load()
+        if not checkpoint:
+            checkpoint = self._PipelineCheckpoint(
+                client_id=self.client_id,
+                run_id=self.checkpoint_mgr.run_id,
+                mode=self.mode,
+                phase=phase_name,
+                phase_number=0,
+                completed_phases=[]
+            )
+        if phase_name not in checkpoint.completed_phases:
+            checkpoint.completed_phases.append(phase_name)
+        checkpoint.phase = phase_name
+        checkpoint.notebook_id = kwargs.get('notebook_id', checkpoint.notebook_id)
+        checkpoint.consolidated_pdf_path = kwargs.get('pdf_path', checkpoint.consolidated_pdf_path)
+        checkpoint.industry = kwargs.get('industry', checkpoint.industry)
+        checkpoint.subsegments = kwargs.get('subsegments', checkpoint.subsegments)
+        self.checkpoint_mgr.save(checkpoint)
+
     def _execute_standard(self) -> bool:
         """
         Execute pipeline without Gemini agent (standard mode).
@@ -185,18 +232,41 @@ class ClientPipeline:
             True if successful, False otherwise
         """
         try:
+            # Load checkpoint for resume
+            if self.resume and self.checkpoint_mgr:
+                checkpoint = self.checkpoint_mgr.load()
+                if checkpoint:
+                    logger.info(f"[{self.client_id}] Resuming from checkpoint: {checkpoint.phase}")
+                    if checkpoint.notebook_id:
+                        self.notebook_id = checkpoint.notebook_id
+                    if checkpoint.industry:
+                        self.industry = checkpoint.industry
+                    if checkpoint.subsegments:
+                        self.subsegments = checkpoint.subsegments
+
             logger.info(f"[{self.client_id}] ========================================")
             logger.info(f"[{self.client_id}] Starting pipeline for {self.client_name}")
             logger.info(f"[{self.client_id}] Mode: {self.mode.upper()}")
             logger.info(f"[{self.client_id}] ========================================")
 
-            # No initial delay - removed to maximize speed
+            # Step 0: Setup client folder (Download from Drive if needed)
+            if not self._should_skip("setup_folder"):
+                self.update_status("Setting up client folder...", 1)
+                self.client_folder = self._setup_client_folder(self.client_folder_spec)
+                logger.info(f"[{self.client_id}] Client folder: {self.client_folder}")
+                self._save_checkpoint("setup_folder")
+            else:
+                self.client_folder = self._setup_client_folder(self.client_folder_spec)
 
             # Step 0.5: Determine Industry and Subsegments (Gemini AI or manual config)
-            self.update_status("Determining industry and subsegments...", 3)
-            self.industry, self.subsegments = self._determine_industry_and_subsegments()
-            logger.info(f"[{self.client_id}] Industry: {self.industry}")
-            logger.info(f"[{self.client_id}] Subsegments: {self.subsegments}")
+            if not self._should_skip("determine_industry"):
+                self.update_status("Determining industry and subsegments...", 3)
+                self.industry, self.subsegments = self._determine_industry_and_subsegments()
+                logger.info(f"[{self.client_id}] Industry: {self.industry}")
+                logger.info(f"[{self.client_id}] Subsegments: {self.subsegments}")
+                self._save_checkpoint("determine_industry", industry=self.industry, subsegments=self.subsegments)
+            elif not self.industry:
+                self.industry, self.subsegments = self._determine_industry_and_subsegments()
 
             # Step 1: Check Authentication (force fresh check)
             self.update_status("Checking authentication...", 5)
@@ -226,6 +296,7 @@ class ClientPipeline:
                 raise Exception("Failed to set notebook context")
 
             self.update_status("Notebook ready", 15, notebook_id=self.notebook_id)
+            self._save_checkpoint("create_notebook", notebook_id=self.notebook_id)
 
             # Initialize source manager now that we have notebook_id
             self.source_manager = SourceManager(self.client_id, self.notebook_id)
@@ -234,10 +305,33 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] Checking if consolidation needed...")
             self.update_status("Checking for file changes...", 23)
 
-            needs_update, newest_file_time = self._check_consolidation_needed()
+            # Pass is_new_notebook flag to force consolidation for new notebooks
+            is_new_notebook = not is_existing
+            needs_update, newest_file_time = self._check_consolidation_needed(is_new_notebook=is_new_notebook)
 
-            if needs_update:
-                logger.info(f"[{self.client_id}] 🔄 Files changed - consolidating to PDF...")
+            # If using existing notebook on new VM, timestamp file won't exist
+            # In that case, force upload to ensure PDF is in notebook
+            logs_dir = Path(self.config.LOGS_DIR if hasattr(self.config, 'LOGS_DIR') else './logs')
+            timestamp_file = logs_dir / '.consolidation_timestamps' / f"{self.client_id}.json"
+            force_upload_on_new_vm = is_existing and not timestamp_file.exists()
+
+            # CRITICAL FIX: Even if no file changes, verify consolidated PDF exists in notebook
+            # The PDF might have been deleted, notebook re-created, or newly created
+            force_upload_missing_pdf = False
+            if not needs_update and not force_upload_on_new_vm:
+                logger.info(f"[{self.client_id}] Verifying consolidated PDF exists in notebook...")
+                if not self.source_manager.has_consolidated_pdf_source(self.client_name):
+                    logger.info(f"[{self.client_id}] 📄 Consolidated PDF missing from notebook - will upload")
+                    force_upload_missing_pdf = True
+
+            if needs_update or force_upload_on_new_vm or force_upload_missing_pdf:
+                if force_upload_on_new_vm:
+                    logger.info(f"[{self.client_id}] 📄 No local timestamp (new VM?) - uploading PDF to ensure notebook has it...")
+                elif force_upload_missing_pdf:
+                    logger.info(f"[{self.client_id}] 📄 Consolidated PDF missing from notebook - re-uploading...")
+                else:
+                    logger.info(f"[{self.client_id}] 🔄 Files changed - consolidating to PDF...")
+
                 self.update_status("Consolidating files to PDF...", 25)
 
                 # Delete old consolidated PDFs first
@@ -273,6 +367,7 @@ class ClientPipeline:
             # Fast mode deduplicates once at the end (below)
             self._run_ask_prompts()
             self.update_status("Research complete", 60)
+            self._save_checkpoint("run_research")
 
             # Step 5: Deduplicate Sources (Fast mode only - deep mode already did it)
             if self.mode == "fast":
@@ -289,6 +384,7 @@ class ClientPipeline:
             # Step 6: Run Chat Prompts - Sequential with Notes
             self._run_chat_prompts()
             self.update_status("Chat prompts complete", 95)
+            self._save_checkpoint("run_chat")
 
             # Step 7: Generate Mind Map
             self._generate_mindmap()
@@ -322,6 +418,11 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] Starting AGENT-ORCHESTRATED pipeline for {self.client_name}")
             logger.info(f"[{self.client_id}] Mode: {self.mode.upper()}")
             logger.info(f"[{self.client_id}] ========================================")
+
+            # Step 0: Setup client folder (Download from Drive if needed)
+            self.update_status("Setting up client folder...", 1)
+            self.client_folder = self._setup_client_folder(self.client_folder_spec)
+            logger.info(f"[{self.client_id}] Client folder: {self.client_folder}")
 
             # Initialize Gemini agent
             agent = GeminiOrchestrationAgent(
@@ -556,9 +657,12 @@ class ClientPipeline:
             logger.error(f"[{self.client_id}] PDF consolidation failed: {e}")
             return None
 
-    def _check_consolidation_needed(self) -> tuple[bool, str]:
+    def _check_consolidation_needed(self, is_new_notebook: bool = False) -> tuple[bool, str]:
         """
         Check if files have changed since last consolidation using Drive API timestamps.
+
+        Args:
+            is_new_notebook: If True, forces consolidation regardless of file timestamps
 
         Returns:
             Tuple of (needs_update: bool, newest_drive_time: str)
@@ -606,6 +710,11 @@ class ClientPipeline:
             if newest_drive_time is None:
                 logger.warning(f"[{self.client_id}] Could not determine file timestamps")
                 return True, datetime.now().isoformat()
+
+            # CRITICAL: If this is a new notebook, always consolidate regardless of file timestamps
+            if is_new_notebook:
+                logger.info(f"[{self.client_id}] New notebook detected - will upload consolidated PDF")
+                return True, newest_drive_time.isoformat()
 
             # Check if we have a previous timestamp
             if not timestamp_file.exists():
@@ -1052,6 +1161,11 @@ class ClientPipeline:
             logger.info(f"[{self.client_id}] UPDATE MODE - Refreshing {self.client_name}")
             logger.info(f"[{self.client_id}] ========================================")
 
+            # Step 0: Setup client folder (Download from Drive if needed)
+            self.update_status("Setting up client folder...", 1)
+            self.client_folder = self._setup_client_folder(self.client_folder_spec)
+            logger.info(f"[{self.client_id}] Client folder: {self.client_folder}")
+
             # Step 1: Determine Industry (for research context)
             self.update_status("Loading industry configuration...", 5)
             self.industry, self.subsegments = self._determine_industry_and_subsegments()
@@ -1138,6 +1252,7 @@ def main():
     parser.add_argument("--mode", choices=["fast", "deep", "update"], default="fast")
     parser.add_argument("--status-file", type=Path, required=True)
     parser.add_argument("--refresh", action="store_true", help="Force refresh Google Drive cache")
+    parser.add_argument("--resume", action="store_true", help="Resume from last checkpoint")
     args = parser.parse_args()
 
     # Setup logging
@@ -1154,7 +1269,7 @@ def main():
     spec.loader.exec_module(config)
 
     # Run pipeline
-    pipeline = ClientPipeline(args.client_id, config, args.status_file, args.mode, args.refresh)
+    pipeline = ClientPipeline(args.client_id, config, args.status_file, args.mode, args.refresh, args.resume)
     success = pipeline.execute()
 
     sys.exit(0 if success else 1)

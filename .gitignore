@@ -4,76 +4,37 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
+env/
 venv/
 ENV/
-env/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Project APE
+logs/*.log
+.multi_process_status/*.json
+.multi_process_status/.workflow_pid
+docs_generated/
+.drive_cache/
+client_data/
+
+# Keep directory structure
+!logs/.gitkeep
+!.multi_process_status/.gitkeep
+
+# Credentials
+credentials/*.json
+.notebooklm/
+*.backup.*
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-
-# Project APE specific
-logs/*.log
-.multi_process_status/
-docs_generated/
-*.pdf
-*.pptx
-*.docx
-
-developer-docs/
-
-# Client data (NEVER commit)
-client_data/
-Venella_2026/
-Blue_Yonder/
-Hershey/
-Lord_Abbett/
-Merck/
-Organon/
-Panasonic/
-Panasonic_Avionics/
-Panasonic_Canada/
-Hershey Entertainment/
-
-# Credentials (NEVER commit)
-.notebooklm/
-credentials.json
-token.json
-vars.py
-jasoande-3aec1043e544.json
-.env
-service-account-key.json
-
 
 # OS
 .DS_Store
 Thumbs.db
-**/.DS_Store
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Claude Code
-.claude/

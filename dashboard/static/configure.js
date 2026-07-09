@@ -1500,6 +1500,7 @@ window.addEventListener('DOMContentLoaded', () => {
     initAuthStatusPolling();
 
     // Drive sources buttons
+    document.getElementById('updateNotebookSourcesBtn').addEventListener('click', showUpdateNotebookSourcesModal);
     document.getElementById('refreshSourcesBtn').addEventListener('click', showRefreshOptionsModal);
     document.getElementById('viewCacheStatsBtn').addEventListener('click', showCacheStats);
     document.getElementById('clearCacheBtn').addEventListener('click', clearCache);
@@ -1508,6 +1509,17 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeCacheStatsBtn').addEventListener('click', () => {
         document.getElementById('cacheStatsModal').style.display = 'none';
     });
+
+    // Update Notebook Sources modal
+    document.getElementById('closeUpdateNotebookSourcesBtn').addEventListener('click', () => {
+        document.getElementById('updateNotebookSourcesModal').style.display = 'none';
+    });
+    document.getElementById('cancelUpdateNotebookBtn').addEventListener('click', () => {
+        document.getElementById('updateNotebookSourcesModal').style.display = 'none';
+    });
+    document.getElementById('startUpdateNotebookBtn').addEventListener('click', startUpdateNotebookSources);
+
+    // Refresh Sources modal
     document.getElementById('closeRefreshOptionsBtn').addEventListener('click', () => {
         document.getElementById('refreshOptionsModal').style.display = 'none';
     });
@@ -1654,6 +1666,136 @@ async function showCacheStats() {
         }
     } catch (error) {
         showMessage('error', `Failed to load cache stats: ${error.message}`);
+    }
+}
+
+async function showUpdateNotebookSourcesModal() {
+    const modal = document.getElementById('updateNotebookSourcesModal');
+    const clientList = document.getElementById('updateNotebookClientList');
+
+    // Get list of all clients (both Drive and local)
+    const allClients = clients.filter(c => c.folder);
+
+    if (allClients.length === 0) {
+        showMessage('warning', 'No clients configured');
+        return;
+    }
+
+    // Build client selection checkboxes
+    let html = `
+        <div style="margin-bottom: 12px; padding: 12px; background: rgba(59,130,246,0.05); border: 1px solid #3b82f6; border-radius: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="selectAllUpdateClients" style="width: 18px; height: 18px; cursor: pointer;" checked />
+                <span style="font-weight: 600; color: #93c5fd;">Select All Clients</span>
+            </label>
+        </div>
+    `;
+
+    allClients.forEach(client => {
+        const isDrive = client.folder && (client.folder.includes('drive.google.com') || client.folder.startsWith('drive://'));
+        const sourceType = isDrive ? '☁️ Drive' : '💾 Local';
+
+        html += `
+            <label style="display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
+                   onmouseover="this.style.background='rgba(255,255,255,0.05)'"
+                   onmouseout="this.style.background='transparent'">
+                <input type="checkbox" class="update-notebook-checkbox" data-client-id="${client.id}" style="width: 18px; height: 18px; cursor: pointer;" checked />
+                <span style="flex: 1; font-weight: 600; color: #e6edf3;">${client.name}</span>
+                <span style="color: #8b949e; font-size: 0.75rem; margin-right: 8px;">${sourceType}</span>
+                <span style="color: #8b949e; font-size: 0.85rem;">${client.id}</span>
+            </label>
+        `;
+    });
+
+    clientList.innerHTML = html;
+
+    // Add select all functionality
+    document.getElementById('selectAllUpdateClients').addEventListener('change', (e) => {
+        document.querySelectorAll('.update-notebook-checkbox').forEach(cb => {
+            cb.checked = e.target.checked;
+        });
+    });
+
+    modal.style.display = 'block';
+}
+
+async function startUpdateNotebookSources() {
+    const selectedClients = Array.from(document.querySelectorAll('.update-notebook-checkbox:checked'))
+        .map(cb => cb.dataset.clientId);
+
+    if (selectedClients.length === 0) {
+        showMessage('warning', 'Please select at least one client to update');
+        return;
+    }
+
+    // Close modal
+    document.getElementById('updateNotebookSourcesModal').style.display = 'none';
+
+    // Show progress panel
+    const progressPanel = document.getElementById('refreshProgressPanel');
+    const progressContent = document.getElementById('refreshProgressContent');
+    progressPanel.style.display = 'block';
+    progressContent.textContent = '';
+
+    // Disable update button during operation
+    const updateBtn = document.getElementById('updateNotebookSourcesBtn');
+    const originalBtnText = updateBtn.textContent;
+    updateBtn.disabled = true;
+    updateBtn.textContent = '🔄 Updating...';
+
+    try {
+        const response = await fetch('/api/update-notebook-sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clients: selectedClients })
+        });
+
+        // Stream progress updates
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.substring(6));
+
+                        if (data.message) {
+                            progressContent.textContent += `${data.message}\n`;
+                        }
+
+                        // Scroll to bottom
+                        progressContent.scrollTop = progressContent.scrollHeight;
+
+                        // Handle completion
+                        if (data.type === 'complete') {
+                            if (data.success) {
+                                showMessage('success', `✅ Update complete! ${data.successful} notebook(s) updated successfully`);
+                            } else {
+                                showMessage('warning', `⚠️ Update completed with ${data.failed} error(s). See progress log for details.`);
+                            }
+
+                            // Reload cache stats
+                            await loadCacheStats();
+                        }
+                    } catch (e) {
+                        // Skip invalid JSON
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        showMessage('error', `Update failed: ${error.message}`);
+        progressContent.textContent += `\n❌ Error: ${error.message}\n`;
+    } finally {
+        updateBtn.disabled = false;
+        updateBtn.textContent = originalBtnText;
     }
 }
 

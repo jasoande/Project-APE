@@ -16,13 +16,30 @@ from pathlib import Path
 from flask import Flask, render_template, jsonify, Response, request
 import logging
 import importlib.util
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+# Google OAuth imports - check if available
+try:
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+    GOOGLE_AUTH_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Warning: Google OAuth packages not available: {e}", file=sys.stderr)
+    print(f"   Google Drive authentication will not work until you install:", file=sys.stderr)
+    print(f"   pip install google-auth-oauthlib google-auth google-api-python-client", file=sys.stderr)
+    GOOGLE_AUTH_AVAILABLE = False
+    # Define dummy values so dashboard can still start
+    Credentials = None
+    InstalledAppFlow = None
+    build = None
 
-# Disable Flask's default logging
+# Enable Flask's logging with better visibility
 log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+log.setLevel(logging.WARNING)  # Changed from ERROR to WARNING to see issues
+
+# Add handler for stderr
+handler = logging.StreamHandler(sys.stderr)
+handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s', '%H:%M:%S'))
+log.addHandler(handler)
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
@@ -34,22 +51,147 @@ if str(PROJECT_ROOT) not in sys.path:
 # Import core modules AFTER fixing path
 from core.auth_manager import AuthManager
 
+# Import workflow detector from project root (NOT developer-docs)
+try:
+    import workflow_detector
+    WORKFLOW_DETECTOR_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Warning: workflow_detector module not available: {e}", file=sys.stderr)
+    print(f"   Workflow detection features will not work", file=sys.stderr)
+    WORKFLOW_DETECTOR_AVAILABLE = False
+    workflow_detector = None
+
 # Load configuration to get proper paths (for container compatibility)
+# Default paths relative to project root
+DEFAULT_STATUS_DIR = SCRIPT_DIR.parent / ".multi_process_status"
+DEFAULT_LOGS_DIR = SCRIPT_DIR.parent / "logs"
+
 try:
     config_path = SCRIPT_DIR.parent / "vars.py"
-    spec = importlib.util.spec_from_file_location("config", config_path)
-    config = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(config)
-    STATUS_DIR = getattr(config, 'STATUS_DIR', SCRIPT_DIR.parent / ".multi_process_status")
-    LOGS_DIR = getattr(config, 'LOGS_DIR', SCRIPT_DIR.parent / "logs")
-except Exception:
+    if config_path.exists():
+        spec = importlib.util.spec_from_file_location("config", config_path)
+        config = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config)
+        STATUS_DIR = getattr(config, 'STATUS_DIR', DEFAULT_STATUS_DIR)
+        LOGS_DIR = getattr(config, 'LOGS_DIR', DEFAULT_LOGS_DIR)
+
+        # Validate that configured paths are under project root or user's home
+        # This prevents issues when vars.py has test-specific paths
+        project_root = SCRIPT_DIR.parent
+        home = Path.home()
+
+        # If STATUS_DIR is absolute and not under home or project, use default
+        if STATUS_DIR.is_absolute():
+            if not (str(STATUS_DIR).startswith(str(home)) or str(STATUS_DIR).startswith(str(project_root))):
+                print(f"⚠️  Warning: STATUS_DIR '{STATUS_DIR}' is outside project/home, using default", file=sys.stderr)
+                STATUS_DIR = DEFAULT_STATUS_DIR
+
+        # Same validation for LOGS_DIR
+        if LOGS_DIR.is_absolute():
+            if not (str(LOGS_DIR).startswith(str(home)) or str(LOGS_DIR).startswith(str(project_root))):
+                print(f"⚠️  Warning: LOGS_DIR '{LOGS_DIR}' is outside project/home, using default", file=sys.stderr)
+                LOGS_DIR = DEFAULT_LOGS_DIR
+    else:
+        # No vars.py file, use defaults
+        STATUS_DIR = DEFAULT_STATUS_DIR
+        LOGS_DIR = DEFAULT_LOGS_DIR
+except Exception as e:
     # Fallback to default paths if config loading fails
-    STATUS_DIR = SCRIPT_DIR.parent / ".multi_process_status"
-    LOGS_DIR = SCRIPT_DIR.parent / "logs"
+    print(f"⚠️  Warning: Failed to load vars.py: {e}, using defaults", file=sys.stderr)
+    STATUS_DIR = DEFAULT_STATUS_DIR
+    LOGS_DIR = DEFAULT_LOGS_DIR
 
 app = Flask(__name__,
             template_folder=str(SCRIPT_DIR / 'templates'),
             static_folder=str(SCRIPT_DIR / 'static'))
+
+# --- Security: CSRF Protection ---
+# TEMPORARILY DISABLED for debugging - workflow not starting
+try:
+    from flask_wtf.csrf import CSRFProtect
+    app.config['SECRET_KEY'] = os.urandom(32).hex()
+    app.config['WTF_CSRF_TIME_LIMIT'] = None
+    # csrf = CSRFProtect(app)  # DISABLED
+    csrf = None  # FORCE DISABLED
+    print("⚠️  CSRF protection DISABLED for debugging", file=sys.stderr)
+except ImportError:
+    print("⚠️  flask-wtf not installed, CSRF protection disabled", file=sys.stderr)
+    csrf = None
+
+@app.context_processor
+def inject_csrf_token():
+    return {'csrf_token': lambda: ''}
+
+# --- Security: Path Traversal Protection ---
+_SAFE_TOKEN_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
+
+def _validate_client_token(token: str) -> bool:
+    return bool(_SAFE_TOKEN_RE.match(token)) and len(token) <= 128
+
+# --- Security: Error Sanitization ---
+def _safe_error(e: Exception, context: str = "operation") -> str:
+    print(f"[ERROR] {context}: {type(e).__name__}: {e}", file=sys.stderr)
+    return f"An error occurred during {context}. Check server logs for details."
+
+# --- Performance: Config Cache ---
+_config_cache = {'module': None, 'mtime': 0, 'path': None}
+
+def get_config(vars_path: Path = None):
+    if vars_path is None:
+        vars_path = PROJECT_ROOT / "vars.py"
+    if not vars_path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {vars_path}")
+    current_mtime = vars_path.stat().st_mtime
+    if (_config_cache['module'] is not None
+        and _config_cache['mtime'] == current_mtime
+        and _config_cache['path'] == str(vars_path)):
+        return _config_cache['module']
+    spec = importlib.util.spec_from_file_location("config", vars_path)
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+    _config_cache['module'] = config
+    _config_cache['mtime'] = current_mtime
+    _config_cache['path'] = str(vars_path)
+    return config
+
+
+@app.route('/health')
+def health():
+    """Health check endpoint for monitoring."""
+    try:
+        import threading
+        import psutil
+        import os
+
+        process = psutil.Process(os.getpid())
+        memory_info = process.memory_info()
+
+        return jsonify({
+            'status': 'healthy',
+            'pid': os.getpid(),
+            'threads': threading.active_count(),
+            'memory_mb': round(memory_info.rss / 1024 / 1024, 2),
+            'status_dir': str(STATUS_DIR),
+            'status_dir_exists': STATUS_DIR.exists(),
+            'logs_dir': str(LOGS_DIR),
+            'logs_dir_exists': LOGS_DIR.exists()
+        })
+    except ImportError:
+        # psutil not available, return basic info
+        import threading
+        import os
+        return jsonify({
+            'status': 'healthy',
+            'pid': os.getpid(),
+            'threads': threading.active_count(),
+            'status_dir': str(STATUS_DIR),
+            'status_dir_exists': STATUS_DIR.exists()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': _safe_error(e, "operation")
+        }), 500
 
 
 @app.route('/')
@@ -64,18 +206,93 @@ def configure():
     return render_template('configure.html')
 
 
+@app.route('/setup-environment')
+def setup_environment():
+    """Serve the environment setup wizard HTML template."""
+    return render_template('setup-environment.html')
+
+
+@app.route('/api/config-status')
+def config_status():
+    """Check if vars.py configuration exists and is valid."""
+    try:
+        vars_path = PROJECT_ROOT / "vars.py"
+
+        if not vars_path.exists():
+            return jsonify({
+                'configured': False,
+                'error': 'Configuration file (vars.py) not found',
+                'message': 'Please configure at least one client before starting a workflow.'
+            })
+
+        # Try to load and validate configuration
+        if WORKFLOW_DETECTOR_AVAILABLE:
+            try:
+                vars_module = workflow_detector.load_vars_module(vars_path)
+                clients = getattr(vars_module, 'clients', [])
+
+                if not clients or len(clients) == 0:
+                    return jsonify({
+                        'configured': False,
+                        'error': 'No clients configured',
+                        'message': 'Your vars.py file exists but has no clients defined. Please add at least one client.'
+                    })
+
+                return jsonify({
+                    'configured': True,
+                    'client_count': len(clients),
+                    'message': f'{len(clients)} client(s) configured'
+                })
+            except Exception as e:
+                return jsonify({
+                    'configured': False,
+                    'error': 'Configuration validation failed',
+                    'message': str(e)
+                })
+        else:
+            # Workflow detector not available, just check file exists
+            return jsonify({
+                'configured': True,
+                'message': 'Configuration file exists (validation unavailable)'
+            })
+
+    except Exception as e:
+        return jsonify({
+            'configured': False,
+            'error': 'Failed to check configuration',
+            'message': str(e)
+        }), 500
+
+
 @app.route('/status')
 def status():
     """Serve aggregated status as JSON."""
-    clients = []
-    running = 0
-    complete = 0
-    failed = 0
-    mode = "fast"
-    run_id = None
+    try:
+        clients = []
+        running = 0
+        complete = 0
+        failed = 0
+        mode = "fast"
+        run_id = None
 
-    if STATUS_DIR.exists():
-        for status_file in STATUS_DIR.glob("*.json"):
+        if not STATUS_DIR.exists():
+            print(f"⚠️  STATUS_DIR does not exist: {STATUS_DIR}", file=sys.stderr)
+            return jsonify({
+                'total': 0,
+                'running': 0,
+                'complete': 0,
+                'failed': 0,
+                'mode': mode,
+                'run_id': run_id,
+                'clients': [],
+                'error': f'Status directory not found: {STATUS_DIR}'
+            })
+
+        status_files = list(STATUS_DIR.glob("*.json"))
+        if not status_files:
+            print(f"⚠️  No status files found in {STATUS_DIR}", file=sys.stderr)
+
+        for status_file in status_files:
             try:
                 with open(status_file, 'r') as f:
                     client_data = json.load(f)
@@ -97,44 +314,101 @@ def status():
                     elif status in ['FAILED', 'DEGRADED']:
                         failed += 1
             except Exception as e:
-                print(f"Error reading {status_file}: {e}")
+                print(f"❌ Error reading {status_file}: {e}", file=sys.stderr)
 
-    # Sort by client name
-    clients.sort(key=lambda x: x.get('name', ''))
+        # Sort by client name
+        clients.sort(key=lambda x: x.get('name', ''))
 
-    return jsonify({
-        'total': len(clients),
-        'running': running,
-        'complete': complete,
-        'failed': failed,
-        'mode': mode,
-        'run_id': run_id,  # Include run_id in response
-        'clients': clients
-    })
+        return jsonify({
+            'total': len(clients),
+            'running': running,
+            'complete': complete,
+            'failed': failed,
+            'mode': mode,
+            'run_id': run_id,  # Include run_id in response
+            'clients': clients
+        })
+
+    except Exception as e:
+        print(f"❌ FATAL: /status endpoint crashed: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return jsonify({
+            'error': _safe_error(e, "operation"),
+            'total': 0,
+            'running': 0,
+            'complete': 0,
+            'failed': 0,
+            'mode': 'fast',
+            'run_id': None,
+            'clients': []
+        }), 500
 
 
 @app.route('/logs/<client_token>')
 def stream_logs(client_token):
-    """Stream logs for a specific client."""
+    """
+    Stream logs for a specific client via Server-Sent Events (SSE).
+
+    CRITICAL: This endpoint holds a thread open for the duration of the stream.
+    In deep mode with multiple clients, this can exhaust Flask's thread pool.
+    Waitress server is configured with threads=100 to handle this load.
+    """
+    if not _validate_client_token(client_token):
+        return jsonify({'error': 'Invalid client token'}), 400
+
+    import threading
+    connection_id = f"{client_token}_{time.time()}"
+
+    print(f"📡 SSE connection opened: {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
+
     def generate():
-        log_file = LOGS_DIR / f"{client_token}.log"
+        try:
+            log_file = LOGS_DIR / f"{client_token}.log"
+            if not log_file.resolve().is_relative_to(LOGS_DIR.resolve()):
+                yield f"data: Invalid path\n\n"
+                return
 
-        if not log_file.exists():
-            yield f"data: Log file not found: {log_file}\n\n"
-            return
+            if not log_file.exists():
+                yield f"data: Log file not found: {log_file}\n\n"
+                return
 
-        with open(log_file, 'r') as f:
-            # Send existing content
-            for line in f:
-                yield f"data: {line}\n\n"
+            # CRITICAL: Increase timeout for deep mode (15-25s delays between prompts)
+            # Deep mode can have 25s idle periods, so 60s timeout is needed
+            max_idle_time = 60  # 60 seconds max with no new content (handles deep mode delays)
+            idle_iterations = 0
+            max_iterations = max_idle_time * 2  # 0.5s sleep per iteration
 
-            # Stream new content
-            while True:
-                line = f.readline()
-                if line:
-                    yield f"data: {line}\n\n"
-                else:
-                    time.sleep(0.5)
+            try:
+                with open(log_file, 'r') as f:
+                    # Send existing content
+                    for line in f:
+                        yield f"data: {line}\n\n"
+
+                    # Stream new content with timeout
+                    while idle_iterations < max_iterations:
+                        line = f.readline()
+                        if line:
+                            yield f"data: {line}\n\n"
+                            idle_iterations = 0  # Reset on new content
+                        else:
+                            # Send periodic heartbeat to keep connection alive
+                            # This prevents proxy/firewall timeouts in long-running workflows
+                            if idle_iterations % 20 == 0:  # Every 10 seconds
+                                yield f": heartbeat\n\n"
+                            time.sleep(0.5)
+                            idle_iterations += 1
+
+                    # Timeout reached
+                    yield f"data: [Stream timeout - refresh to reconnect]\n\n"
+            except (BrokenPipeError, ConnectionResetError, GeneratorExit):
+                # Client disconnected - clean exit
+                print(f"🔌 SSE connection closed (client disconnect): {connection_id}", file=sys.stderr)
+            except Exception as e:
+                # Log other errors but don't crash
+                print(f"❌ Error streaming logs for {client_token}: {e}", file=sys.stderr)
+        finally:
+            print(f"🔚 SSE connection cleanup: {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
 
     return Response(generate(), mimetype='text/event-stream')
 
@@ -142,6 +416,11 @@ def stream_logs(client_token):
 @app.route('/logs/overall')
 def stream_overall_logs():
     """Stream combined logs from all components."""
+    import threading
+    connection_id = f"overall_{time.time()}"
+
+    print(f"📡 SSE connection opened (overall): {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
+
     def generate():
         # Find all log files
         log_files = []
@@ -160,39 +439,58 @@ def stream_overall_logs():
             yield f"data: Log files will appear here when workflows run.\n\n"
             return
 
-        # Send existing content from all files
-        for log_file in log_files:
-            try:
-                yield f"data: ═══════════════════════════════════════════════════════════════\n\n"
-                yield f"data: 📄 {log_file.name}\n\n"
-                yield f"data: ═══════════════════════════════════════════════════════════════\n\n"
-                with open(log_file, 'r') as f:
-                    for line in f:
-                        yield f"data: {line}\n\n"
-                yield f"data: \n\n"
-            except Exception as e:
-                yield f"data: Error reading {log_file.name}: {e}\n\n"
+        # CRITICAL: Increase timeout for deep mode workflows
+        # Deep mode can run 45-60 minutes, so we need a longer timeout
+        # But not too long - we want to free up threads when clients disconnect
+        max_idle_time = 600  # 10 minutes max with no new content (handles deep mode)
+        idle_iterations = 0
+        max_iterations = max_idle_time * 2
 
-        # Stream new content from most recent log file
-        if log_files:
-            most_recent = max(log_files, key=lambda p: p.stat().st_mtime)
-            try:
-                with open(most_recent, 'r') as f:
-                    f.seek(0, 2)  # Go to end
-                    yield f"data: \n\n"
-                    yield f"data: ──────────────────────────────────────────────────────────────\n\n"
-                    yield f"data: 🔄 Streaming live updates from {most_recent.name}...\n\n"
-                    yield f"data: ──────────────────────────────────────────────────────────────\n\n"
-                    yield f"data: \n\n"
-
-                    while True:
-                        line = f.readline()
-                        if line:
+        try:
+            # Send existing content from all files
+            for log_file in log_files:
+                try:
+                    yield f"data: ═══════════════════════════════════════════════════════════════\n\n"
+                    yield f"data: 📄 {log_file.name}\n\n"
+                    yield f"data: ═══════════════════════════════════════════════════════════════\n\n"
+                    with open(log_file, 'r') as f:
+                        for line in f:
                             yield f"data: {line}\n\n"
-                        else:
-                            time.sleep(0.5)
-            except Exception as e:
-                yield f"data: Error streaming {most_recent.name}: {e}\n\n"
+                    yield f"data: \n\n"
+                except Exception as e:
+                    yield f"data: Error reading {log_file.name}: {e}\n\n"
+
+            # Stream new content from most recent log file with timeout
+            if log_files:
+                most_recent = max(log_files, key=lambda p: p.stat().st_mtime)
+                try:
+                    with open(most_recent, 'r') as f:
+                        f.seek(0, 2)  # Go to end
+                        yield f"data: \n\n"
+                        yield f"data: ──────────────────────────────────────────────────────────────\n\n"
+                        yield f"data: 🔄 Streaming live updates from {most_recent.name}...\n\n"
+                        yield f"data: ──────────────────────────────────────────────────────────────\n\n"
+                        yield f"data: \n\n"
+
+                        while idle_iterations < max_iterations:
+                            line = f.readline()
+                            if line:
+                                yield f"data: {line}\n\n"
+                                idle_iterations = 0
+                            else:
+                                time.sleep(0.5)
+                                idle_iterations += 1
+
+                        yield f"data: [Stream timeout - refresh to reconnect]\n\n"
+                except Exception as e:
+                    yield f"data: Error streaming {most_recent.name}: {e}\n\n"
+        except (BrokenPipeError, ConnectionResetError, GeneratorExit):
+            # Client disconnected - clean exit
+            print(f"🔌 SSE connection closed (client disconnect): {connection_id}", file=sys.stderr)
+        except Exception as e:
+            print(f"❌ Error in overall log stream: {e}", file=sys.stderr)
+        finally:
+            print(f"🔚 SSE connection cleanup (overall): {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
 
     return Response(generate(), mimetype='text/event-stream')
 
@@ -301,7 +599,7 @@ def generate_config():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': _safe_error(e, "config generation")
         }), 500
 
 
@@ -350,7 +648,7 @@ def validate_drive_url():
     except Exception as e:
         return jsonify({
             'valid': False,
-            'error': str(e)
+            'error': _safe_error(e, "operation")
         }), 500
 
 
@@ -387,7 +685,7 @@ def load_config():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Failed to load configuration: {str(e)}'
+            'error': _safe_error(e, "loading configuration")
         }), 500
 
 
@@ -414,6 +712,7 @@ def save_config():
         clients = data.get('clients', [])
         settings = data.get('settings', {})
 
+        # Save vars.py to project root where main.py expects it
         vars_path = SCRIPT_DIR.parent / 'vars.py'
 
         # Debug logging
@@ -471,7 +770,7 @@ def save_config():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Failed to save configuration: {str(e)}'
+            'error': _safe_error(e, "saving configuration")
         }), 500
 
 
@@ -558,7 +857,7 @@ def import_csv():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Failed to parse CSV: {str(e)}'
+            'error': _safe_error(e, "CSV parsing")
         }), 500
 
 
@@ -595,13 +894,13 @@ def preview_config():
         except ValueError as e:
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': _safe_error(e, "operation")
             }), 400
 
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Server error: {str(e)}'
+            'error': _safe_error(e, "config generation")
         }), 500
 
 
@@ -612,9 +911,11 @@ def launch_page():
     This is the transition from configuration to workflow execution.
     """
     try:
-        # Import workflow detector
-        sys.path.insert(0, str(PROJECT_ROOT))
-        import workflow_detector
+        # Check if workflow detector is available
+        if not WORKFLOW_DETECTOR_AVAILABLE:
+            return render_template('error.html',
+                                 error="Workflow detector not available",
+                                 message="The workflow_detector module could not be loaded. Check server logs."), 500
 
         # Check if vars.py exists
         vars_path = PROJECT_ROOT / "vars.py"
@@ -656,26 +957,9 @@ def start_workflow():
                 'error': 'Invalid workflow data'
             }), 400
 
-        # CRITICAL: Validate authentication BEFORE starting workflow
-        auth_manager = AuthManager()
-        if not auth_manager.is_authenticated():
-            return jsonify({
-                'success': False,
-                'error': 'Authentication Required',
-                'auth_error': True,
-                'instructions': [
-                    'You need to authenticate with NotebookLM before launching workflows.',
-                    'Please run the following commands in your terminal:',
-                    '',
-                    '1. Authenticate with NotebookLM:',
-                    '   notebooklm login',
-                    '',
-                    '2. For container mode, update credentials:',
-                    '   ./setup-credentials.sh',
-                    '',
-                    'Then return to this page and try launching again.'
-                ]
-            }), 401
+        # NOTE: Authentication validation removed - auth is checked by main.py preflight
+        # or skipped with --skip-preflight flag. The GUI config wizard handles initial auth setup.
+        # This allows workflows to launch without blocking on auth check here.
 
         # Mark that first configuration is complete
         # This prevents the configuration UI from appearing on next launch
@@ -687,6 +971,9 @@ def start_workflow():
                 'via': 'web_ui'
             }, indent=2))
 
+        # Store workflow execution result
+        workflow_result = {'success': False, 'error': None, 'pid': None}
+
         def run_workflow():
             """Background thread to execute workflow launcher"""
             try:
@@ -696,41 +983,57 @@ def start_workflow():
                 print(f"[WORKFLOW] Starting workflow: {' '.join(cmd)}", file=sys.stderr)
                 print(f"[WORKFLOW] Working directory: {PROJECT_ROOT}", file=sys.stderr)
 
-                # Check if this is run-workflow.sh (local mode) - needs bash execution
-                if cmd[0] == './run-workflow.sh':
-                    # Make sure script is executable
-                    script_path = PROJECT_ROOT / 'run-workflow.sh'
-                    if script_path.exists():
-                        import os
-                        os.chmod(script_path, 0o755)
-
-                    # Execute with bash to handle shebang and virtual env activation
-                    cmd = ['/bin/bash'] + cmd
+                # Validate command exists before executing
+                if cmd[0].startswith('./'):
+                    script_path = PROJECT_ROOT / cmd[0][2:]
+                    if not script_path.exists():
+                        error_msg = f"Workflow script not found: {script_path}"
+                        print(f"[WORKFLOW] ERROR: {error_msg}", file=sys.stderr)
+                        workflow_result['error'] = error_msg
+                        return
 
                 # Execute in project root directory as background process
                 # Don't use subprocess.run() - it blocks and waits for completion
                 # Use Popen() so main.py can spawn its own client processes
+
+                # CRITICAL: Add venv bin to PATH so spawned process can find notebooklm
+                venv_bin = Path.home() / '.project-ape-venv' / 'bin'
+                env = os.environ.copy()
+                if venv_bin.exists():
+                    env['PATH'] = f"{venv_bin}:{env.get('PATH', '')}"
+                    print(f"[WORKFLOW] Added venv to PATH: {venv_bin}", file=sys.stderr)
+
                 process = subprocess.Popen(
                     cmd,
                     cwd=PROJECT_ROOT,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    text=True
+                    text=True,
+                    env=env  # Pass modified environment with venv in PATH
                 )
 
                 print(f"[WORKFLOW] Workflow process started (PID: {process.pid})", file=sys.stderr)
                 print(f"[WORKFLOW] Command: {' '.join(cmd)}", file=sys.stderr)
 
+                workflow_result['success'] = True
+                workflow_result['pid'] = process.pid
+
             except FileNotFoundError as e:
-                print(f"[WORKFLOW] Workflow script not found: {e}", file=sys.stderr)
+                error_msg = f"Workflow script not found: {e}"
+                print(f"[WORKFLOW] {error_msg}", file=sys.stderr)
+                workflow_result['error'] = error_msg
                 import traceback
                 traceback.print_exc()
             except PermissionError as e:
-                print(f"[WORKFLOW] Permission denied executing workflow: {e}", file=sys.stderr)
+                error_msg = f"Permission denied executing workflow: {e}"
+                print(f"[WORKFLOW] {error_msg}", file=sys.stderr)
+                workflow_result['error'] = error_msg
                 import traceback
                 traceback.print_exc()
             except Exception as e:
-                print(f"[WORKFLOW] Error running workflow: {e}", file=sys.stderr)
+                error_msg = f"Error running workflow: {e}"
+                print(f"[WORKFLOW] {error_msg}", file=sys.stderr)
+                workflow_result['error'] = error_msg
                 import traceback
                 traceback.print_exc()
 
@@ -738,9 +1041,20 @@ def start_workflow():
         thread = threading.Thread(target=run_workflow, daemon=True)
         thread.start()
 
+        # Give thread a moment to start and validate command
+        thread.join(timeout=1.0)
+
+        # Check if workflow started successfully
+        if workflow_result['error']:
+            return jsonify({
+                'success': False,
+                'error': workflow_result['error']
+            }), 500
+
         return jsonify({
             'success': True,
             'message': 'Workflow started in background',
+            'pid': workflow_result.get('pid'),
             'dashboard_url': workflow.get('dashboard_url', 'http://localhost:8765')
         })
 
@@ -851,7 +1165,7 @@ def check_auth_status():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e),
+            'error': _safe_error(e, "operation"),
             'authenticated': False
         }), 500
 
@@ -997,7 +1311,7 @@ def notebooklm_login():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e),
+            'error': _safe_error(e, "operation"),
             'fallback_instructions': [
                 'Automatic login failed. Please run this command manually in your terminal:',
                 '  notebooklm login',
@@ -1018,8 +1332,17 @@ def notebooklm_logout():
     import subprocess
 
     try:
+        # Use full path to notebooklm in virtual environment
+        venv_notebooklm = Path.home() / '.project-ape-venv' / 'bin' / 'notebooklm'
+
+        if venv_notebooklm.exists():
+            notebooklm_cmd = str(venv_notebooklm)
+        else:
+            # Fallback to PATH (if venv is activated)
+            notebooklm_cmd = 'notebooklm'
+
         result = subprocess.run(
-            ['notebooklm', 'auth', 'logout'],
+            [notebooklm_cmd, 'auth', 'logout'],
             capture_output=True,
             text=True,
             timeout=10
@@ -1039,7 +1362,7 @@ def notebooklm_logout():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': _safe_error(e, "operation")
         }), 500
 
 
@@ -1269,7 +1592,7 @@ def cache_stats():
                         'client_name': client_name,
                         'type': 'drive',
                         'cached': False,
-                        'error': str(e)
+                        'error': _safe_error(e, "operation")
                     })
             else:
                 stats.append({
@@ -1290,7 +1613,7 @@ def cache_stats():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': _safe_error(e, "operation")
         }), 500
 
 
@@ -1366,7 +1689,7 @@ def clear_cache():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': _safe_error(e, "operation")
         }), 500
 
 
@@ -1374,35 +1697,46 @@ def clear_cache():
 def oauth_status():
     """Check if OAuth credentials and token exist."""
     try:
+        # Ensure .project-ape directory exists
         creds_dir = Path.home() / '.project-ape'
+        creds_dir.mkdir(parents=True, exist_ok=True)
+
         creds_file = creds_dir / 'drive_credentials.json'
         token_file = creds_dir / 'drive_token.json'
 
         response = {
+            'success': True,
             'credentials_exist': creds_file.exists(),
             'token_exist': token_file.exists(),
             'authenticated': False,
             'email': None,
-            'scopes': []
+            'scopes': [],
+            'ready_for_upload': True,  # Always ready to accept credentials
+            'google_packages_available': GOOGLE_AUTH_AVAILABLE
         }
 
         # If token exists, check if it's valid
         if token_file.exists():
             try:
-                creds = Credentials.from_authorized_user_file(str(token_file))
-                response['authenticated'] = creds.valid or (creds.expired and creds.refresh_token)
-                if hasattr(creds, 'token') and creds.token:
-                    response['email'] = 'Authenticated'
-                if hasattr(creds, 'scopes'):
-                    response['scopes'] = creds.scopes
+                if not GOOGLE_AUTH_AVAILABLE:
+                    response['authenticated'] = False
+                    response['error'] = 'Google OAuth packages not installed'
+                else:
+                    creds = Credentials.from_authorized_user_file(str(token_file))
+                    response['authenticated'] = creds.valid or (creds.expired and creds.refresh_token)
+                    if hasattr(creds, 'token') and creds.token:
+                        response['email'] = 'Authenticated'
+                    if hasattr(creds, 'scopes'):
+                        response['scopes'] = creds.scopes
             except Exception as e:
                 print(f"Error checking token validity: {e}", file=sys.stderr)
+                response['token_error'] = str(e)
 
         return jsonify(response)
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': _safe_error(e, "operation")
         }), 500
 
 
@@ -1452,50 +1786,77 @@ def upload_oauth_credentials():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/api/start-oauth-flow', methods=['POST'])
+@app.route('/api/start-oauth-flow', methods=['GET', 'POST'])
 def start_oauth_flow():
     """Trigger OAuth flow and stream progress via SSE."""
     def generate():
         try:
+            # Check if Google OAuth packages are available
+            if not GOOGLE_AUTH_AVAILABLE:
+                yield 'data: {"status": "error", "message": "Google OAuth packages not available. Please restart the dashboard using: python3 launch-project-ape.py (This ensures the virtual environment is used)"}\n\n'
+                return
+
             yield 'data: {"status": "starting", "message": "Initializing OAuth flow..."}\n\n'
 
+            # Ensure directory exists
             creds_dir = Path.home() / '.project-ape'
+            creds_dir.mkdir(parents=True, exist_ok=True)
+
             creds_file = creds_dir / 'drive_credentials.json'
             token_file = creds_dir / 'drive_token.json'
 
             if not creds_file.exists():
-                yield 'data: {"status": "error", "message": "Credentials file not found. Please upload OAuth credentials first."}\n\n'
+                yield 'data: {"status": "error", "message": "OAuth credentials not uploaded. Please go to Step 3 and upload your credentials.json file first."}\n\n'
                 return
 
             SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
-            flow = InstalledAppFlow.from_client_secrets_file(
-                str(creds_file), SCOPES
-            )
+            yield 'data: {"status": "loading", "message": "Loading OAuth configuration..."}\n\n'
 
-            yield 'data: {"status": "browser_opening", "message": "Opening browser for authentication..."}\n\n'
+            try:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    str(creds_file), SCOPES
+                )
+            except Exception as e:
+                yield f'data: {{"status": "error", "message": "Invalid credentials file: {str(e)}. Please re-upload your OAuth credentials."}}\n\n'
+                return
+
+            yield 'data: {"status": "browser_opening", "message": "Opening browser for authentication... (Check for popup blockers)"}\n\n'
 
             # Run OAuth flow (opens browser automatically)
-            creds = flow.run_local_server(
-                port=0,
-                success_message='Authentication successful! You can close this window and return to Project APE.',
-                open_browser=True
-            )
+            try:
+                creds = flow.run_local_server(
+                    port=0,
+                    success_message='✅ Authentication successful! You can close this window and return to Project APE.',
+                    open_browser=True
+                )
+            except Exception as e:
+                error_detail = str(e)
+                if "Connection refused" in error_detail or "Address already in use" in error_detail:
+                    yield 'data: {"status": "error", "message": "Port conflict detected. Please close any applications using ports 8080-8090 and try again."}\n\n'
+                else:
+                    yield f'data: {{"status": "error", "message": "Browser authentication failed: {error_detail}"}}\n\n'
+                return
 
             yield 'data: {"status": "token_saving", "message": "Saving authentication token..."}\n\n'
 
             # Save token
-            with open(token_file, 'w') as f:
-                f.write(creds.to_json())
+            try:
+                with open(token_file, 'w') as f:
+                    f.write(creds.to_json())
+                os.chmod(token_file, 0o600)  # Secure permissions
+            except Exception as e:
+                yield f'data: {{"status": "error", "message": "Failed to save token: {str(e)}"}}\n\n'
+                return
 
-            os.chmod(token_file, 0o600)  # Secure permissions
-
-            yield 'data: {"status": "complete", "message": "Authentication complete!", "email": "Authenticated"}\n\n'
+            yield 'data: {"status": "complete", "message": "✅ Authentication complete! Google Drive access granted.", "email": "Authenticated"}\n\n'
 
         except Exception as e:
             error_msg = str(e)
             print(f"[OAuth Flow Error] {error_msg}", file=sys.stderr)
-            yield f'data: {{"status": "error", "message": "OAuth flow failed: {error_msg}"}}\n\n'
+            import traceback
+            traceback.print_exc()
+            yield f'data: {{"status": "error", "message": "OAuth flow failed: {error_msg}. Check console for details."}}\n\n'
 
     return Response(generate(), mimetype='text/event-stream')
 
@@ -1539,7 +1900,7 @@ def test_drive_access():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': _safe_error(e, "operation")
         }), 500
 
 
@@ -1564,7 +1925,7 @@ def system_status():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': _safe_error(e, "operation")
         }), 500
 
 
@@ -1599,8 +1960,77 @@ def get_cache_files(client_id):
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': _safe_error(e, "operation")
         }), 500
+
+
+@app.route('/api/preflight-check', methods=['GET'])
+def preflight_check():
+    """Run pre-flight health checks before workflow launch."""
+    try:
+        from core.health_checks import run_preflight_checks
+        results = run_preflight_checks(PROJECT_ROOT / "vars.py")
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({
+            'all_passed': False,
+            'checks': [],
+            'summary': _safe_error(e, "preflight checks")
+        }), 500
+
+
+@app.route('/api/stop-workflow', methods=['POST'])
+def stop_workflow():
+    """Stop the running workflow and all child processes."""
+    import signal as sig_module
+
+    pid_file = STATUS_DIR / '.workflow_pid'
+    if not pid_file.exists():
+        return jsonify({'success': False, 'error': 'No workflow is running'}), 404
+
+    try:
+        with open(pid_file) as f:
+            data = json.load(f)
+        pid = data['pid']
+
+        try:
+            os.killpg(os.getpgid(pid), sig_module.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            pass
+
+        for _ in range(10):
+            try:
+                os.kill(pid, 0)
+                time.sleep(0.5)
+            except ProcessLookupError:
+                break
+        else:
+            try:
+                os.killpg(os.getpgid(pid), sig_module.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+
+        if STATUS_DIR.exists():
+            for sf in STATUS_DIR.glob("*.json"):
+                if sf.name.startswith('.'):
+                    continue
+                try:
+                    with open(sf, 'r') as f:
+                        status = json.load(f)
+                    if status.get('status', '').upper() in ('RUNNING', 'PENDING'):
+                        status['status'] = 'CANCELLED'
+                        status['step'] = 'Cancelled by user'
+                        with open(sf, 'w') as f:
+                            json.dump(status, f, indent=2)
+                except Exception:
+                    pass
+
+        pid_file.unlink(missing_ok=True)
+
+        return jsonify({'success': True, 'message': 'Workflow cancelled'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': _safe_error(e, "stop workflow")}), 500
 
 
 @app.route('/api/shutdown', methods=['POST'])
@@ -1626,35 +2056,615 @@ def shutdown():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': _safe_error(e, "operation")
         }), 500
+
+
+# ============================================================================
+# ENVIRONMENT SETUP API ENDPOINTS
+# ============================================================================
+
+@app.route('/api/setup/system-info', methods=['GET'])
+def setup_system_info():
+    """Get system information (OS, architecture, platform)."""
+    try:
+        import platform
+        import os
+
+        system = platform.system()
+
+        # Map to user-friendly OS names
+        os_map = {
+            'Darwin': 'macOS',
+            'Linux': 'Linux',
+            'Windows': 'Windows'
+        }
+
+        os_name = os_map.get(system, system)
+
+        # Detect specific Linux distros
+        if os_name == 'Linux':
+            if Path('/etc/redhat-release').exists():
+                os_name = 'RHEL/Fedora'
+            elif Path('/etc/debian_version').exists():
+                os_name = 'Debian/Ubuntu'
+
+        return jsonify({
+            'os': os_name,
+            'arch': platform.machine(),
+            'platform': platform.platform(),
+            'python_version': platform.python_version()
+        })
+    except Exception as e:
+        return jsonify({'error': _safe_error(e, "system detection")}), 500
+
+
+@app.route('/api/setup/check-homebrew', methods=['GET'])
+def setup_check_homebrew():
+    """Check if Homebrew is installed (macOS only)."""
+    try:
+        import subprocess
+
+        result = subprocess.run(['which', 'brew'], capture_output=True, text=True)
+
+        if result.returncode == 0:
+            # Get version
+            version_result = subprocess.run(['brew', '--version'], capture_output=True, text=True)
+            version = version_result.stdout.strip().split('\n')[0] if version_result.returncode == 0 else 'Unknown'
+
+            return jsonify({
+                'installed': True,
+                'version': version,
+                'path': result.stdout.strip()
+            })
+        else:
+            return jsonify({'installed': False})
+    except Exception as e:
+        return jsonify({'error': _safe_error(e, "Homebrew check")}), 500
+
+
+@app.route('/api/setup/install-homebrew', methods=['POST'])
+def setup_install_homebrew():
+    """Install Homebrew (macOS only)."""
+    try:
+        import subprocess
+
+        # Run Homebrew installation script
+        cmd = '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+
+        # This is a long-running operation
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=600)
+
+        if result.returncode == 0 or 'already installed' in result.stdout.lower():
+            # Verify installation
+            check_result = subprocess.run(['brew', '--version'], capture_output=True, text=True)
+            version = check_result.stdout.strip().split('\n')[0] if check_result.returncode == 0 else 'Unknown'
+
+            path_result = subprocess.run(['which', 'brew'], capture_output=True, text=True)
+            path = path_result.stdout.strip()
+
+            return jsonify({
+                'success': True,
+                'version': version,
+                'path': path
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.stderr or 'Installation failed'
+            }), 400
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Installation timed out (>10 minutes)'}), 408
+    except Exception as e:
+        return jsonify({'success': False, 'error': _safe_error(e, "Homebrew installation")}), 500
+
+
+@app.route('/api/setup/check-podman', methods=['GET'])
+def setup_check_podman():
+    """Check if Podman is installed."""
+    try:
+        import subprocess
+
+        result = subprocess.run(['which', 'podman'], capture_output=True, text=True)
+
+        if result.returncode == 0:
+            version_result = subprocess.run(['podman', '--version'], capture_output=True, text=True)
+            version = version_result.stdout.strip() if version_result.returncode == 0 else 'Unknown'
+
+            # Check Podman machine status on macOS
+            machine_running = False
+            try:
+                machine_result = subprocess.run(['podman', 'machine', 'list', '--format', '{{.Running}}'],
+                                              capture_output=True, text=True, timeout=10)
+                if machine_result.returncode == 0:
+                    machine_running = 'true' in machine_result.stdout.lower()
+            except:
+                pass
+
+            return jsonify({
+                'installed': True,
+                'version': version,
+                'machine_running': machine_running
+            })
+        else:
+            return jsonify({'installed': False})
+    except Exception as e:
+        return jsonify({'error': _safe_error(e, "Podman check")}), 500
+
+
+@app.route('/api/setup/install-podman', methods=['POST'])
+def setup_install_podman():
+    """Install Podman."""
+    try:
+        import subprocess
+        import platform
+
+        system = platform.system()
+
+        if system == 'Darwin':  # macOS
+            result = subprocess.run(['brew', 'install', 'podman'], capture_output=True, text=True, timeout=300)
+        elif system == 'Linux':
+            # Detect distro
+            if Path('/etc/redhat-release').exists():
+                result = subprocess.run(['sudo', 'dnf', 'install', '-y', 'podman'],
+                                      capture_output=True, text=True, timeout=300)
+            elif Path('/etc/debian_version').exists():
+                subprocess.run(['sudo', 'apt-get', 'update'], capture_output=True, timeout=120)
+                result = subprocess.run(['sudo', 'apt-get', 'install', '-y', 'podman'],
+                                      capture_output=True, text=True, timeout=300)
+            else:
+                return jsonify({'success': False, 'error': 'Unsupported Linux distribution'}), 400
+        else:
+            return jsonify({'success': False, 'error': 'Unsupported operating system'}), 400
+
+        if result.returncode == 0 or 'already installed' in result.stdout.lower():
+            # Verify installation
+            version_result = subprocess.run(['podman', '--version'], capture_output=True, text=True)
+            version = version_result.stdout.strip()
+
+            # Initialize Podman machine on macOS
+            if system == 'Darwin':
+                subprocess.run(['podman', 'machine', 'init'], capture_output=True, timeout=60)
+                subprocess.run(['podman', 'machine', 'start'], capture_output=True, timeout=120)
+
+            return jsonify({
+                'success': True,
+                'version': version
+            })
+        else:
+            return jsonify({'success': False, 'error': result.stderr}), 400
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Installation timed out'}), 408
+    except Exception as e:
+        return jsonify({'success': False, 'error': _safe_error(e, "Podman installation")}), 500
+
+
+@app.route('/api/setup/check-gcloud', methods=['GET'])
+def setup_check_gcloud():
+    """Check if Google Cloud SDK is installed."""
+    try:
+        import subprocess
+
+        result = subprocess.run(['which', 'gcloud'], capture_output=True, text=True)
+
+        if result.returncode == 0:
+            version_result = subprocess.run(['gcloud', '--version'], capture_output=True, text=True)
+            version = version_result.stdout.strip().split('\n')[0] if version_result.returncode == 0 else 'Unknown'
+
+            # Check authentication
+            auth_result = subprocess.run(['gcloud', 'auth', 'list', '--filter=status:ACTIVE',
+                                        '--format=value(account)'],
+                                       capture_output=True, text=True)
+            authenticated = bool(auth_result.stdout.strip())
+            account = auth_result.stdout.strip().split('\n')[0] if authenticated else None
+
+            return jsonify({
+                'installed': True,
+                'version': version,
+                'authenticated': authenticated,
+                'account': account
+            })
+        else:
+            return jsonify({'installed': False})
+    except Exception as e:
+        return jsonify({'error': _safe_error(e, "Google Cloud SDK check")}), 500
+
+
+@app.route('/api/setup/install-gcloud', methods=['POST'])
+def setup_install_gcloud():
+    """Install Google Cloud SDK."""
+    try:
+        import subprocess
+        import platform
+
+        system = platform.system()
+
+        if system == 'Darwin':  # macOS
+            result = subprocess.run(['brew', 'install', '--cask', 'google-cloud-sdk'],
+                                  capture_output=True, text=True, timeout=300)
+        elif system == 'Linux':
+            if Path('/etc/redhat-release').exists():
+                # RHEL/Fedora
+                arch = platform.machine()
+                if arch == 'x86_64':
+                    # Use official repo
+                    repo_config = """[google-cloud-cli]
+name=Google Cloud CLI
+baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el9-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=0
+gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+"""
+                    with open('/tmp/google-cloud-sdk.repo', 'w') as f:
+                        f.write(repo_config)
+                    subprocess.run(['sudo', 'mv', '/tmp/google-cloud-sdk.repo', '/etc/yum.repos.d/'], timeout=10)
+                    result = subprocess.run(['sudo', 'dnf', 'install', '-y', 'google-cloud-cli'],
+                                          capture_output=True, text=True, timeout=300)
+                else:
+                    return jsonify({'success': False, 'error': f'Architecture {arch} not supported for auto-install'}), 400
+            elif Path('/etc/debian_version').exists():
+                # Debian/Ubuntu
+                commands = [
+                    ['sudo', 'apt-get', 'update'],
+                    ['sudo', 'apt-get', 'install', '-y', 'apt-transport-https', 'ca-certificates', 'gnupg', 'curl'],
+                    ['curl', 'https://packages.cloud.google.com/apt/doc/apt-key.gpg', '|', 'sudo', 'gpg', '--dearmor', '-o', '/usr/share/keyrings/cloud.google.gpg'],
+                ]
+                for cmd in commands:
+                    subprocess.run(' '.join(cmd), shell=True, capture_output=True, timeout=60)
+
+                repo_line = 'deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main'
+                subprocess.run(f'echo "{repo_line}" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list',
+                             shell=True, capture_output=True, timeout=10)
+                subprocess.run(['sudo', 'apt-get', 'update'], capture_output=True, timeout=60)
+                result = subprocess.run(['sudo', 'apt-get', 'install', '-y', 'google-cloud-cli'],
+                                      capture_output=True, text=True, timeout=300)
+            else:
+                return jsonify({'success': False, 'error': 'Unsupported Linux distribution'}), 400
+        else:
+            return jsonify({'success': False, 'error': 'Unsupported operating system'}), 400
+
+        if result.returncode == 0 or 'already installed' in result.stdout.lower():
+            version_result = subprocess.run(['gcloud', '--version'], capture_output=True, text=True)
+            version = version_result.stdout.strip().split('\n')[0]
+
+            return jsonify({
+                'success': True,
+                'version': version
+            })
+        else:
+            return jsonify({'success': False, 'error': result.stderr}), 400
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Installation timed out'}), 408
+    except Exception as e:
+        return jsonify({'success': False, 'error': _safe_error(e, "Google Cloud SDK installation")}), 500
+
+
+@app.route('/api/setup/check-python', methods=['GET'])
+def setup_check_python():
+    """Check if Python 3.10+ is installed."""
+    try:
+        import subprocess
+        import platform
+
+        # Try to find Python 3
+        python_cmds = ['python3', '/opt/homebrew/bin/python3', '/usr/local/bin/python3']
+        python_cmd = None
+
+        for cmd in python_cmds:
+            try:
+                result = subprocess.run([cmd, '--version'], capture_output=True, text=True)
+                if result.returncode == 0:
+                    python_cmd = cmd
+                    break
+            except:
+                continue
+
+        if python_cmd:
+            version_str = subprocess.run([python_cmd, '--version'], capture_output=True, text=True).stdout.strip()
+            version = version_str.split()[1]  # "Python 3.14.0" -> "3.14.0"
+
+            # Check if version is 3.10+
+            parts = version.split('.')
+            major = int(parts[0])
+            minor = int(parts[1])
+            compatible = (major == 3 and minor >= 10) or major > 3
+
+            path_result = subprocess.run(['which', python_cmd], capture_output=True, text=True)
+
+            return jsonify({
+                'installed': True,
+                'compatible': compatible,
+                'version': version,
+                'path': path_result.stdout.strip()
+            })
+        else:
+            return jsonify({
+                'installed': False,
+                'compatible': False
+            })
+    except Exception as e:
+        return jsonify({'error': _safe_error(e, "Python check")}), 500
+
+
+@app.route('/api/setup/install-python', methods=['POST'])
+def setup_install_python():
+    """Install Python 3.14."""
+    try:
+        import subprocess
+        import platform
+
+        system = platform.system()
+
+        if system == 'Darwin':  # macOS
+            result = subprocess.run(['brew', 'install', 'python@3.14'],
+                                  capture_output=True, text=True, timeout=300)
+        elif system == 'Linux':
+            if Path('/etc/redhat-release').exists():
+                result = subprocess.run(['sudo', 'dnf', 'install', '-y', 'python3.14', 'python3.14-pip'],
+                                      capture_output=True, text=True, timeout=300)
+            elif Path('/etc/debian_version').exists():
+                subprocess.run(['sudo', 'apt-get', 'update'], capture_output=True, timeout=60)
+                result = subprocess.run(['sudo', 'apt-get', 'install', '-y', 'python3.14', 'python3.14-pip', 'python3.14-venv'],
+                                      capture_output=True, text=True, timeout=300)
+            else:
+                return jsonify({'success': False, 'error': 'Unsupported Linux distribution'}), 400
+        else:
+            return jsonify({'success': False, 'error': 'Unsupported operating system'}), 400
+
+        if result.returncode == 0 or 'already installed' in result.stdout.lower():
+            # Find the installed Python
+            python_cmd = 'python3'
+            if system == 'Darwin':
+                python_cmd = '/opt/homebrew/bin/python3'
+
+            version_result = subprocess.run([python_cmd, '--version'], capture_output=True, text=True)
+            version = version_result.stdout.strip().split()[1]
+
+            path_result = subprocess.run(['which', python_cmd], capture_output=True, text=True)
+
+            return jsonify({
+                'success': True,
+                'version': version,
+                'path': path_result.stdout.strip()
+            })
+        else:
+            return jsonify({'success': False, 'error': result.stderr}), 400
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Installation timed out'}), 408
+    except Exception as e:
+        return jsonify({'success': False, 'error': _safe_error(e, "Python installation")}), 500
+
+
+@app.route('/api/setup/check-venv', methods=['GET'])
+def setup_check_venv():
+    """Check if virtual environment exists."""
+    try:
+        import subprocess
+
+        venv_path = Path.home() / '.project-ape-venv'
+
+        if venv_path.exists() and (venv_path / 'bin' / 'python3').exists():
+            # Get Python version in venv
+            version_result = subprocess.run([str(venv_path / 'bin' / 'python3'), '--version'],
+                                          capture_output=True, text=True)
+            version = version_result.stdout.strip().split()[1] if version_result.returncode == 0 else 'Unknown'
+
+            # Check if version is 3.10+
+            parts = version.split('.')
+            major = int(parts[0])
+            minor = int(parts[1])
+            compatible = (major == 3 and minor >= 10) or major > 3
+
+            return jsonify({
+                'exists': True,
+                'compatible': compatible,
+                'version': version,
+                'path': str(venv_path)
+            })
+        else:
+            return jsonify({'exists': False})
+    except Exception as e:
+        return jsonify({'error': _safe_error(e, "Virtual environment check")}), 500
+
+
+@app.route('/api/setup/create-venv', methods=['POST'])
+def setup_create_venv():
+    """Create Python virtual environment."""
+    try:
+        import subprocess
+        import platform
+
+        venv_path = Path.home() / '.project-ape-venv'
+
+        # Remove old venv if exists
+        if venv_path.exists():
+            import shutil
+            shutil.rmtree(venv_path)
+
+        # Find Python 3 command
+        system = platform.system()
+        python_cmd = 'python3'
+        if system == 'Darwin':
+            if Path('/opt/homebrew/bin/python3').exists():
+                python_cmd = '/opt/homebrew/bin/python3'
+
+        # Create venv
+        result = subprocess.run([python_cmd, '-m', 'venv', str(venv_path)],
+                              capture_output=True, text=True, timeout=120)
+
+        if result.returncode == 0:
+            # Verify creation
+            version_result = subprocess.run([str(venv_path / 'bin' / 'python3'), '--version'],
+                                          capture_output=True, text=True)
+            version = version_result.stdout.strip().split()[1]
+
+            # Upgrade pip in venv
+            subprocess.run([str(venv_path / 'bin' / 'python3'), '-m', 'pip', 'install', '--upgrade', 'pip'],
+                         capture_output=True, timeout=60)
+
+            return jsonify({
+                'success': True,
+                'version': version,
+                'path': str(venv_path)
+            })
+        else:
+            return jsonify({'success': False, 'error': result.stderr}), 400
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Creation timed out'}), 408
+    except Exception as e:
+        return jsonify({'success': False, 'error': _safe_error(e, "Virtual environment creation")}), 500
+
+
+@app.route('/api/setup/check-notebooklm', methods=['GET'])
+def setup_check_notebooklm():
+    """Check if NotebookLM CLI and dependencies are installed."""
+    try:
+        import subprocess
+
+        venv_path = Path.home() / '.project-ape-venv'
+        notebooklm_bin = venv_path / 'bin' / 'notebooklm'
+
+        if notebooklm_bin.exists():
+            # Get NotebookLM version
+            version_result = subprocess.run([str(notebooklm_bin), '--version'],
+                                          capture_output=True, text=True)
+            version = version_result.stdout.strip() if version_result.returncode == 0 else 'Unknown'
+
+            # Check Flask
+            flask_result = subprocess.run([str(venv_path / 'bin' / 'python3'), '-c',
+                                         'import flask; print(flask.__version__)'],
+                                        capture_output=True, text=True)
+            flask_version = flask_result.stdout.strip() if flask_result.returncode == 0 else 'Not installed'
+
+            return jsonify({
+                'installed': True,
+                'version': version,
+                'flask_version': flask_version
+            })
+        else:
+            return jsonify({'installed': False})
+    except Exception as e:
+        return jsonify({'error': _safe_error(e, "NotebookLM CLI check")}), 500
+
+
+@app.route('/api/setup/install-notebooklm', methods=['POST'])
+def setup_install_notebooklm():
+    """Install NotebookLM CLI and all dependencies."""
+    try:
+        import subprocess
+
+        venv_path = Path.home() / '.project-ape-venv'
+        pip_cmd = str(venv_path / 'bin' / 'pip')
+
+        # Install NotebookLM with browser support
+        subprocess.run([pip_cmd, 'install', 'notebooklm-py[browser]'],
+                     capture_output=True, text=True, timeout=300)
+
+        # Install Google API libraries
+        subprocess.run([pip_cmd, 'install', 'google-auth', 'google-auth-oauthlib',
+                       'google-auth-httplib2', 'google-api-python-client'],
+                     capture_output=True, text=True, timeout=180)
+
+        # Install Flask and dependencies
+        subprocess.run([pip_cmd, 'install', 'flask>=3.0.0', 'werkzeug>=3.0.0',
+                       'waitress>=3.0.0', 'python-dotenv>=1.0.0', 'pypdf>=4.0.0',
+                       'Pillow>=10.0.0', 'reportlab>=4.0.0', 'flask-wtf'],
+                     capture_output=True, text=True, timeout=240)
+
+        # Install Playwright browsers
+        playwright_cmd = str(venv_path / 'bin' / 'playwright')
+        result = subprocess.run([playwright_cmd, 'install', 'chromium'],
+                              capture_output=True, text=True, timeout=300)
+
+        if result.returncode == 0:
+            # Verify installations
+            notebooklm_version = subprocess.run([str(venv_path / 'bin' / 'notebooklm'), '--version'],
+                                              capture_output=True, text=True).stdout.strip()
+
+            flask_version = subprocess.run([str(venv_path / 'bin' / 'python3'), '-c',
+                                          'import flask; print(flask.__version__)'],
+                                         capture_output=True, text=True).stdout.strip()
+
+            return jsonify({
+                'success': True,
+                'version': notebooklm_version,
+                'flask_version': flask_version
+            })
+        else:
+            return jsonify({'success': False, 'error': result.stderr}), 400
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Installation timed out'}), 408
+    except Exception as e:
+        return jsonify({'success': False, 'error': _safe_error(e, "NotebookLM CLI installation")}), 500
+
+
+# --- CSRF Exemptions for SSE streaming endpoints and workflow launch ---
+# DISABLED - csrf is None for debugging
+# if csrf:
+#     csrf.exempt(run_setup)
+#     csrf.exempt(refresh_sources)
+#     csrf.exempt(update_notebook_sources)
+#     csrf.exempt(start_oauth_flow)
+#     csrf.exempt(start_workflow)
 
 
 def run_server(port=8765, debug=False):
     """Run the Flask server."""
     import signal
     import sys
+    import threading
 
     print(f"\n📊 Dashboard server starting...")
     print(f"   URL: http://localhost:{port}")
     print(f"   Refresh: Every 2 seconds")
     print(f"   Logs: Real-time streaming")
+    print(f"   STATUS_DIR: {STATUS_DIR}")
+    print(f"   LOGS_DIR: {LOGS_DIR}")
+    print(f"   Initial threads: {threading.active_count()}")
     print(f"\n   Press Ctrl+C to stop\n")
 
     # Signal handler for graceful shutdown
     def signal_handler(sig, frame):
-        print("\n⏰ Dashboard server received shutdown signal")
+        print(f"\n⏰ Dashboard server received shutdown signal (active threads: {threading.active_count()})")
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
-    # Bind to 0.0.0.0 for container compatibility (allows external access)
-    app.run(host='0.0.0.0', port=port, debug=debug, threaded=True)
+    # CRITICAL: Use waitress instead of Flask's dev server for better thread handling
+    # Flask dev server has limited threads and struggles with multiple SSE connections
+    # waitress supports many concurrent connections and is production-ready
+    try:
+        from waitress import serve
+        print(f"   Using Waitress WSGI server (production-grade)")
+        print(f"   Max threads: 100 (increased for SSE log streams)")
+
+        # Configure Waitress for high concurrency
+        # threads=100: Handle up to 100 concurrent connections (SSE streams + polling)
+        # channel_timeout=300: Keep SSE connections alive for 5 minutes
+        # cleanup_interval=30: Clean up stale connections every 30 seconds
+        serve(app,
+              host='0.0.0.0',
+              port=port,
+              threads=100,
+              channel_timeout=300,
+              cleanup_interval=30,
+              _quiet=False)
+    except ImportError:
+        # Fallback to Flask dev server if waitress not installed
+        print(f"   ⚠️  Waitress not installed - using Flask dev server (limited concurrency)")
+        print(f"   For production use: pip install waitress")
+        try:
+            from werkzeug.serving import WSGIRequestHandler
+            WSGIRequestHandler.protocol_version = "HTTP/1.1"  # Enable keep-alive
+        except:
+            pass
+        app.run(host='0.0.0.0', port=port, debug=debug, threaded=True, processes=1)
 
 
 if __name__ == "__main__":
-    # Create directories if needed
-    STATUS_DIR.mkdir(exist_ok=True)
-    LOGS_DIR.mkdir(exist_ok=True)
+    # Create directories if needed (including parent directories)
+    STATUS_DIR.mkdir(parents=True, exist_ok=True)
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
     run_server()

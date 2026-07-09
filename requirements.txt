@@ -22,6 +22,11 @@ google-genai>=2.0.0
 # ==============================================================================
 # Flask web server for real-time progress monitoring
 flask>=3.0.0
+
+# Waitress WSGI server - production-grade replacement for Flask dev server
+# Critical for deep mode: handles 100+ concurrent connections (SSE streams + polling)
+# Flask dev server struggles with thread exhaustion during long-running workflows
+waitress>=3.0.0
 werkzeug>=3.0.0
 
 # ==============================================================================
@@ -50,3 +55,14 @@ python-dotenv>=1.0.0
 # All update functionality uses existing dependencies above.
 # No additional packages needed.
 
+# ==============================================================================
+# TESTING (Development Only)
+# ==============================================================================
+pytest>=8.0.0
+pytest-cov>=5.0.0
+pytest-mock>=3.12.0
+
+# ==============================================================================
+# SECURITY (Required)
+# ==============================================================================
+flask-wtf>=1.2.0

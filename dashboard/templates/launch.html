@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Project APE - Launching Workflow</title>
     <meta http-equiv="refresh" content="5;url=/">
     <style>
@@ -279,6 +280,24 @@
     </div>
 
     <script>
+        // CSRF interceptor
+        (function() {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            if (csrfMeta) {
+                const origFetch = window.fetch;
+                window.fetch = function(url, opts) {
+                    opts = opts || {};
+                    if (opts.method && opts.method.toUpperCase() === 'POST') {
+                        opts.headers = opts.headers || {};
+                        if (!(opts.headers instanceof Headers)) {
+                            opts.headers['X-CSRFToken'] = csrfMeta.content;
+                        }
+                    }
+                    return origFetch(url, opts);
+                };
+            }
+        })();
+
         // Trigger workflow start
         fetch('/api/start-workflow', {
             method: 'POST',

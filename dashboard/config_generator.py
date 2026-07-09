@@ -324,6 +324,26 @@ DOCS_DIR = PROJECT_ROOT / "docs"
     return vars_content
 
 
+def _is_numeric_sequence(s: str) -> bool:
+    """Check if string looks like a serialized tuple or list of numbers."""
+    if not isinstance(s, str):
+        return False
+    s = s.strip()
+    # Match patterns like "[8, 12]" or "(8, 12)" or "[8,12]" or "(8,12)"
+    return bool(re.match(r'^[\(\[][\s\d,\.]+[\)\]]$', s))
+
+
+def _parse_numeric_sequence(s: str) -> list:
+    """Parse '(8, 12)' or '[8, 12]' into a list of numbers. Returns None on failure."""
+    s = s.strip()
+    inner = s[1:-1]
+    try:
+        parts = [float(x.strip()) for x in inner.split(',') if x.strip()]
+        return [int(x) if x == int(x) else x for x in parts]
+    except (ValueError, TypeError):
+        return None
+
+
 def generate_vars_py_full(clients_data: List[Dict], settings: Dict) -> str:
     """
     Generate complete vars.py content with custom global settings.
@@ -450,8 +470,22 @@ def generate_vars_py_full(clients_data: List[Dict], settings: Dict) -> str:
         ind = '    ' * indent
         lines = []
         for k, v in d.items():
-            if isinstance(v, tuple):
-                lines.append(f"{ind}'{k}': {v},")
+            if isinstance(v, (tuple, list)):
+                # Already a tuple/list - format directly
+                lines.append(f"{ind}'{k}': ({', '.join(str(x) for x in v)}),")
+            elif isinstance(v, str):
+                # Check if string looks like a numeric sequence
+                if _is_numeric_sequence(v):
+                    nums = _parse_numeric_sequence(v)
+                    if nums is not None:
+                        # Convert string "[8, 12]" to tuple (8, 12)
+                        lines.append(f"{ind}'{k}': ({', '.join(str(x) for x in nums)}),")
+                    else:
+                        # Parse failed, keep as string
+                        lines.append(f"{ind}'{k}': \"{v}\",")
+                else:
+                    # Regular string value
+                    lines.append(f"{ind}'{k}': \"{v}\",")
             elif isinstance(v, bool):
                 lines.append(f"{ind}'{k}': {str(v)},")
             elif isinstance(v, (int, float)):

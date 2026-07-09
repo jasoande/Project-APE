@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Project APE - Multi-Process Mode</title>
     <style>
         /* CSS Variables for theming */
@@ -602,6 +603,7 @@
                     <span id="themeIcon">🌙</span>
                 </button>
                 <a href="/configure" class="nav-btn">⚙️ Configure Clients</a>
+                <button id="stopBtn" class="nav-btn" style="display:none; background:#dc3545; border-color:#dc3545;" onclick="stopWorkflow()">Stop Workflow</button>
                 <div class="timer-box">
                     <div class="timer-label">EXECUTION TIME</div>
                     <div class="timer-value" id="execution-time">00m 00s</div>
@@ -685,10 +687,44 @@
     </div>
 
     <div class="footer">
-        Auto-refreshing every 2 seconds • <span id="lastUpdate">Never updated</span>
+        Auto-refreshing every 5 seconds • <span id="lastUpdate">Never updated</span>
     </div>
 
     <script>
+        // CSRF token for POST requests
+        (function() {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            if (csrfMeta) {
+                const origFetch = window.fetch;
+                window.fetch = function(url, opts) {
+                    opts = opts || {};
+                    if (opts.method && opts.method.toUpperCase() === 'POST') {
+                        opts.headers = opts.headers || {};
+                        if (!(opts.headers instanceof Headers)) {
+                            opts.headers['X-CSRFToken'] = csrfMeta.content;
+                        }
+                    }
+                    return origFetch(url, opts);
+                };
+            }
+        })();
+
+        async function stopWorkflow() {
+            if (!confirm('Stop the workflow? All running clients will be cancelled.')) return;
+            try {
+                const resp = await fetch('/api/stop-workflow', {method: 'POST'});
+                const data = await resp.json();
+                if (data.success) {
+                    document.getElementById('stopBtn').style.display = 'none';
+                    updateDashboard();
+                } else {
+                    alert(data.error || 'Failed to stop workflow');
+                }
+            } catch(e) {
+                console.error('Failed to stop workflow:', e);
+            }
+        }
+
         // Cache for graceful server shutdown
         let lastSuccessfulData = null;
         let allClientsComplete = false;
@@ -703,6 +739,9 @@
                     const mode = data.mode || 'deep';
                     const modeText = mode.charAt(0).toUpperCase() + mode.slice(1);
                     document.getElementById('page-title').textContent = `Project APE - ${modeText} Mode`;
+
+                    // Show/hide stop button
+                    document.getElementById('stopBtn').style.display = data.running > 0 ? 'inline-block' : 'none';
 
                     // Update stats
                     document.getElementById('stat-total').textContent = data.total;
@@ -723,6 +762,12 @@
                         if (!completionTime) {
                             completionTime = Date.now();
                             console.log('Pipeline complete - timer stopped, will stop refreshing in 5 minutes');
+                            if (pollInterval !== 10000) {
+                                pollInterval = 10000;
+                                clearInterval(refreshInterval);
+                                refreshInterval = null;
+                                startAutoRefresh();
+                            }
                         }
                     } else {
                         // Only initialize/update timer if pipeline is NOT complete
@@ -764,9 +809,9 @@
                                         <a href="/configure" style="background: #238636; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.95rem; display: inline-block; transition: all 0.2s;">
                                             ⚙️ Configure Clients
                                         </a>
-                                        <a href="/launch" style="background: #ee0000; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.95rem; display: inline-block; transition: all 0.2s;">
+                                        <button id="launchWorkflowBtn" style="background: #ee0000; color: #fff; padding: 12px 24px; border-radius: 6px; border: none; font-weight: 600; font-size: 0.95rem; display: inline-block; transition: all 0.2s; cursor: pointer;">
                                             ▶️ Start Workflow
-                                        </a>
+                                        </button>
                                     </div>
                                     <div style="font-size: 0.85rem; color: #6e7681; margin-top: 20px; line-height: 1.5;">
                                         Or run from terminal: <code style="background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px; color: #ee0000;">./run-workflow.sh fast</code>
@@ -872,9 +917,11 @@
         let completionTime = null;
         const POST_COMPLETION_DELAY = 5 * 60 * 1000; // 5 minutes in milliseconds
 
+        let pollInterval = 5000;
+
         function startAutoRefresh() {
-            if (refreshInterval) return; // Already running
-            refreshInterval = setInterval(updateDashboard, 2000);
+            if (refreshInterval) return;
+            refreshInterval = setInterval(updateDashboard, pollInterval);
         }
 
         function stopAutoRefresh() {
@@ -961,6 +1008,20 @@
         // Timer interval will be started by initializeTimer() when first status data arrives
 
         // ========================================================================
+        // Launch Workflow Button Handler
+        // ========================================================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const launchBtn = document.getElementById('launchWorkflowBtn');
+            if (launchBtn) {
+                launchBtn.addEventListener('click', function() {
+                    // Navigate to /launch endpoint which will detect workflow and auto-start
+                    window.location.href = '/launch';
+                });
+            }
+        });
+
+        // ========================================================================
         // Theme Toggle
         // ========================================================================
 
@@ -1005,13 +1066,36 @@
         // Logs Section
         // ========================================================================
 
+        function loadAvailableLogs() {
+            fetch('/api/available-logs')
+                .then(response => response.json())
+                .then(data => {
+                    const logSelector = document.getElementById('logSelector');
+                    if (data.success && data.logs) {
+                        logSelector.innerHTML = data.logs.map(log =>
+                            `<option value="${log.token}">${log.label}</option>`
+                        ).join('');
+
+                        // Start streaming first log after loading list
+                        if (data.logs.length > 0) {
+                            startLogStream();
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to load available logs:', err);
+                    const logContent = document.getElementById('logContent');
+                    logContent.textContent = `[ERROR] Failed to load log sources: ${err.message}\n`;
+                });
+        }
+
         function toggleLogs() {
             const logsSection = document.getElementById('logsSection');
             logsSection.classList.toggle('expanded');
 
             // Start streaming logs when expanded
             if (logsSection.classList.contains('expanded') && !logStreamEventSource) {
-                startLogStream();
+                loadAvailableLogs();
             }
         }
 
@@ -1021,15 +1105,18 @@
 
         function startLogStream() {
             const logSelector = document.getElementById('logSelector');
-            const logFile = logSelector.value;
+            const logToken = logSelector.value;
 
             // Close existing stream
             if (logStreamEventSource) {
                 logStreamEventSource.close();
             }
 
+            // Use correct backend endpoint: /logs/{client_token}
+            const streamUrl = `/logs/${logToken}`;
+
             // Open new stream
-            logStreamEventSource = new EventSource(`/stream-logs?log=${logFile}`);
+            logStreamEventSource = new EventSource(streamUrl);
 
             logStreamEventSource.onmessage = function(event) {
                 if (!logsPaused) {
@@ -1048,6 +1135,9 @@
 
             logStreamEventSource.onerror = function(error) {
                 console.error('Log stream error:', error);
+                const logContent = document.getElementById('logContent');
+                logContent.textContent += `\n[ERROR] Failed to connect to log stream: ${streamUrl}\n`;
+                logContent.textContent += `Make sure a workflow is running and generating logs.\n`;
             };
         }
 

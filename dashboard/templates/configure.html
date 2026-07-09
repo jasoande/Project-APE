@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Project APE - Configuration Tool</title>
     <style>
         /* CSS Variables for theming */
@@ -921,6 +922,7 @@
                         <span id="themeIcon">🌙</span>
                         <span style="font-size: 0.85rem; font-weight: 600;">Theme</span>
                     </button>
+                    <a href="/setup-environment">🔧 Environment Setup</a>
                     <a href="/">← Back to Dashboard</a>
                 </div>
             </div>
@@ -1026,10 +1028,10 @@
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
                     <div>
                         <h4 style="font-size: 1rem; font-weight: 600; color: #e6edf3; margin-bottom: 8px;">
-                            🔄 Google Drive Sources
+                            🔄 Google Drive Sources & Notebooks
                         </h4>
                         <p class="form-help" style="margin: 0;">
-                            Refresh cached files from Google Drive without running full workflows
+                            Refresh cached files from Google Drive and update sources in existing NotebookLM notebooks
                         </p>
                     </div>
                     <div id="cacheStatusBadge" style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 6px; background: rgba(139,148,158,0.1); border: 1px solid #8b949e;">
@@ -1052,15 +1054,28 @@
                 </div>
 
                 <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-primary" id="refreshSourcesBtn">
-                        🔄 Refresh Drive Sources
+                    <button type="button" class="btn btn-primary" id="updateNotebookSourcesBtn">
+                        📝 Update Notebook Sources
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="refreshSourcesBtn">
+                        💾 Refresh Cache Only
                     </button>
                     <button type="button" class="btn btn-secondary" id="viewCacheStatsBtn">
-                        📊 View Cache Stats
+                        📊 View Stats
                     </button>
                     <button type="button" class="btn btn-danger" id="clearCacheBtn">
                         🗑️ Clear Cache
                     </button>
+                </div>
+
+                <!-- Help Text -->
+                <div style="background: rgba(59,130,246,0.05); border: 1px solid #3b82f6; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+                    <div style="font-size: 0.9rem; color: #93c5fd; line-height: 1.6;">
+                        <strong>📝 Update Notebook Sources:</strong> Downloads fresh files from Drive, consolidates PDFs, and replaces sources in existing NotebookLM notebooks (does NOT re-run prompts)<br>
+                        <strong>💾 Refresh Cache Only:</strong> Downloads files from Drive to local cache without touching notebooks<br>
+                        <strong>📊 View Stats:</strong> See cache details per client<br>
+                        <strong>🗑️ Clear Cache:</strong> Delete local cached files (notebooks unaffected)
+                    </div>
                 </div>
 
                 <!-- Refresh Progress Panel (hidden by default) -->
@@ -1104,11 +1119,56 @@
             </div>
         </div>
 
-        <!-- Refresh Options Modal (Hidden by default) -->
-        <div id="refreshOptionsModal" style="display: none; position: fixed: top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 20px; overflow-y: auto;">
+        <!-- Update Notebook Sources Modal (Hidden by default) -->
+        <div id="updateNotebookSourcesModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 20px; overflow-y: auto;">
             <div style="max-width: 700px; margin: 40px auto; background: #161b22; border: 2px solid #30363d; border-radius: 12px; padding: 30px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="font-size: 1.5rem; font-weight: 700; color: #fff;">🔄 Refresh Drive Sources</h3>
+                    <h3 style="font-size: 1.5rem; font-weight: 700; color: #fff;">📝 Update Notebook Sources</h3>
+                    <button type="button" class="btn btn-secondary" id="closeUpdateNotebookSourcesBtn" style="padding: 8px 16px;">
+                        ✖ Close
+                    </button>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <p class="form-help" style="margin-bottom: 16px;">
+                        This will download fresh files from Google Drive, consolidate them, and update the sources in existing NotebookLM notebooks. <strong>It will NOT re-run ask/chat prompts</strong> - only the source documents will be updated.
+                    </p>
+                    <div style="background: rgba(59,130,246,0.1); border: 1px solid #3b82f6; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+                        <strong style="color: #93c5fd;">What this does:</strong><br>
+                        1. Downloads fresh PDFs from Google Drive<br>
+                        2. Consolidates them into a new combined PDF<br>
+                        3. Removes old consolidated PDF from notebook<br>
+                        4. Adds new consolidated PDF to notebook<br>
+                        5. Your next chat/ask will use the updated documents
+                    </div>
+                    <div style="background: rgba(238,0,0,0.1); border: 1px solid #ee0000; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+                        <strong style="color: #fca5a5;">Note:</strong> This requires existing notebooks (run a workflow first if notebooks don't exist yet). May take 2-3 minutes per client.
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="form-label">Select Clients to Update</label>
+                    <div id="updateNotebookClientList" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto;">
+                        <!-- Client checkboxes will be populated here -->
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" id="cancelUpdateNotebookBtn">
+                        ❌ Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="startUpdateNotebookBtn">
+                        📝 Update Sources
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Refresh Options Modal (Hidden by default) -->
+        <div id="refreshOptionsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 20px; overflow-y: auto;">
+            <div style="max-width: 700px; margin: 40px auto; background: #161b22; border: 2px solid #30363d; border-radius: 12px; padding: 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="font-size: 1.5rem; font-weight: 700; color: #fff;">🔄 Refresh Drive Cache</h3>
                     <button type="button" class="btn btn-secondary" id="closeRefreshOptionsBtn" style="padding: 8px 16px;">
                         ✖ Close
                     </button>
@@ -1116,7 +1176,7 @@
 
                 <div style="margin-bottom: 24px;">
                     <p class="form-help" style="margin-bottom: 16px;">
-                        This will re-download all files from the selected Google Drive folders and update the cache. Your workflows will use the latest data from Drive on the next run.
+                        This will re-download all files from the selected Google Drive folders and update the cache. <strong>It will NOT update existing notebooks</strong> - use "Update Notebook Sources" for that.
                     </p>
                     <div style="background: rgba(238,0,0,0.1); border: 1px solid #ee0000; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
                         <strong style="color: #fca5a5;">Note:</strong> This may take 1-2 minutes per client depending on the number of files.
@@ -1519,7 +1579,25 @@
 
     </div>
 
-    <script src="/static/configure.js"></script>
-    <script src="/static/oauth-wizard.js"></script>
+    <script>
+    (function() {
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfMeta) {
+            const origFetch = window.fetch;
+            window.fetch = function(url, opts) {
+                opts = opts || {};
+                if (opts.method && opts.method.toUpperCase() === 'POST') {
+                    opts.headers = opts.headers || {};
+                    if (!(opts.headers instanceof Headers)) {
+                        opts.headers['X-CSRFToken'] = csrfMeta.content;
+                    }
+                }
+                return origFetch(url, opts);
+            };
+        }
+    })();
+    </script>
+    <script src="/static/configure.js?v=4.0.4"></script>
+    <script src="/static/oauth-wizard.js?v=4.0.4"></script>
 </body>
 </html>

@@ -29,10 +29,6 @@ from pathlib import Path
 from typing import List, Dict
 from datetime import datetime
 import importlib.util
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 # ==============================================================================
 # CONFIGURATION
@@ -104,19 +100,68 @@ class ProcessManager:
         """Start Flask dashboard server."""
         logger.info("\n📊 Starting dashboard server...")
 
+        # Kill any existing process on the dashboard port
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['lsof', '-ti', f':{DASHBOARD_PORT}'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.stdout.strip():
+                pids = result.stdout.strip().split('\n')
+                for pid in pids:
+                    try:
+                        logger.info(f"   Killing stale process on port {DASHBOARD_PORT} (PID: {pid})")
+                        subprocess.run(['kill', '-9', pid], timeout=2)
+                    except:
+                        pass
+                time.sleep(1)
+        except:
+            pass  # lsof might not be available on all systems
+
         dashboard_script = SCRIPT_DIR / "dashboard" / "server.py"
+        dashboard_log = LOGS_DIR / "dashboard.log"
+
+        # CRITICAL: Log dashboard output with unbuffered I/O for debugging crashes
+        # Use line buffering to ensure logs are written immediately
+        log_handle = open(dashboard_log, 'w', buffering=1)  # Line buffering
 
         self.dashboard_process = subprocess.Popen(
-            [sys.executable, str(dashboard_script)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            [sys.executable, '-u', str(dashboard_script)],  # -u for unbuffered Python output
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            env={**subprocess.os.environ, 'PYTHONUNBUFFERED': '1'}  # Force unbuffered
         )
 
-        # Wait for server to start
+        # Wait for server to start and verify it's running
         time.sleep(3)
+
+        # Check if dashboard actually started
+        try:
+            import urllib.request
+            urllib.request.urlopen(f"http://localhost:{DASHBOARD_PORT}/status", timeout=2)
+            dashboard_running = True
+        except:
+            dashboard_running = False
+
+        if not dashboard_running:
+            logger.error(f"   ❌ Dashboard failed to start on port {DASHBOARD_PORT}")
+            logger.error(f"   Check {dashboard_log} for errors")
+            # Read first few lines of error log
+            try:
+                with open(dashboard_log, 'r') as f:
+                    error_lines = f.readlines()[-5:]
+                    for line in error_lines:
+                        logger.error(f"      {line.rstrip()}")
+            except:
+                pass
+            raise RuntimeError(f"Dashboard failed to start - check {dashboard_log}")
 
         dashboard_url = f"http://localhost:{DASHBOARD_PORT}"
         logger.info(f"   URL: {dashboard_url}")
+        logger.info("   ✅ Dashboard server running")
 
         # Open in browser
         try:
@@ -148,6 +193,9 @@ class ProcessManager:
 
         if refresh:
             cmd.append("--refresh")
+
+        if hasattr(self, '_resume') and self._resume:
+            cmd.append("--resume")
 
         # Start process
         process = subprocess.Popen(
@@ -238,7 +286,7 @@ def print_banner():
     print("  PROJECT APE - ACCOUNT PLANNING ENGINE")
     print("  AI-Powered Enterprise Account Planning Automation")
     print("="*70)
-    print(f"  Version: 3.2.2 - Auth Retry & Lock Contention Fix")
+    print(f"  Version: 4.1.0 - Security, Checkpoint/Resume, Health Checks")
     print(f"  Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*70 + "\n")
 
@@ -286,6 +334,16 @@ def main():
         action="store_true",
         help="Force refresh Google Drive cache (ignore TTL)"
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from last checkpoint (skip completed phases)"
+    )
+    parser.add_argument(
+        "--skip-preflight",
+        action="store_true",
+        help="Skip pre-flight health checks"
+    )
 
     args = parser.parse_args()
 
@@ -303,6 +361,23 @@ def main():
     logger.info(f"   Mode: {args.mode.upper()}")
     logger.info(f"   Clients: {len(clients)}")
     logger.info(f"   Dashboard: {'Disabled' if args.no_dashboard else 'Enabled'}")
+    logger.info(f"   Resume: {'Yes' if args.resume else 'No'}")
+
+    # Pre-flight health checks
+    if not args.skip_preflight:
+        try:
+            from core.health_checks import run_preflight_checks
+            logger.info("\n🔍 Running pre-flight checks...")
+            preflight = run_preflight_checks(SCRIPT_DIR / "vars.py")
+            for check in preflight['checks']:
+                status_icon = "✅" if check['passed'] else "❌"
+                logger.info(f"   {status_icon} {check['check']}: {check['message']}")
+            if not preflight['all_passed']:
+                logger.error("\n❌ Pre-flight checks failed. Use --skip-preflight to bypass.")
+                sys.exit(1)
+            logger.info("   ✅ All pre-flight checks passed")
+        except ImportError:
+            logger.warning("   ⚠️  Health checks module not available, skipping")
 
     # Create directories
     STATUS_DIR.mkdir(exist_ok=True)
@@ -319,6 +394,7 @@ def main():
     run_id = str(int(time.time()))
     manager = ProcessManager(run_id=run_id)
     manager.start_time = time.time()
+    manager._resume = args.resume
     global_manager = manager
 
     logger.info(f"\n🆔 Run ID: {run_id}")
@@ -372,6 +448,16 @@ def main():
         logger.info(f"   ❌ Failed: {results['failed']}")
         logger.info(f"   ⏱️  Duration: {elapsed/60:.1f} minutes")
         logger.info("="*60)
+
+        # Send completion notification
+        try:
+            from core.notification_manager import notify_completion
+            results['duration_minutes'] = elapsed / 60
+            notify_completion(config, results)
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.warning(f"   ⚠️  Notification failed: {e}")
 
         if not args.no_dashboard:
             logger.info(f"\n📊 Dashboard: http://localhost:{DASHBOARD_PORT}")

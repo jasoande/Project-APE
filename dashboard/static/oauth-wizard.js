@@ -69,7 +69,31 @@ function updateWizardProgress() {
 async function checkOAuthStatusWizard() {
     try {
         const response = await fetch('/api/oauth-status');
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
         const data = await response.json();
+
+        // Only show error if the API returned an explicit error
+        if (data.success === false) {
+            console.error('OAuth status check failed:', data.error);
+            // Don't show scary error on fresh install - just log it
+            updateStatusBadgeWizard('creds-status-badge', false);
+            updateStatusBadgeWizard('token-status-badge', false);
+            updateStatusBadgeWizard('access-status-badge', false);
+            return;
+        }
+
+        // Check if Google OAuth packages are available
+        if (data.google_packages_available === false) {
+            showMessage('error', '⚠️ Google OAuth packages not available. Please restart dashboard using: python3 launch-project-ape.py');
+            updateStatusBadgeWizard('creds-status-badge', false);
+            updateStatusBadgeWizard('token-status-badge', false);
+            updateStatusBadgeWizard('access-status-badge', false);
+            return;
+        }
 
         // Update status badges
         updateStatusBadgeWizard('creds-status-badge', data.credentials_exist);
@@ -80,8 +104,14 @@ async function checkOAuthStatusWizard() {
             showMessage('success', '✅ OAuth already configured! You can skip this wizard or reconfigure.');
         }
     } catch (error) {
-        console.error('Failed to check OAuth status:', error);
-        showMessage('error', 'Failed to check OAuth status: ' + error.message);
+        // Don't show error banner on page load - just log to console
+        // This is normal for fresh installations
+        console.log('OAuth status check (expected on fresh install):', error.message);
+
+        // Set all badges to "Not Configured" state
+        updateStatusBadgeWizard('creds-status-badge', false);
+        updateStatusBadgeWizard('token-status-badge', false);
+        updateStatusBadgeWizard('access-status-badge', false);
     }
 }
 
@@ -272,6 +302,9 @@ async function startOAuthFlow() {
     const statusDiv = document.getElementById('auth-flow-status');
     const startBtn = document.getElementById('start-oauth-btn');
 
+    // Mark that user intentionally started the flow
+    startBtn.setAttribute('data-flow-started', 'true');
+
     startBtn.disabled = true;
     statusDiv.innerHTML = '<div class="status-message">🔄 Starting OAuth flow...</div>';
 
@@ -313,7 +346,11 @@ async function startOAuthFlow() {
             statusDiv.innerHTML = '<div class="status-message error">❌ OAuth flow failed. Please try again.</div>';
             startBtn.disabled = false;
             eventSource.close();
-            showMessage('error', '❌ OAuth flow connection failed');
+
+            // Only show error if user actually tried to authenticate (not on page load)
+            if (startBtn.getAttribute('data-flow-started') === 'true') {
+                showMessage('error', '❌ OAuth flow failed. Check that credentials are uploaded (Step 3).');
+            }
         };
 
     } catch (error) {
