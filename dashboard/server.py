@@ -1276,10 +1276,9 @@ def notebooklm_login():
                     if setup_script.exists():
                         print(f"[AUTH] Syncing credentials to container volume...", file=sys.stderr)
                         try:
-                            # Use shell pipe to auto-confirm overwrite
                             sync_result = subprocess.run(
-                                f"echo 'y' | /bin/bash {setup_script}",
-                                shell=True,
+                                ['/bin/bash', str(setup_script)],
+                                input='y\n',
                                 cwd=str(PROJECT_ROOT),
                                 capture_output=True,
                                 text=True,
@@ -1948,8 +1947,13 @@ def system_status():
 @app.route('/api/cache-files/<client_id>', methods=['GET'])
 def get_cache_files(client_id):
     """List individual cached files for a client."""
+    if not _validate_client_token(client_id):
+        return jsonify({'success': False, 'error': 'Invalid client ID'}), 400
     try:
-        cache_dir = Path.home() / '.project-ape' / 'drive_cache' / client_id
+        cache_root = Path.home() / '.project-ape' / 'drive_cache'
+        cache_dir = (cache_root / client_id).resolve()
+        if not cache_dir.is_relative_to(cache_root.resolve()):
+            return jsonify({'success': False, 'error': 'Invalid client ID'}), 400
 
         if not cache_dir.exists():
             return jsonify({'files': []})
@@ -2145,11 +2149,18 @@ def setup_install_homebrew():
     try:
         import subprocess
 
-        # Run Homebrew installation script
-        cmd = '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+        curl_result = subprocess.run(
+            ['curl', '-fsSL', 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh'],
+            capture_output=True, text=True, timeout=60
+        )
+        if curl_result.returncode != 0:
+            return jsonify({'success': False, 'error': 'Failed to download Homebrew installer'}), 500
 
-        # This is a long-running operation
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=600)
+        result = subprocess.run(
+            ['/bin/bash'],
+            input=curl_result.stdout,
+            capture_output=True, text=True, timeout=600
+        )
 
         if result.returncode == 0 or 'already installed' in result.stdout.lower():
             # Verify installation
@@ -2321,17 +2332,24 @@ gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
                     return jsonify({'success': False, 'error': f'Architecture {arch} not supported for auto-install'}), 400
             elif Path('/etc/debian_version').exists():
                 # Debian/Ubuntu
-                commands = [
-                    ['sudo', 'apt-get', 'update'],
-                    ['sudo', 'apt-get', 'install', '-y', 'apt-transport-https', 'ca-certificates', 'gnupg', 'curl'],
-                    ['curl', 'https://packages.cloud.google.com/apt/doc/apt-key.gpg', '|', 'sudo', 'gpg', '--dearmor', '-o', '/usr/share/keyrings/cloud.google.gpg'],
-                ]
-                for cmd in commands:
-                    subprocess.run(' '.join(cmd), shell=True, capture_output=True, timeout=60)
+                subprocess.run(['sudo', 'apt-get', 'update'], capture_output=True, timeout=60)
+                subprocess.run(['sudo', 'apt-get', 'install', '-y', 'apt-transport-https', 'ca-certificates', 'gnupg', 'curl'],
+                              capture_output=True, timeout=60)
+                gpg_key = subprocess.run(
+                    ['curl', '-fsSL', 'https://packages.cloud.google.com/apt/doc/apt-key.gpg'],
+                    capture_output=True, timeout=60
+                )
+                if gpg_key.returncode == 0:
+                    subprocess.run(
+                        ['sudo', 'gpg', '--dearmor', '-o', '/usr/share/keyrings/cloud.google.gpg'],
+                        input=gpg_key.stdout, capture_output=True, timeout=30
+                    )
 
-                repo_line = 'deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main'
-                subprocess.run(f'echo "{repo_line}" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list',
-                             shell=True, capture_output=True, timeout=10)
+                repo_line = 'deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main\n'
+                subprocess.run(
+                    ['sudo', 'tee', '-a', '/etc/apt/sources.list.d/google-cloud-sdk.list'],
+                    input=repo_line.encode(), capture_output=True, timeout=10
+                )
                 subprocess.run(['sudo', 'apt-get', 'update'], capture_output=True, timeout=60)
                 result = subprocess.run(['sudo', 'apt-get', 'install', '-y', 'google-cloud-cli'],
                                       capture_output=True, text=True, timeout=300)
@@ -2656,8 +2674,9 @@ def run_server(port=8765, debug=False):
         # threads=100: Handle up to 100 concurrent connections (SSE streams + polling)
         # channel_timeout=300: Keep SSE connections alive for 5 minutes
         # cleanup_interval=30: Clean up stale connections every 30 seconds
+        bind_host = os.environ.get('DASHBOARD_HOST', '127.0.0.1')
         serve(app,
-              host='0.0.0.0',
+              host=bind_host,
               port=port,
               threads=100,
               channel_timeout=300,
@@ -2672,7 +2691,8 @@ def run_server(port=8765, debug=False):
             WSGIRequestHandler.protocol_version = "HTTP/1.1"  # Enable keep-alive
         except:
             pass
-        app.run(host='0.0.0.0', port=port, debug=debug, threaded=True, processes=1)
+        bind_host = os.environ.get('DASHBOARD_HOST', '127.0.0.1')
+        app.run(host=bind_host, port=port, debug=debug, threaded=True, processes=1)
 
 
 if __name__ == "__main__":

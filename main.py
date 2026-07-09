@@ -65,8 +65,9 @@ class ProcessManager:
     def __init__(self, run_id: str = None):
         self.client_processes: List[subprocess.Popen] = []
         self.dashboard_process: subprocess.Popen = None
+        self._log_handles = []
         self.start_time = None
-        self.run_id = run_id or str(int(time.time()))  # Unique ID for this run
+        self.run_id = run_id or str(int(time.time()))
 
     def initialize_status_file(self, client_id: str, mode: str):
         """Create initial status file for a client."""
@@ -124,9 +125,8 @@ class ProcessManager:
         dashboard_script = SCRIPT_DIR / "dashboard" / "server.py"
         dashboard_log = LOGS_DIR / "dashboard.log"
 
-        # CRITICAL: Log dashboard output with unbuffered I/O for debugging crashes
-        # Use line buffering to ensure logs are written immediately
-        log_handle = open(dashboard_log, 'w', buffering=1)  # Line buffering
+        log_handle = open(dashboard_log, 'w', buffering=1)
+        self._log_handles.append(log_handle)
 
         self.dashboard_process = subprocess.Popen(
             [sys.executable, '-u', str(dashboard_script)],  # -u for unbuffered Python output
@@ -179,8 +179,8 @@ class ProcessManager:
         client_name = getattr(config, f"{client_id}_name", client_id)
 
         # Logging handled by caller in wave launch code
-        # Open log file
         log_handle = open(log_file, 'w')
+        self._log_handles.append(log_handle)
 
         # Build command
         cmd = [
@@ -269,10 +269,18 @@ class ProcessManager:
         if self.dashboard_process and self.dashboard_process.poll() is None:
             logger.info("   Stopping dashboard server...")
             self.dashboard_process.terminate()
-            time.sleep(2)  # Give Flask time to shut down gracefully
+            time.sleep(2)
             if self.dashboard_process.poll() is None:
                 logger.warning("   Dashboard didn't stop gracefully, forcing...")
                 self.dashboard_process.kill()
+
+        # Close all log file handles to prevent FD leaks
+        for handle in self._log_handles:
+            try:
+                handle.close()
+            except Exception:
+                pass
+        self._log_handles.clear()
 
         logger.info("   ✅ Cleanup complete")
 

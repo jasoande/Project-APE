@@ -515,7 +515,6 @@ class DriveManager:
         cache_dir = self._get_cache_dir(folder_id)
         metadata_file = cache_dir / 'metadata.json'
 
-        # Count files
         file_count = len(list(cache_dir.glob('*'))) - 1  # Exclude metadata.json
 
         metadata = {
@@ -527,6 +526,44 @@ class DriveManager:
 
         with open(metadata_file, 'w') as f:
             json.dump(metadata, f, indent=2)
+
+        self._enforce_cache_limit()
+
+    # 2 GB default limit
+    CACHE_MAX_BYTES = 2 * 1024 * 1024 * 1024
+
+    def _enforce_cache_limit(self):
+        """Evict oldest cache entries when total cache exceeds CACHE_MAX_BYTES."""
+        cache_root = Path.home() / '.project-ape' / 'drive_cache'
+        if not cache_root.exists():
+            return
+
+        entries = []
+        total_size = 0
+        for entry_dir in cache_root.iterdir():
+            if not entry_dir.is_dir():
+                continue
+            dir_size = sum(f.stat().st_size for f in entry_dir.rglob('*') if f.is_file())
+            meta_file = entry_dir / 'metadata.json'
+            try:
+                with open(meta_file) as f:
+                    meta = json.load(f)
+                cached_at = datetime.fromisoformat(meta['cached_at'])
+            except Exception:
+                cached_at = datetime.min
+            entries.append((entry_dir, dir_size, cached_at))
+            total_size += dir_size
+
+        if total_size <= self.CACHE_MAX_BYTES:
+            return
+
+        entries.sort(key=lambda e: e[2])
+        for entry_dir, dir_size, _ in entries:
+            if total_size <= self.CACHE_MAX_BYTES:
+                break
+            logger.info(f"[{self.client_id}] Evicting cache entry: {entry_dir.name} ({dir_size / (1024*1024):.1f}MB)")
+            shutil.rmtree(entry_dir)
+            total_size -= dir_size
 
     # ==========================================================================
     # STATIC METHODS

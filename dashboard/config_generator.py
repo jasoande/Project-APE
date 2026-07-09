@@ -87,10 +87,13 @@ def escape_python_string(value: str) -> str:
     Returns:
         Escaped string safe for Python code
     """
-    # Escape backslashes first
     value = value.replace('\\', '\\\\')
-    # Escape quotes
     value = value.replace('"', '\\"')
+    value = value.replace("'", "\\'")
+    value = value.replace('\n', '\\n')
+    value = value.replace('\r', '\\r')
+    value = value.replace('\t', '\\t')
+    value = value.replace('\0', '\\0')
     return value
 
 

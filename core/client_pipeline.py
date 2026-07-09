@@ -33,6 +33,12 @@ try:
 except ImportError:
     GEMINI_AGENT_AVAILABLE = False
 
+try:
+    from core.quality_scorer import GeminiQualityScorer
+    GEMINI_SCORER_AVAILABLE = True
+except ImportError:
+    GEMINI_SCORER_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -804,9 +810,8 @@ class ClientPipeline:
             logger.warning(f"[{self.client_id}] No ask prompts found")
             return
 
-        # Both modes now run in parallel with staggered start delays
-        # Deep mode: Small delay to avoid simultaneous API calls
-        # Fast mode: Random delay for additional spread
+        total_imported = 0
+
         if self.mode == "deep":
             import random
             delay = random.uniform(0, 15)
@@ -822,7 +827,6 @@ class ClientPipeline:
 
                     logger.info(f"[{self.client_id}] Research prompt: {prompt_file.name}")
 
-                    # Run research with source import (with variable substitution)
                     result = self.source_manager.add_research_with_import(
                         prompt_file,
                         mode="deep",
@@ -832,23 +836,16 @@ class ClientPipeline:
                     )
 
                     if result["success"]:
-                        logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
+                        imported = result.get('imported', 0)
+                        total_imported += imported
+                        logger.info(f"[{self.client_id}] ✅ Imported {imported} sources")
                     else:
-                        # Critical failure: research failed after retries
-                        error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
-                        logger.error(f"[{self.client_id}] ❌ {error_msg}")
+                        error_msg = f"Research failed for {prompt_file.name}: {result.get('error')}"
+                        logger.warning(f"[{self.client_id}] ⚠️  {error_msg}")
 
-                        # Check if this is a rate limit error
                         error_str = str(result.get('error', ''))
                         if 'rate limit' in error_str.lower() or 'ratelimiterror' in error_str.lower():
-                            logger.error(f"[{self.client_id}] 🚫 NotebookLM API rate limit exceeded")
-                            logger.error(f"[{self.client_id}]    Your account has hit the deep research quota")
-                            logger.error(f"[{self.client_id}]    Solutions:")
-                            logger.error(f"[{self.client_id}]    1. Wait 1-24 hours for quota to reset")
-                            logger.error(f"[{self.client_id}]    2. Use --mode fast (lower quotas)")
-                            logger.error(f"[{self.client_id}]    3. Reduce number of clients running simultaneously")
-
-                        raise RuntimeError(error_msg)
+                            logger.warning(f"[{self.client_id}] 🚫 NotebookLM API rate limit hit — continuing with remaining prompts")
 
                     # Deduplicate after EACH research prompt (deep mode only)
                     logger.info(f"[{self.client_id}] Deduplicating sources (after prompt {idx})...")
@@ -859,8 +856,6 @@ class ClientPipeline:
                     logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")
 
         else:
-            # Fast mode: small random delay, then run in parallel
-            # Reduced jitter: 0-12s (was 0-15s, reduced by 20% for faster execution)
             import random
             delay = random.uniform(0, 12)
             logger.info(f"[{self.client_id}] ⏱️  Anti-rate-limit delay: {delay:.1f}s")
@@ -875,7 +870,6 @@ class ClientPipeline:
 
                     logger.info(f"[{self.client_id}] Research prompt: {prompt_file.name}")
 
-                    # Run research with source import (with variable substitution)
                     result = self.source_manager.add_research_with_import(
                         prompt_file,
                         mode="fast",
@@ -885,26 +879,23 @@ class ClientPipeline:
                     )
 
                     if result["success"]:
-                        logger.info(f"[{self.client_id}] ✅ Imported {result['imported']} sources")
+                        imported = result.get('imported', 0)
+                        total_imported += imported
+                        logger.info(f"[{self.client_id}] ✅ Imported {imported} sources")
                     else:
-                        # Critical failure: research failed after retries
-                        error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
-                        logger.error(f"[{self.client_id}] ❌ {error_msg}")
+                        error_msg = f"Research failed for {prompt_file.name}: {result.get('error')}"
+                        logger.warning(f"[{self.client_id}] ⚠️  {error_msg}")
 
-                        # Check if this is a rate limit error
                         error_str = str(result.get('error', ''))
                         if 'rate limit' in error_str.lower() or 'ratelimiterror' in error_str.lower():
-                            logger.error(f"[{self.client_id}] 🚫 NotebookLM API rate limit exceeded")
-                            logger.error(f"[{self.client_id}]    Your account has hit the deep research quota")
-                            logger.error(f"[{self.client_id}]    Solutions:")
-                            logger.error(f"[{self.client_id}]    1. Wait 1-24 hours for quota to reset")
-                            logger.error(f"[{self.client_id}]    2. Use --mode fast (lower quotas)")
-                            logger.error(f"[{self.client_id}]    3. Reduce number of clients running simultaneously")
-
-                        raise RuntimeError(error_msg)
+                            logger.warning(f"[{self.client_id}] 🚫 NotebookLM API rate limit hit — continuing with remaining prompts")
 
                 except Exception as e:
                     logger.error(f"[{self.client_id}] Ask prompt failed {prompt_file.name}: {e}")
+
+        logger.info(f"[{self.client_id}] Research phase complete: {total_imported} total sources imported")
+        if total_imported == 0:
+            raise RuntimeError(f"All {len(ask_prompts)} research prompts failed — zero sources imported")
 
     def _deduplicate_sources(self):
         """Deduplicate sources after research."""
@@ -1086,86 +1077,72 @@ class ClientPipeline:
     def _calculate_quality_score(self) -> float:
         """
         Calculate quality score (0-10) based on notebook completeness.
-
-        Scoring:
-        - Sources count: 0-3 points (need 15+ sources for full points)
-        - Notes created: 0-4 points (need 6 notes for full points - v3.0.4 consolidated prompts)
-        - Has mindmap: 0-1 points
-        - Has PDF source: 0-1 points
-        - Research sources: 0-1 points (10+ web sources)
+        Uses GeminiQualityScorer when GEMINI_API_KEY is available.
 
         Returns:
             float: Quality score from 0.0 to 10.0
         """
         try:
-            score = 0.0
+            # Gather notebook data for both paths
+            sources = []
+            notes_count = 0
+            has_mindmap = False
 
-            # Get notebook sources
             result = subprocess.run(
                 ["notebooklm", "source", "list", "-n", self.notebook_id, "--json"],
-                capture_output=True,
-                text=True,
-                timeout=30
+                capture_output=True, text=True, timeout=30
             )
-
             if result.returncode == 0:
-                import json
                 data = json.loads(result.stdout)
                 sources = data.get('sources', [])
-                source_count = len(sources)
 
-                # Count different types of sources
-                pdf_count = sum(1 for s in sources if s.get('type', '').lower() == 'pdf')
-                web_count = sum(1 for s in sources if s.get('type', '').lower() in ['web', 'url', 'webpage'])
-
-                # 1. Sources count (0-3 points)
-                # 15+ sources = 3 points, scales linearly
-                score += min(3.0, (source_count / 15.0) * 3.0)
-
-                # 2. Has PDF source (0-1 point)
-                if pdf_count > 0:
-                    score += 1.0
-
-                # 3. Research sources (0-1 point)
-                # 10+ web sources = 1 point
-                if web_count >= 10:
-                    score += 1.0
-                elif web_count > 0:
-                    score += (web_count / 10.0)
-
-            # Get notebook notes
             result = subprocess.run(
                 ["notebooklm", "note", "list", "-n", self.notebook_id, "--json"],
-                capture_output=True,
-                text=True,
-                timeout=30
+                capture_output=True, text=True, timeout=30
             )
-
             if result.returncode == 0:
-                import json
                 data = json.loads(result.stdout)
-                notes = data.get('notes', [])
-                note_count = len(notes)
+                notes_count = len(data.get('notes', []))
 
-                # 4. Notes created (0-4 points)
-                # 6 notes = 4 points (consolidated prompts in v3.0.4)
-                score += min(4.0, (note_count / 6.0) * 4.0)
-
-            # 5. Has mindmap (0-1 point)
-            # Check if mindmap exists
             result = subprocess.run(
                 ["notebooklm", "artifact", "list", "-n", self.notebook_id],
-                capture_output=True,
-                text=True,
-                timeout=30
+                capture_output=True, text=True, timeout=30
             )
-
             if result.returncode == 0 and "mind-map" in result.stdout.lower():
+                has_mindmap = True
+
+            # Use Gemini scorer when available
+            gemini_api_key = os.getenv('GEMINI_API_KEY')
+            if gemini_api_key and GEMINI_SCORER_AVAILABLE:
+                logger.info(f"[{self.client_id}] Using Gemini quality scorer")
+                scorer = GeminiQualityScorer(api_key=gemini_api_key, config=self.config)
+                report = scorer.calculate_enhanced_score(
+                    client_id=self.client_id,
+                    notebook_id=self.notebook_id,
+                    sources=sources,
+                    notes_count=notes_count,
+                    has_mindmap=has_mindmap
+                )
+                return round(report.total_score, 1)
+
+            # Fallback: basic scoring
+            score = 0.0
+            source_count = len(sources)
+            pdf_count = sum(1 for s in sources if s.get('type', '').lower() == 'pdf')
+            web_count = sum(1 for s in sources if s.get('type', '').lower() in ['web', 'url', 'webpage'])
+
+            score += min(3.0, (source_count / 15.0) * 3.0)
+            if pdf_count > 0:
+                score += 1.0
+            if web_count >= 10:
+                score += 1.0
+            elif web_count > 0:
+                score += (web_count / 10.0)
+            score += min(4.0, (notes_count / 6.0) * 4.0)
+            if has_mindmap:
                 score += 1.0
 
-            # Round to 1 decimal place
             score = round(score, 1)
-
             logger.info(f"[{self.client_id}] Quality score breakdown: {score}/10")
             return score
 
