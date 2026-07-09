@@ -1,0 +1,150 @@
+#!/bin/bash
+# Workflow Launch Fix - Apply on VM
+# Fixes: CSRF token missing on launch page, timing values as strings, SSE log spam
+
+echo "Applying workflow launch fixes..."
+
+# Fix 1: config_generator.py - Handle list/tuple timing values
+cat > /tmp/config_generator_fix.txt << 'EOF'
+--- Original format_dict function around line 453
++++ Fixed to handle lists, tuples, and string-encoded arrays
+
+Replace the format_dict function starting around line 448 with:
+
+def _is_numeric_sequence(s: str) -> bool:
+    """Check if string looks like a serialized tuple or list of numbers."""
+    s = s.strip()
+    return ((s.startswith('(') and s.endswith(')')) or
+            (s.startswith('[') and s.endswith(']')))
+
+
+def _parse_numeric_sequence(s: str) -> list:
+    """Parse '(8, 12)' or '[8, 12]' into a list of numbers. Returns None on failure."""
+    s = s.strip()
+    inner = s[1:-1]
+    try:
+        parts = [float(x.strip()) for x in inner.split(',') if x.strip()]
+        return [int(x) if x == int(x) else x for x in parts]
+    except (ValueError, TypeError):
+        return None
+
+
+def generate_vars_py_full(clients_data: List[Dict], settings: Dict) -> str:
+    # ... (existing code until format_dict definition around line 448)
+
+    def format_dict(d, indent=1):
+        """Format dict for Python code."""
+        ind = '    ' * indent
+        lines = []
+        for k, v in d.items():
+            if isinstance(v, (tuple, list)):
+                lines.append(f"{ind}'{k}': ({', '.join(str(x) for x in v)}),")
+            elif isinstance(v, str) and _is_numeric_sequence(v):
+                nums = _parse_numeric_sequence(v)
+                if nums is not None:
+                    lines.append(f"{ind}'{k}': ({', '.join(str(x) for x in nums)}),")
+                else:
+                    lines.append(f"{ind}'{k}': \"{v}\",")
+            elif isinstance(v, bool):
+                lines.append(f"{ind}'{k}': {str(v)},")
+            elif isinstance(v, (int, float)):
+                lines.append(f"{ind}'{k}': {v},")
+            elif v is None:
+                lines.append(f"{ind}'{k}': None,")
+            else:
+                lines.append(f"{ind}'{k}': \"{v}\",")
+        return '\n'.join(lines)
+
+    # ... (rest of function continues)
+EOF
+
+# Fix 2: launch.html - Add CSRF interceptor
+cat > /tmp/launch_csrf_fix.txt << 'EOF'
+--- dashboard/templates/launch.html around line 282
++++ Add CSRF interceptor before workflow start
+
+Find the line:
+    <script>
+        // Trigger workflow start
+        fetch('/api/start-workflow', {
+
+Replace with:
+    <script>
+        // CSRF interceptor
+        (function() {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            if (csrfMeta) {
+                const origFetch = window.fetch;
+                window.fetch = function(url, opts) {
+                    opts = opts || {};
+                    if (opts.method && opts.method.toUpperCase() === 'POST') {
+                        opts.headers = opts.headers || {};
+                        if (!(opts.headers instanceof Headers)) {
+                            opts.headers['X-CSRFToken'] = csrfMeta.content;
+                        }
+                    }
+                    return origFetch(url, opts);
+                };
+            }
+        })();
+
+        // Trigger workflow start
+        fetch('/api/start-workflow', {
+EOF
+
+# Fix 3: server.py - Fix SSE log spam when no logs exist
+cat > /tmp/server_sse_fix.txt << 'EOF'
+--- dashboard/server.py around line 428
++++ Keep SSE connection alive and poll for logs
+
+Find the section around line 428:
+        if not log_files:
+            yield f"data: No log files found in {LOGS_DIR}\n\n"
+            yield f"data: \n\n"
+            yield f"data: Log files will appear here when workflows run.\n\n"
+            return
+
+Replace with:
+        if not log_files:
+            yield f"data: Log files will appear here when workflows run.\n\n"
+            # Keep connection alive and poll for new log files
+            for _ in range(300):  # Poll for up to 5 minutes
+                time.sleep(1)
+                new_files = list(LOGS_DIR.glob("*.log")) if LOGS_DIR.exists() else []
+                if new_files:
+                    log_files = sorted(new_files)
+                    yield f"data: Workflow logs detected, streaming...\n\n"
+                    break
+                if _ % 15 == 14:
+                    yield f"data: \n\n"  # keepalive
+            else:
+                return
+            # Fall through to stream the discovered log files
+EOF
+
+echo ""
+echo "MANUAL STEPS ON VM:"
+echo "==================="
+echo ""
+echo "1. Edit dashboard/config_generator.py:"
+echo "   - Add _is_numeric_sequence() and _parse_numeric_sequence() helpers before generate_vars_py_full()"
+echo "   - Update format_dict() to handle lists/tuples/string-encoded arrays (see /tmp/config_generator_fix.txt)"
+echo ""
+echo "2. Edit dashboard/templates/launch.html:"
+echo "   - Add CSRF interceptor before workflow start (see /tmp/launch_csrf_fix.txt)"
+echo ""
+echo "3. Edit dashboard/server.py:"
+echo "   - Update SSE log stream to poll instead of returning immediately (see /tmp/server_sse_fix.txt)"
+echo ""
+echo "4. Re-save configuration:"
+echo "   - Open http://localhost:8765/configure"
+echo "   - Click 'Save Configuration' (regenerates vars.py with correct timing tuples)"
+echo ""
+echo "5. Restart dashboard and test workflow launch"
+echo ""
+
+cat /tmp/config_generator_fix.txt
+echo ""
+cat /tmp/launch_csrf_fix.txt
+echo ""
+cat /tmp/server_sse_fix.txt
