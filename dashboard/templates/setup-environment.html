@@ -5,7 +5,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Project APE - Environment Setup</title>
     <style>
-        /* CSS Variables for theming */
         :root {
             --bg-primary: #0f1419;
             --bg-secondary: #161b22;
@@ -21,6 +20,23 @@
             --success-green: #22c55e;
             --warning-orange: #ff9500;
             --error-red: #dc2626;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #ffffff;
+            --bg-card: rgba(0,0,0,0.03);
+            --text-primary: #24292f;
+            --text-secondary: #57606a;
+            --text-muted: #656d76;
+            --accent-red: #cf222e;
+            --border-primary: #d0d7de;
+            --border-secondary: rgba(0,0,0,0.1);
+            --shadow-color: rgba(0,0,0,0.1);
+            --success-green: #1a7f37;
+            --warning-orange: #bf8700;
+            --error-red: #cf222e;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,476 +55,652 @@
             border-bottom: 3px solid var(--accent-red);
             padding: 30px 60px;
             box-shadow: 0 8px 24px var(--shadow-color);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
         .header-content {
             display: flex;
             align-items: center;
             gap: 20px;
         }
-        .logo-section {
-            flex-shrink: 0;
-        }
+        .logo-section { flex-shrink: 0; }
         .monkey-logo {
             border: 3px solid #ee0000;
             box-shadow: 0 8px 24px rgba(238,0,0,0.6), 0 0 20px rgba(238,0,0,0.3);
             border-radius: 8px;
             padding: 6px;
         }
-        .header-text {
-            flex: 1;
-        }
+        .header-text { flex: 1; }
         .header h1 {
             font-size: 2rem;
             font-weight: 900;
             color: #fff;
             margin-bottom: 8px;
         }
+        [data-theme="light"] .header h1 { color: var(--text-primary); }
         .header p {
-            color: #8b949e;
+            color: var(--text-secondary);
             font-size: 0.95rem;
         }
         .header-nav {
             margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
-        .header-nav a {
-            color: #e6edf3;
+        .header-nav a, .theme-toggle {
+            color: var(--text-primary);
             text-decoration: none;
             padding: 8px 16px;
             border-radius: 6px;
             background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid var(--border-secondary);
             font-size: 0.9rem;
             transition: all 0.2s;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
         }
-        .header-nav a:hover {
+        .header-nav a:hover, .theme-toggle:hover {
             background: rgba(255,255,255,0.1);
-            border-color: #ee0000;
+            border-color: var(--accent-red);
+        }
+        [data-theme="light"] .header-nav a,
+        [data-theme="light"] .theme-toggle {
+            background: rgba(0,0,0,0.04);
+            border-color: var(--border-secondary);
+        }
+        [data-theme="light"] .header-nav a:hover,
+        [data-theme="light"] .theme-toggle:hover {
+            background: rgba(0,0,0,0.08);
         }
 
-        /* Container */
         .container {
             max-width: 1000px;
             margin: 0 auto;
             padding: 40px 20px;
         }
 
-        /* Setup Progress */
-        .setup-progress {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
+        /* Welcome hero */
+        .welcome-hero {
+            text-align: center;
             padding: 30px;
+            margin-bottom: 30px;
+        }
+        .welcome-hero .hero-logo {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border: 3px solid #ee0000;
+            box-shadow: 0 8px 24px rgba(238,0,0,0.4), 0 0 30px rgba(238,0,0,0.2);
+            border-radius: 12px;
+            padding: 6px;
+            margin-bottom: 20px;
+        }
+        .welcome-hero h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .welcome-hero p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Progress section */
+        .setup-progress {
+            background: var(--bg-card);
+            border: 1px solid var(--border-secondary);
+            border-radius: 12px;
+            padding: 24px 30px;
             margin-bottom: 30px;
         }
         .progress-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         .progress-title {
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             font-weight: 700;
-            color: #fff;
+            color: var(--text-primary);
         }
         .progress-status {
             font-size: 0.9rem;
-            color: #8b949e;
+            color: var(--text-secondary);
+            font-weight: 600;
         }
-        .progress-bar-container {
+        .progress-bar-track {
             background: rgba(0,0,0,0.3);
             border-radius: 8px;
             height: 8px;
             overflow: hidden;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
-        .progress-bar {
+        [data-theme="light"] .progress-bar-track {
+            background: rgba(0,0,0,0.08);
+        }
+        .progress-bar-fill {
             height: 100%;
             background: linear-gradient(90deg, #ee0000 0%, #ff6b6b 100%);
-            transition: width 0.3s ease;
+            transition: width 0.5s ease;
             width: 0%;
+            border-radius: 8px;
+        }
+        .progress-bar-fill.complete {
+            background: linear-gradient(90deg, var(--success-green) 0%, #4ade80 100%);
         }
         .progress-text {
             font-size: 0.85rem;
-            color: #8b949e;
+            color: var(--text-secondary);
             text-align: center;
         }
 
-        /* Setup Steps */
+        /* Steps */
         .setup-steps {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
         .setup-step {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: var(--bg-card);
+            border: 1px solid var(--border-secondary);
             border-radius: 12px;
-            padding: 24px;
-            transition: all 0.3s;
+            overflow: hidden;
+            transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
         }
         .setup-step.active {
             border-color: var(--accent-red);
-            box-shadow: 0 0 20px rgba(238,0,0,0.2);
+            box-shadow: 0 0 20px rgba(238,0,0,0.15);
         }
         .setup-step.completed {
             border-color: var(--success-green);
-            background: rgba(34,197,94,0.05);
+            background: rgba(34,197,94,0.03);
+        }
+        [data-theme="light"] .setup-step.completed {
+            background: rgba(34,197,94,0.04);
         }
         .setup-step.error {
             border-color: var(--error-red);
-            background: rgba(220,38,38,0.05);
+            background: rgba(220,38,38,0.03);
         }
+        .setup-step.skipped {
+            opacity: 0.7;
+        }
+
         .step-header {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
+            gap: 16px;
+            padding: 20px 24px;
+            cursor: pointer;
+            user-select: none;
         }
-        .step-number {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.1);
+        .step-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.06);
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            transition: background 0.3s, transform 0.3s;
+        }
+        [data-theme="light"] .step-icon {
+            background: rgba(0,0,0,0.05);
+        }
+        .setup-step.active .step-icon {
+            background: rgba(238,0,0,0.15);
+            transform: scale(1.05);
+        }
+        .setup-step.completed .step-icon {
+            background: rgba(34,197,94,0.15);
+        }
+        .setup-step.error .step-icon {
+            background: rgba(220,38,38,0.15);
+        }
+        .step-info { flex: 1; }
+        .step-info h3 {
+            font-size: 1.05rem;
             font-weight: 700;
-            font-size: 1.1rem;
-            color: #8b949e;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+        .step-info p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .step-badge {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            white-space: nowrap;
             flex-shrink: 0;
         }
-        .step-number.active {
-            background: var(--accent-red);
-            color: #fff;
-        }
-        .step-number.completed {
-            background: var(--success-green);
-            color: #fff;
-        }
-        .step-number.error {
-            background: var(--error-red);
-            color: #fff;
-        }
-        .step-title {
-            flex: 1;
-        }
-        .step-title h3 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #fff;
-            margin-bottom: 4px;
-        }
-        .step-title p {
-            font-size: 0.9rem;
-            color: #8b949e;
-        }
-        .step-status {
-            font-size: 0.9rem;
-            font-weight: 600;
-            padding: 6px 12px;
-            border-radius: 6px;
-        }
-        .step-status.pending {
+        .step-badge.pending {
             background: rgba(255,255,255,0.05);
-            color: #8b949e;
+            color: var(--text-secondary);
         }
-        .step-status.running {
+        [data-theme="light"] .step-badge.pending {
+            background: rgba(0,0,0,0.05);
+        }
+        .step-badge.checking {
             background: rgba(238,0,0,0.1);
             color: var(--accent-red);
         }
-        .step-status.completed {
+        .step-badge.installed {
             background: rgba(34,197,94,0.1);
             color: var(--success-green);
         }
-        .step-status.error {
-            background: rgba(220,38,38,0.1);
-            color: var(--error-red);
-        }
-        .step-status.skipped {
+        .step-badge.missing {
             background: rgba(255,149,0,0.1);
             color: var(--warning-orange);
         }
+        .step-badge.error {
+            background: rgba(220,38,38,0.1);
+            color: var(--error-red);
+        }
+        .step-badge.skipped {
+            background: rgba(255,149,0,0.1);
+            color: var(--warning-orange);
+        }
+        .step-badge.installing {
+            background: rgba(238,0,0,0.1);
+            color: var(--accent-red);
+        }
+
+        /* Step body (collapsible) */
         .step-body {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            display: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.3s ease;
+            padding: 0 24px;
         }
-        .step-body.visible {
-            display: block;
+        .step-body.open {
+            max-height: 600px;
+            padding: 0 24px 20px;
         }
-        .step-details {
-            background: rgba(0,0,0,0.2);
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 15px;
+        .step-body-inner {
+            border-top: 1px solid var(--border-secondary);
+            padding-top: 16px;
         }
-        .step-details pre {
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 0.85rem;
-            color: #c0c8d0;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+
+        /* Detail cards inside steps */
+        .detail-card {
+            background: rgba(0,0,0,0.15);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
         }
+        [data-theme="light"] .detail-card {
+            background: rgba(0,0,0,0.03);
+        }
+        .detail-card .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+        .detail-card .detail-label {
+            color: var(--text-secondary);
+        }
+        .detail-card .detail-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        .detail-card .detail-value.success { color: var(--success-green); }
+        .detail-card .detail-value.warning { color: var(--warning-orange); }
+        .detail-card .detail-value.error { color: var(--error-red); }
+
+        .step-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        /* Live log console */
+        .live-log {
+            background: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 0.8rem;
+            line-height: 1.7;
+            margin-bottom: 12px;
+            color: #8b949e;
+            scroll-behavior: smooth;
+        }
+        [data-theme="light"] .live-log {
+            background: #f6f8fa;
+            border-color: #d0d7de;
+            color: #57606a;
+        }
+        .live-log .log-line { padding: 1px 0; }
+        .live-log .log-success { color: #3fb950; }
+        .live-log .log-error { color: #f85149; }
+        .live-log .log-warning { color: #d29922; }
+        .live-log .log-info { color: #58a6ff; }
+        [data-theme="light"] .live-log .log-success { color: #1a7f37; }
+        [data-theme="light"] .live-log .log-error { color: #cf222e; }
+        [data-theme="light"] .live-log .log-warning { color: #9a6700; }
+        [data-theme="light"] .live-log .log-info { color: #0969da; }
+
+        /* Step action buttons */
         .step-actions {
             display: flex;
             gap: 10px;
-            margin-top: 15px;
+            flex-wrap: wrap;
         }
 
         /* Buttons */
         .btn {
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 8px;
             border: none;
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            font-family: inherit;
         }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-primary {
-            background: #ee0000;
+            background: var(--accent-red);
             color: #fff;
         }
         .btn-primary:hover:not(:disabled) {
-            background: #cc0000;
+            filter: brightness(0.9);
             box-shadow: 0 4px 12px rgba(238,0,0,0.4);
         }
         .btn-secondary {
             background: rgba(255,255,255,0.05);
-            color: #e6edf3;
-            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--text-primary);
+            border: 1px solid var(--border-secondary);
+        }
+        [data-theme="light"] .btn-secondary {
+            background: rgba(0,0,0,0.04);
         }
         .btn-secondary:hover:not(:disabled) {
             background: rgba(255,255,255,0.1);
         }
         .btn-success {
-            background: rgba(34,197,94,0.2);
-            color: #86efac;
-            border: 1px solid #22c55e;
+            background: rgba(34,197,94,0.15);
+            color: var(--success-green);
+            border: 1px solid var(--success-green);
         }
         .btn-success:hover:not(:disabled) {
-            background: rgba(34,197,94,0.3);
+            background: rgba(34,197,94,0.25);
         }
 
         /* Spinner */
         .spinner {
             display: inline-block;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
+            border-top-color: currentColor;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Alert Boxes */
-        .alert {
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        /* Pulse animation for active step icon */
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(238,0,0,0.3); }
+            50% { box-shadow: 0 0 0 8px rgba(238,0,0,0); }
+        }
+        .setup-step.active .step-icon { animation: pulse 2s infinite; }
+
+        /* Completion card */
+        .completion-card {
+            text-align: center;
+            background: var(--bg-card);
+            border: 2px solid var(--success-green);
+            border-radius: 16px;
+            padding: 40px;
+            margin-top: 30px;
             display: none;
         }
-        .alert.visible {
-            display: block;
+        .completion-card.visible { display: block; }
+        .completion-card .completion-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
         }
-        .alert-info {
-            background: rgba(59,130,246,0.1);
-            border: 1px solid rgba(59,130,246,0.3);
-            color: #93c5fd;
+        .completion-card h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--success-green);
+            margin-bottom: 8px;
         }
-        .alert-success {
-            background: rgba(34,197,94,0.1);
-            border: 1px solid rgba(34,197,94,0.3);
-            color: #86efac;
+        .completion-card p {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            font-size: 1rem;
         }
-        .alert-warning {
-            background: rgba(255,149,0,0.1);
-            border: 1px solid rgba(255,149,0,0.3);
-            color: #ff9500;
-        }
-        .alert-error {
-            background: rgba(220,38,38,0.1);
-            border: 1px solid rgba(220,38,38,0.3);
-            color: #fca5a5;
-        }
+        .completion-card .btn { font-size: 1.05rem; padding: 14px 32px; }
 
-        /* Footer Actions */
+        /* Footer */
         .footer-actions {
             display: flex;
             gap: 15px;
             justify-content: space-between;
+            align-items: center;
             margin-top: 30px;
-            padding-top: 30px;
-            border-top: 2px solid rgba(255,255,255,0.1);
+            padding-top: 24px;
+            border-top: 1px solid var(--border-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 20px; }
+            .header-content { flex-direction: column; text-align: center; }
+            .header-nav { justify-content: center; flex-wrap: wrap; }
+            .container { padding: 20px 15px; }
+            .step-header { padding: 16px; gap: 12px; }
+            .step-icon { width: 38px; height: 38px; font-size: 1.1rem; }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
         <div class="header-content">
             <div class="logo-section">
                 <img src="{{ url_for('static', filename='kingkong.png') }}" class="monkey-logo" style="width: 80px; height: 80px; object-fit: cover;">
             </div>
             <div class="header-text">
-                <h1>Environment Setup Wizard</h1>
-                <p>Automated installation of Project APE dependencies</p>
+                <h1>Environment Setup</h1>
+                <p>Automated dependency installation for Project APE</p>
                 <div class="header-nav">
-                    <a href="/configure">← Back to Configuration</a>
+                    <a href="/configure">&#8592; Back to Configuration</a>
+                    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+                        <span id="themeIcon"></span>
+                        <span>Theme</span>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Container -->
     <div class="container">
-        <!-- Overall Progress -->
+        <!-- Welcome -->
+        <div class="welcome-hero">
+            <img src="{{ url_for('static', filename='kingkong.png') }}" class="hero-logo">
+            <h2>Setting Up Your Environment</h2>
+            <p>Project APE will check and install all required dependencies automatically. Sit back while we get everything ready.</p>
+        </div>
+
+        <!-- Progress -->
         <div class="setup-progress">
             <div class="progress-header">
-                <div class="progress-title">Setup Progress</div>
-                <div class="progress-status" id="overall-status">Ready to begin</div>
+                <div class="progress-title">Overall Progress</div>
+                <div class="progress-status" id="overall-status">Checking dependencies...</div>
             </div>
-            <div class="progress-bar-container">
-                <div class="progress-bar" id="progress-bar"></div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progress-bar"></div>
             </div>
-            <div class="progress-text" id="progress-text">0 of 7 steps completed</div>
+            <div class="progress-text" id="progress-text">0 of 7 checks completed</div>
         </div>
 
-        <!-- Alerts -->
-        <div id="alert-container"></div>
-
-        <!-- Setup Steps -->
-        <div class="setup-steps">
-            <!-- Step 1: System Detection -->
+        <!-- Steps -->
+        <div class="setup-steps" id="setup-steps">
             <div class="setup-step" id="step-1" data-step="1">
-                <div class="step-header">
-                    <div class="step-number" id="step-1-number">1</div>
-                    <div class="step-title">
+                <div class="step-header" onclick="toggleStep(1)">
+                    <div class="step-icon" id="step-1-icon">&#x1F5A5;</div>
+                    <div class="step-info">
                         <h3>System Detection</h3>
-                        <p>Detecting your operating system and architecture</p>
+                        <p>Identify your operating system and architecture</p>
                     </div>
-                    <div class="step-status pending" id="step-1-status">Pending</div>
+                    <span class="step-badge pending" id="step-1-badge">Pending</span>
                 </div>
                 <div class="step-body" id="step-1-body">
-                    <div class="step-details" id="step-1-details"></div>
+                    <div class="step-body-inner">
+                        <p class="step-description">Determines which package manager and installation methods to use for your platform.</p>
+                        <div id="step-1-details"></div>
+                        <div class="step-actions" id="step-1-actions"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Step 2: Homebrew (macOS only) -->
             <div class="setup-step" id="step-2" data-step="2">
-                <div class="step-header">
-                    <div class="step-number" id="step-2-number">2</div>
-                    <div class="step-title">
+                <div class="step-header" onclick="toggleStep(2)">
+                    <div class="step-icon" id="step-2-icon">&#x1F4E6;</div>
+                    <div class="step-info">
                         <h3>Homebrew Package Manager</h3>
-                        <p>macOS package manager (required for Podman and Python)</p>
+                        <p>macOS package manager for installing system dependencies</p>
                     </div>
-                    <div class="step-status pending" id="step-2-status">Pending</div>
+                    <span class="step-badge pending" id="step-2-badge">Pending</span>
                 </div>
                 <div class="step-body" id="step-2-body">
-                    <div class="step-details" id="step-2-details"></div>
-                    <div class="step-actions" id="step-2-actions"></div>
+                    <div class="step-body-inner">
+                        <p class="step-description">Homebrew provides a reliable way to install and manage Podman, Python, and other tools on macOS. On Linux, your system package manager is used instead.</p>
+                        <div id="step-2-details"></div>
+                        <div class="step-actions" id="step-2-actions"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Step 3: Podman -->
             <div class="setup-step" id="step-3" data-step="3">
-                <div class="step-header">
-                    <div class="step-number" id="step-3-number">3</div>
-                    <div class="step-title">
+                <div class="step-header" onclick="toggleStep(3)">
+                    <div class="step-icon" id="step-3-icon">&#x1F4E4;</div>
+                    <div class="step-info">
                         <h3>Podman Container Runtime</h3>
-                        <p>Container runtime for executing Project APE workflows</p>
+                        <p>Runs Project APE workflows in isolated containers</p>
                     </div>
-                    <div class="step-status pending" id="step-3-status">Pending</div>
+                    <span class="step-badge pending" id="step-3-badge">Pending</span>
                 </div>
                 <div class="step-body" id="step-3-body">
-                    <div class="step-details" id="step-3-details"></div>
-                    <div class="step-actions" id="step-3-actions"></div>
+                    <div class="step-body-inner">
+                        <p class="step-description">Podman provides rootless container execution, ensuring Project APE runs consistently across different machines without requiring Docker or root privileges.</p>
+                        <div id="step-3-details"></div>
+                        <div class="step-actions" id="step-3-actions"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Step 4: Google Cloud SDK -->
             <div class="setup-step" id="step-4" data-step="4">
-                <div class="step-header">
-                    <div class="step-number" id="step-4-number">4</div>
-                    <div class="step-title">
+                <div class="step-header" onclick="toggleStep(4)">
+                    <div class="step-icon" id="step-4-icon">&#x2601;</div>
+                    <div class="step-info">
                         <h3>Google Cloud SDK</h3>
-                        <p>Required for service account management</p>
+                        <p>Authentication and credential management for Google APIs</p>
                     </div>
-                    <div class="step-status pending" id="step-4-status">Pending</div>
+                    <span class="step-badge pending" id="step-4-badge">Pending</span>
                 </div>
                 <div class="step-body" id="step-4-body">
-                    <div class="step-details" id="step-4-details"></div>
-                    <div class="step-actions" id="step-4-actions"></div>
+                    <div class="step-body-inner">
+                        <p class="step-description">The Google Cloud SDK manages OAuth credentials and Application Default Credentials used by NotebookLM and Google Drive integration.</p>
+                        <div id="step-4-details"></div>
+                        <div class="step-actions" id="step-4-actions"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Step 5: Python 3.10+ -->
             <div class="setup-step" id="step-5" data-step="5">
-                <div class="step-header">
-                    <div class="step-number" id="step-5-number">5</div>
-                    <div class="step-title">
+                <div class="step-header" onclick="toggleStep(5)">
+                    <div class="step-icon" id="step-5-icon">&#x1F40D;</div>
+                    <div class="step-info">
                         <h3>Python 3.10+</h3>
-                        <p>Python 3.14 recommended for NotebookLM CLI</p>
+                        <p>Required runtime for the NotebookLM CLI and Project APE</p>
                     </div>
-                    <div class="step-status pending" id="step-5-status">Pending</div>
+                    <span class="step-badge pending" id="step-5-badge">Pending</span>
                 </div>
                 <div class="step-body" id="step-5-body">
-                    <div class="step-details" id="step-5-details"></div>
-                    <div class="step-actions" id="step-5-actions"></div>
+                    <div class="step-body-inner">
+                        <p class="step-description">Python 3.10 or newer is required. Python 3.14 is recommended for the best compatibility with the NotebookLM CLI package.</p>
+                        <div id="step-5-details"></div>
+                        <div class="step-actions" id="step-5-actions"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Step 6: Virtual Environment -->
             <div class="setup-step" id="step-6" data-step="6">
-                <div class="step-header">
-                    <div class="step-number" id="step-6-number">6</div>
-                    <div class="step-title">
+                <div class="step-header" onclick="toggleStep(6)">
+                    <div class="step-icon" id="step-6-icon">&#x1F4C1;</div>
+                    <div class="step-info">
                         <h3>Python Virtual Environment</h3>
-                        <p>Isolated environment at ~/.project-ape-venv</p>
+                        <p>Isolated dependency environment at ~/.project-ape-venv</p>
                     </div>
-                    <div class="step-status pending" id="step-6-status">Pending</div>
+                    <span class="step-badge pending" id="step-6-badge">Pending</span>
                 </div>
                 <div class="step-body" id="step-6-body">
-                    <div class="step-details" id="step-6-details"></div>
-                    <div class="step-actions" id="step-6-actions"></div>
+                    <div class="step-body-inner">
+                        <p class="step-description">A dedicated virtual environment keeps Project APE dependencies isolated from your system Python, preventing version conflicts with other projects.</p>
+                        <div id="step-6-details"></div>
+                        <div class="step-actions" id="step-6-actions"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Step 7: NotebookLM CLI -->
             <div class="setup-step" id="step-7" data-step="7">
-                <div class="step-header">
-                    <div class="step-number" id="step-7-number">7</div>
-                    <div class="step-title">
-                        <h3>NotebookLM CLI & Dependencies</h3>
-                        <p>NotebookLM CLI with browser support, Flask, and core libraries</p>
+                <div class="step-header" onclick="toggleStep(7)">
+                    <div class="step-icon" id="step-7-icon">&#x1F4D3;</div>
+                    <div class="step-info">
+                        <h3>NotebookLM CLI &amp; Dependencies</h3>
+                        <p>Core libraries: NotebookLM CLI, Flask, Google APIs, Playwright</p>
                     </div>
-                    <div class="step-status pending" id="step-7-status">Pending</div>
+                    <span class="step-badge pending" id="step-7-badge">Pending</span>
                 </div>
                 <div class="step-body" id="step-7-body">
-                    <div class="step-details" id="step-7-details"></div>
-                    <div class="step-actions" id="step-7-actions"></div>
+                    <div class="step-body-inner">
+                        <p class="step-description">Installs the NotebookLM command-line tool with browser automation support, the Flask web framework for the dashboard, and all Google API client libraries needed for Drive and OAuth integration.</p>
+                        <div id="step-7-details"></div>
+                        <div class="step-actions" id="step-7-actions"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Footer Actions -->
-        <div class="footer-actions">
-            <button class="btn btn-secondary" id="btn-skip">Skip Setup</button>
-            <div style="display: flex; gap: 15px;">
-                <button class="btn btn-secondary" id="btn-restart" style="display: none;">Restart Setup</button>
-                <button class="btn btn-primary" id="btn-start">Start Setup</button>
+        <!-- Completion card -->
+        <div class="completion-card" id="completion-card">
+            <div class="completion-icon">&#x2705;</div>
+            <h2>Environment Ready</h2>
+            <p>All dependencies are installed and verified. You're ready to configure clients and start running workflows.</p>
+            <a href="/configure" class="btn btn-success" style="text-decoration:none;">Go to Configuration &#8594;</a>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer-actions" id="footer-actions">
+            <a href="/configure" class="btn btn-secondary" style="text-decoration:none;">Skip Setup</a>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" id="btn-restart" style="display:none;" onclick="restartSetup()">Re-check All</button>
+                <button class="btn btn-primary" id="btn-start" onclick="startSetup()">
+                    <span class="spinner" id="btn-spinner" style="display:none;"></span>
+                    <span id="btn-label">Start Setup</span>
+                </button>
             </div>
         </div>
     </div>
