@@ -137,6 +137,52 @@ def _safe_error(e: Exception, context: str = "operation") -> str:
 # --- Performance: Config Cache ---
 _config_cache = {'module': None, 'mtime': 0, 'path': None}
 
+# --- Connection Rate Limiting ---
+# Track SSE connection attempts to prevent thread exhaustion from retry storms
+_sse_connection_tracker = {}  # {remote_addr: [(timestamp, endpoint), ...]}
+_max_connections_per_ip = 10  # Max concurrent SSE connections per IP
+_connection_window = 60  # Track connections in last 60 seconds
+
+def _check_sse_rate_limit(remote_addr: str, endpoint: str) -> tuple[bool, str]:
+    """
+    Check if client can open another SSE connection.
+    Returns (allowed, reason)
+    """
+    import time
+    now = time.time()
+
+    # Clean up old entries
+    if remote_addr in _sse_connection_tracker:
+        _sse_connection_tracker[remote_addr] = [
+            (ts, ep) for ts, ep in _sse_connection_tracker[remote_addr]
+            if now - ts < _connection_window
+        ]
+
+    # Check current connection count
+    current_connections = len(_sse_connection_tracker.get(remote_addr, []))
+    if current_connections >= _max_connections_per_ip:
+        return False, f"Too many concurrent SSE connections ({current_connections}/{_max_connections_per_ip})"
+
+    # Record this connection attempt
+    if remote_addr not in _sse_connection_tracker:
+        _sse_connection_tracker[remote_addr] = []
+    _sse_connection_tracker[remote_addr].append((now, endpoint))
+
+    return True, ""
+
+def _cleanup_sse_connection(remote_addr: str, endpoint: str):
+    """Remove connection from tracking when it closes."""
+    if remote_addr in _sse_connection_tracker:
+        # Remove the most recent matching entry
+        entries = _sse_connection_tracker[remote_addr]
+        for i in range(len(entries) - 1, -1, -1):
+            if entries[i][1] == endpoint:
+                entries.pop(i)
+                break
+        # Clean up empty lists
+        if not entries:
+            del _sse_connection_tracker[remote_addr]
+
 def get_config(vars_path: Path = None):
     if vars_path is None:
         vars_path = PROJECT_ROOT / "vars.py"
@@ -359,10 +405,17 @@ def stream_logs(client_token):
 
     CRITICAL: This endpoint holds a thread open for the duration of the stream.
     In deep mode with multiple clients, this can exhaust Flask's thread pool.
-    Waitress server is configured with threads=100 to handle this load.
+    Waitress server is configured with threads=200 to handle this load.
     """
     if not _validate_client_token(client_token):
         return jsonify({'error': 'Invalid client token'}), 400
+
+    # Rate limiting: prevent connection storms
+    remote_addr = request.remote_addr or 'unknown'
+    allowed, reason = _check_sse_rate_limit(remote_addr, f'/logs/{client_token}')
+    if not allowed:
+        print(f"🚫 SSE rate limit exceeded for {remote_addr}: {reason}", file=sys.stderr)
+        return jsonify({'error': reason}), 429
 
     import threading
     connection_id = f"{client_token}_{time.time()}"
@@ -415,6 +468,7 @@ def stream_logs(client_token):
                 # Log other errors but don't crash
                 print(f"❌ Error streaming logs for {client_token}: {e}", file=sys.stderr)
         finally:
+            _cleanup_sse_connection(remote_addr, f'/logs/{client_token}')
             print(f"🔚 SSE connection cleanup: {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
 
     return Response(generate(), mimetype='text/event-stream')
@@ -423,33 +477,56 @@ def stream_logs(client_token):
 @app.route('/logs/overall')
 def stream_overall_logs():
     """Stream combined logs from all components."""
+    # Rate limiting: prevent connection storms
+    remote_addr = request.remote_addr or 'unknown'
+    allowed, reason = _check_sse_rate_limit(remote_addr, '/logs/overall')
+    if not allowed:
+        print(f"🚫 SSE rate limit exceeded for {remote_addr}: {reason}", file=sys.stderr)
+        return jsonify({'error': reason}), 429
+
     import threading
     connection_id = f"overall_{time.time()}"
 
     print(f"📡 SSE connection opened (overall): {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
 
     def generate():
-        # Find all log files
-        log_files = []
+        try:
+            # Find all log files
+            log_files = []
 
-        if not LOGS_DIR.exists():
-            yield f"data: Logs directory not found: {LOGS_DIR}\n\n"
-            return
+            if not LOGS_DIR.exists():
+                yield f"data: Logs directory not found: {LOGS_DIR}\n\n"
+                return
 
-        # Collect all log files
-        for log_file in sorted(LOGS_DIR.glob("*.log")):
-            log_files.append(log_file)
+            # Collect all log files
+            for log_file in sorted(LOGS_DIR.glob("*.log")):
+                log_files.append(log_file)
 
-        if not log_files:
-            yield f"data: No log files found in {LOGS_DIR}\n\n"
-            yield f"data: \n\n"
-            yield f"data: Log files will appear here when workflows run.\n\n"
-            return
+            if not log_files:
+                yield f"data: No log files found in {LOGS_DIR}\n\n"
+                yield f"data: \n\n"
+                yield f"data: Log files will appear here when workflows run.\n\n"
+                # CRITICAL FIX: Send periodic heartbeats even when no logs exist
+                # This prevents "connection failed" errors and thread leaks
+                # Wait up to 60 seconds for logs to appear, then close connection
+                max_wait = 60  # 60 seconds
+                for i in range(max_wait * 2):  # Check every 0.5s
+                    time.sleep(0.5)
+                    # Check if logs appeared
+                    if list(LOGS_DIR.glob("*.log")):
+                        # Logs appeared, close this connection so client reconnects
+                        yield f"data: ✅ Logs detected - please refresh\n\n"
+                        return
+                    # Send heartbeat every 10 seconds to keep connection alive
+                    if i % 20 == 0:
+                        yield f": heartbeat\n\n"
+                yield f"data: [No logs after 60s - refresh to reconnect]\n\n"
+                return
 
-        # CRITICAL: Increase timeout for deep mode workflows
-        # Deep mode can run 45-60 minutes, so we need a longer timeout
-        # But not too long - we want to free up threads when clients disconnect
-        max_idle_time = 600  # 10 minutes max with no new content (handles deep mode)
+            # CRITICAL: Increase timeout for deep mode workflows
+            # Deep mode can run 45-60 minutes, so we need a longer timeout
+            # But not too long - we want to free up threads when clients disconnect
+            max_idle_time = 600  # 10 minutes max with no new content (handles deep mode)
         idle_iterations = 0
         max_iterations = max_idle_time * 2
 
@@ -497,6 +574,7 @@ def stream_overall_logs():
         except Exception as e:
             print(f"❌ Error in overall log stream: {e}", file=sys.stderr)
         finally:
+            _cleanup_sse_connection(remote_addr, '/logs/overall')
             print(f"🔚 SSE connection cleanup (overall): {connection_id} (active threads: {threading.active_count()})", file=sys.stderr)
 
     return Response(generate(), mimetype='text/event-stream')
@@ -2687,17 +2765,19 @@ def run_server(port=8765, debug=False):
     try:
         from waitress import serve
         print(f"   Using Waitress WSGI server (production-grade)")
-        print(f"   Max threads: 100 (increased for SSE log streams)")
+        print(f"   Max threads: 200 (increased for SSE log streams)")
 
         # Configure Waitress for high concurrency
-        # threads=100: Handle up to 100 concurrent connections (SSE streams + polling)
+        # threads=200: Handle up to 200 concurrent connections (SSE streams + polling)
+        #   - In deep mode with 5 clients, each client can have multiple SSE streams
+        #   - Plus browser polling, plus retries = need higher limit
         # channel_timeout=300: Keep SSE connections alive for 5 minutes
         # cleanup_interval=30: Clean up stale connections every 30 seconds
         bind_host = os.environ.get('DASHBOARD_HOST', '127.0.0.1')
         serve(app,
               host=bind_host,
               port=port,
-              threads=100,
+              threads=200,
               channel_timeout=300,
               cleanup_interval=30,
               _quiet=False)
