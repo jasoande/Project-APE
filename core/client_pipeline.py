@@ -366,6 +366,16 @@ class ClientPipeline:
             # Deep mode deduplicates after EACH prompt (inside _run_ask_prompts)
             # Fast mode deduplicates once at the end (below)
             self._run_ask_prompts()
+
+            # CRITICAL: Verify sources were actually imported
+            min_sources = 30 if self.mode == "deep" else 10
+            if not self.source_manager.verify_sources_imported(min_sources):
+                raise RuntimeError(
+                    f"Research completed but sources not imported. "
+                    f"Expected at least {min_sources} sources. "
+                    f"Check NotebookLM API logs and verify --import-all succeeded."
+                )
+
             self.update_status("Research complete", 60)
             self._save_checkpoint("run_research")
 
@@ -827,6 +837,17 @@ class ClientPipeline:
                         # Critical failure: research failed after retries
                         error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
                         logger.error(f"[{self.client_id}] ❌ {error_msg}")
+
+                        # Check if this is a rate limit error
+                        error_str = str(result.get('error', ''))
+                        if 'rate limit' in error_str.lower() or 'ratelimiterror' in error_str.lower():
+                            logger.error(f"[{self.client_id}] 🚫 NotebookLM API rate limit exceeded")
+                            logger.error(f"[{self.client_id}]    Your account has hit the deep research quota")
+                            logger.error(f"[{self.client_id}]    Solutions:")
+                            logger.error(f"[{self.client_id}]    1. Wait 1-24 hours for quota to reset")
+                            logger.error(f"[{self.client_id}]    2. Use --mode fast (lower quotas)")
+                            logger.error(f"[{self.client_id}]    3. Reduce number of clients running simultaneously")
+
                         raise RuntimeError(error_msg)
 
                     # Deduplicate after EACH research prompt (deep mode only)
@@ -869,6 +890,17 @@ class ClientPipeline:
                         # Critical failure: research failed after retries
                         error_msg = f"Research failed for {prompt_file.name} after all retry attempts: {result.get('error')}"
                         logger.error(f"[{self.client_id}] ❌ {error_msg}")
+
+                        # Check if this is a rate limit error
+                        error_str = str(result.get('error', ''))
+                        if 'rate limit' in error_str.lower() or 'ratelimiterror' in error_str.lower():
+                            logger.error(f"[{self.client_id}] 🚫 NotebookLM API rate limit exceeded")
+                            logger.error(f"[{self.client_id}]    Your account has hit the deep research quota")
+                            logger.error(f"[{self.client_id}]    Solutions:")
+                            logger.error(f"[{self.client_id}]    1. Wait 1-24 hours for quota to reset")
+                            logger.error(f"[{self.client_id}]    2. Use --mode fast (lower quotas)")
+                            logger.error(f"[{self.client_id}]    3. Reduce number of clients running simultaneously")
+
                         raise RuntimeError(error_msg)
 
                 except Exception as e:

@@ -241,26 +241,22 @@ class SourceManager:
                     try:
                         # Deep mode uses --mode deep with retry logic
                         if mode == "deep":
-                            # Build command - only import sources on first attempt to avoid duplicates
+                            # Build command - always import sources (NotebookLM deduplicates)
                             cmd = [
                                 "notebooklm", "source", "add-research",
                                 "--mode", "deep",  # Use actual deep mode
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
+                                "--import-all",  # CRITICAL: Always import, even on retry
+                                "--cited-only",  # Only import sources actually cited
+                                "--timeout", "3600"  # 60 minutes (30 min research + 30 min import)
                             ]
-
-                            # Only import sources on FIRST attempt to prevent duplicate imports on retry
-                            if attempt == 0:
-                                cmd.append("--import-all")
-
-                            cmd.append("--timeout")
-                            cmd.append("1200")  # 20 minutes for deep mode
 
                             result = subprocess.run(
                                 cmd,
                                 capture_output=True,
                                 text=True,
-                                timeout=1500  # 25 minutes total (20 min + 5 min buffer)
+                                timeout=4200  # 70 minutes (60 min + 10 min buffer)
                             )
                         else:
                             # Fast mode: standard fast research
@@ -269,27 +265,49 @@ class SourceManager:
                                 "--mode", "fast",
                                 "--prompt-file", tmp_path,
                                 "-n", self.notebook_id,
+                                "--import-all",  # CRITICAL: Always import, even on retry
+                                "--cited-only",  # Only import sources actually cited
+                                "--timeout", "900"  # 15 minutes (increased from 10 for safety)
                             ]
-
-                            # Only import sources on FIRST attempt to prevent duplicate imports on retry
-                            if attempt == 0:
-                                cmd.append("--import-all")
-
-                            cmd.append("--timeout")
-                            cmd.append("600")
 
                             result = subprocess.run(
                                 cmd,
                                 capture_output=True,
                                 text=True,
-                                timeout=700
+                                timeout=1200  # 20 minutes (15 min + 5 min buffer)
                             )
 
                         if result.returncode == 0:
                             # Parse output to count imported sources
                             imported = self._count_imported_sources(result.stdout)
-                            logger.info(f"[{self.client_id}] ✅ Research complete, imported {imported} sources")
 
+                            # CRITICAL: Validate sources were actually imported
+                            min_sources = 10 if mode == "deep" else 5
+
+                            if imported < min_sources:
+                                logger.error(
+                                    f"[{self.client_id}] ❌ Research succeeded but only imported {imported} sources "
+                                    f"(expected {min_sources}+). Sources may not have been imported due to timeout."
+                                )
+
+                                # Retry if attempts remaining
+                                if attempt < max_attempts - 1:
+                                    retry_delay = base_delay * (2 ** attempt)
+                                    logger.warning(
+                                        f"[{self.client_id}] Retrying research with source import "
+                                        f"(attempt {attempt + 1}/{max_attempts})..."
+                                    )
+                                    time.sleep(retry_delay)
+                                    continue
+                                else:
+                                    # Max attempts reached with insufficient sources
+                                    return {
+                                        "success": False,
+                                        "imported": imported,
+                                        "error": f"Insufficient sources imported: {imported}/{min_sources} after {max_attempts} attempts"
+                                    }
+
+                            logger.info(f"[{self.client_id}] ✅ Research complete, imported {imported} sources")
                             return {
                                 "success": True,
                                 "imported": imported,
@@ -488,6 +506,56 @@ class SourceManager:
         except Exception as e:
             logger.warning(f"[{self.client_id}] Error checking for consolidated PDF: {e}")
             # On error, assume PDF doesn't exist to be safe
+            return False
+
+    def verify_sources_imported(self, min_sources: int = 10) -> bool:
+        """
+        Verify that sources were actually imported after research.
+
+        Args:
+            min_sources: Minimum number of sources expected
+
+        Returns:
+            True if sufficient sources present, False otherwise
+        """
+        try:
+            sources = self.list_sources()
+
+            # Filter out PDF sources (only count web/research sources)
+            # Web sources have URLs, PDFs typically don't (or have file:// URLs)
+            # Note: Some sources may have url=None, so check for truthiness first
+            research_sources = [
+                s for s in sources
+                if s.get('url') and str(s.get('url')).startswith('http')  # Web sources have http/https URLs
+            ]
+
+            source_count = len(research_sources)
+
+            if source_count < min_sources:
+                logger.error(
+                    f"[{self.client_id}] ❌ Verification failed: "
+                    f"Only {source_count} research sources found (expected {min_sources}+)"
+                )
+                logger.error(
+                    f"[{self.client_id}]    Total sources in notebook: {len(sources)}"
+                )
+                logger.error(
+                    f"[{self.client_id}]    Sources with http URLs: {source_count}"
+                )
+                # Log first few sources for debugging
+                for idx, src in enumerate(sources[:5], 1):
+                    url = src.get('url', 'NO_URL')
+                    title = src.get('title', 'NO_TITLE')
+                    logger.error(f"[{self.client_id}]      {idx}. {title[:50]}... URL: {url[:60]}...")
+                return False
+
+            logger.info(
+                f"[{self.client_id}] ✅ Verified: {source_count} research sources imported"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"[{self.client_id}] Source verification failed: {e}")
             return False
 
     def deduplicate_sources(self) -> int:

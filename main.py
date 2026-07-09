@@ -399,6 +399,18 @@ def main():
 
     logger.info(f"\n🆔 Run ID: {run_id}")
 
+    # Write PID file for workflow stop button
+    pid_file = STATUS_DIR / '.workflow_pid'
+    with open(pid_file, 'w') as f:
+        json.dump({
+            'pid': subprocess.os.getpid(),
+            'run_id': run_id,
+            'started_at': time.time(),
+            'mode': args.mode,
+            'clients': clients
+        }, f, indent=2)
+    logger.info(f"   📝 Workflow PID: {subprocess.os.getpid()}")
+
     try:
         # Initialize status files
         logger.info("\n📝 Initializing status files...")
@@ -477,6 +489,10 @@ def main():
 
         # Cleanup
         manager.cleanup()
+
+        # Remove PID file
+        pid_file = STATUS_DIR / '.workflow_pid'
+        pid_file.unlink(missing_ok=True)
 
         # Additional step: Try to trigger dashboard shutdown via API
         # This is a belt-and-suspenders approach to ensure dashboard stops
