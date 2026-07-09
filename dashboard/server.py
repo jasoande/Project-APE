@@ -938,13 +938,54 @@ def launch_page():
                              message=str(e)), 500
 
 
+_VALID_MODES = {'fast', 'deep', 'update'}
+_VALID_CLIENT_ID_RE = re.compile(r'^[a-zA-Z0-9_]+$')
+_VALID_FLAGS = {'--refresh', '--skip-preflight', '--resume', '--no-dashboard'}
+
+
+def _build_workflow_command(workflow: dict) -> list:
+    """Build a validated subprocess argument list from structured workflow params.
+
+    Accepts only known fields; rejects arbitrary strings.
+    Returns a list suitable for subprocess.Popen (no shell).
+
+    Raises ValueError on invalid input.
+    """
+    mode = workflow.get('mode', 'fast')
+    if mode not in _VALID_MODES:
+        raise ValueError(f"Invalid mode: {mode!r}. Must be one of {_VALID_MODES}")
+
+    clients = workflow.get('clients', [])
+    if not isinstance(clients, list):
+        raise ValueError("clients must be a list")
+    for cid in clients:
+        if not isinstance(cid, str) or not _VALID_CLIENT_ID_RE.match(cid):
+            raise ValueError(f"Invalid client ID: {cid!r}")
+        if len(cid) > 128:
+            raise ValueError(f"Client ID too long: {cid!r}")
+
+    flags = workflow.get('flags', [])
+    if not isinstance(flags, list):
+        raise ValueError("flags must be a list")
+    for flag in flags:
+        if flag not in _VALID_FLAGS:
+            raise ValueError(f"Invalid flag: {flag!r}. Allowed: {_VALID_FLAGS}")
+
+    cmd = [sys.executable, str(PROJECT_ROOT / 'main.py'), '--mode', mode]
+    if clients:
+        cmd.append('--clients')
+        cmd.extend(clients)
+    cmd.extend(flags)
+    return cmd
+
+
 @app.route('/api/start-workflow', methods=['POST'])
 def start_workflow():
     """
     Trigger workflow execution in background.
     Called by the launch page to start the pipeline.
 
-    Also marks that first-time configuration is complete.
+    Accepts structured JSON with validated fields — never raw command strings.
     """
     import subprocess
     import threading
@@ -952,18 +993,22 @@ def start_workflow():
 
     try:
         workflow = request.json
-        if not workflow or 'command' not in workflow:
+        if not workflow:
+            return jsonify({'success': False, 'error': 'Invalid workflow data'}), 400
+
+        if 'command' in workflow and 'mode' not in workflow:
             return jsonify({
                 'success': False,
-                'error': 'Invalid workflow data'
+                'error': 'Raw command strings are not accepted. '
+                         'Send mode, clients, and flags instead.'
             }), 400
 
-        # NOTE: Authentication validation removed - auth is checked by main.py preflight
-        # or skipped with --skip-preflight flag. The GUI config wizard handles initial auth setup.
-        # This allows workflows to launch without blocking on auth check here.
+        try:
+            cmd = _build_workflow_command(workflow)
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
 
         # Mark that first configuration is complete
-        # This prevents the configuration UI from appearing on next launch
         from datetime import datetime
         first_config_marker = Path.home() / '.ape_first_config_done'
         if not first_config_marker.exists():
@@ -972,37 +1017,22 @@ def start_workflow():
                 'via': 'web_ui'
             }, indent=2))
 
-        # Store workflow execution result
         workflow_result = {'success': False, 'error': None, 'pid': None}
 
         def run_workflow():
-            """Background thread to execute workflow launcher"""
             try:
-                # Parse command into parts
-                cmd = workflow['command'].split()
-
                 print(f"[WORKFLOW] Starting workflow: {' '.join(cmd)}", file=sys.stderr)
                 print(f"[WORKFLOW] Working directory: {PROJECT_ROOT}", file=sys.stderr)
 
-                # Validate command exists before executing
-                if cmd[0].startswith('./'):
-                    script_path = PROJECT_ROOT / cmd[0][2:]
-                    if not script_path.exists():
-                        error_msg = f"Workflow script not found: {script_path}"
-                        print(f"[WORKFLOW] ERROR: {error_msg}", file=sys.stderr)
-                        workflow_result['error'] = error_msg
-                        return
+                main_py = PROJECT_ROOT / 'main.py'
+                if not main_py.exists():
+                    workflow_result['error'] = f"main.py not found at {main_py}"
+                    return
 
-                # Execute in project root directory as background process
-                # Don't use subprocess.run() - it blocks and waits for completion
-                # Use Popen() so main.py can spawn its own client processes
-
-                # CRITICAL: Add venv bin to PATH so spawned process can find notebooklm
                 venv_bin = Path.home() / '.project-ape-venv' / 'bin'
                 env = os.environ.copy()
                 if venv_bin.exists():
                     env['PATH'] = f"{venv_bin}:{env.get('PATH', '')}"
-                    print(f"[WORKFLOW] Added venv to PATH: {venv_bin}", file=sys.stderr)
 
                 process = subprocess.Popen(
                     cmd,
@@ -1010,42 +1040,27 @@ def start_workflow():
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
-                    env=env  # Pass modified environment with venv in PATH
+                    env=env
                 )
 
                 print(f"[WORKFLOW] Workflow process started (PID: {process.pid})", file=sys.stderr)
-                print(f"[WORKFLOW] Command: {' '.join(cmd)}", file=sys.stderr)
-
                 workflow_result['success'] = True
                 workflow_result['pid'] = process.pid
 
             except FileNotFoundError as e:
-                error_msg = f"Workflow script not found: {e}"
-                print(f"[WORKFLOW] {error_msg}", file=sys.stderr)
-                workflow_result['error'] = error_msg
-                import traceback
-                traceback.print_exc()
+                workflow_result['error'] = f"Workflow script not found: {e}"
+                print(f"[WORKFLOW] {workflow_result['error']}", file=sys.stderr)
             except PermissionError as e:
-                error_msg = f"Permission denied executing workflow: {e}"
-                print(f"[WORKFLOW] {error_msg}", file=sys.stderr)
-                workflow_result['error'] = error_msg
-                import traceback
-                traceback.print_exc()
+                workflow_result['error'] = f"Permission denied: {e}"
+                print(f"[WORKFLOW] {workflow_result['error']}", file=sys.stderr)
             except Exception as e:
-                error_msg = f"Error running workflow: {e}"
-                print(f"[WORKFLOW] {error_msg}", file=sys.stderr)
-                workflow_result['error'] = error_msg
-                import traceback
-                traceback.print_exc()
+                workflow_result['error'] = f"Error running workflow: {e}"
+                print(f"[WORKFLOW] {workflow_result['error']}", file=sys.stderr)
 
-        # Start workflow in background thread
         thread = threading.Thread(target=run_workflow, daemon=True)
         thread.start()
-
-        # Give thread a moment to start and validate command
         thread.join(timeout=1.0)
 
-        # Check if workflow started successfully
         if workflow_result['error']:
             return jsonify({
                 'success': False,
@@ -1062,7 +1077,7 @@ def start_workflow():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Failed to start workflow: {str(e)}'
+            'error': _safe_error(e, "workflow start")
         }), 500
 
 

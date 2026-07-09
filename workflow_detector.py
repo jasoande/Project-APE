@@ -95,8 +95,14 @@ def detect_workflow(vars_module) -> Dict[str, Any]:
     # Running checks again causes main.py to exit before creating status files
     command_parts.append('--skip-preflight')
 
-    # Join into single command string
+    # Join into single command string (for display only)
     command = ' '.join(command_parts)
+
+    # Structured flags for the start-workflow API (no raw command string needed)
+    flags = []
+    if not cache_enabled:
+        flags.append('--refresh')
+    flags.append('--skip-preflight')
 
     # Get client details for display
     client_details = []
@@ -117,6 +123,7 @@ def detect_workflow(vars_module) -> Dict[str, Any]:
         'clients': clients,
         'client_count': len(clients),
         'client_details': client_details,
+        'flags': flags,
         'refresh_flag': '--refresh' if not cache_enabled else '',
         'estimated_minutes_min': total_time_min,
         'estimated_minutes_max': total_time_max,
