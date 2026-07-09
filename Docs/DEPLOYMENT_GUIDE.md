@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="150"/>
   
   # Deployment Guide
   **Production Deployment Strategies and Best Practices**
@@ -213,7 +213,7 @@ sudo nano /etc/systemd/system/project-ape.service
 
 ```ini
 [Unit]
-Description=Project APE Dashboard
+Description=Account Intelligence Dashboard
 After=network.target
 
 [Service]

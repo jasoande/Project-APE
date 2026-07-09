@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Project APE - Multi-Process Mode</title>
+    <title>Account Intelligence - Multi-Process Mode</title>
     <style>
         /* CSS Variables for theming */
         :root {
@@ -317,6 +317,89 @@
             transition: width 0.4s ease;
         }
 
+        /* Visual Pipeline */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 16px 0;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+        .pipeline-stage {
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+            position: relative;
+        }
+        .stage-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 6px;
+            font-size: 1.2rem;
+            border: 2px solid;
+            transition: all 0.3s ease;
+            background: #0d1117;
+        }
+        .stage-complete .stage-icon {
+            background: rgba(34,197,94,0.15);
+            border-color: #22c55e;
+            color: #86efac;
+            box-shadow: 0 0 12px rgba(34,197,94,0.3);
+        }
+        .stage-running .stage-icon {
+            background: rgba(240,136,62,0.15);
+            border-color: #f0883e;
+            color: #ffb366;
+            box-shadow: 0 0 12px rgba(240,136,62,0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .stage-waiting .stage-icon {
+            background: rgba(88,166,255,0.08);
+            border-color: #30363d;
+            color: #58a6ff;
+        }
+        .stage-failed .stage-icon {
+            background: rgba(248,81,73,0.15);
+            border-color: #f85149;
+            color: #ff6b6b;
+            box-shadow: 0 0 12px rgba(248,81,73,0.3);
+        }
+        .stage-label {
+            font-size: 0.7rem;
+            color: #8b949e;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .stage-complete .stage-label {
+            color: #86efac;
+        }
+        .stage-running .stage-label {
+            color: #ffb366;
+        }
+        .stage-failed .stage-label {
+            color: #ff6b6b;
+        }
+        .pipeline-connector {
+            flex: 0 0 20px;
+            height: 2px;
+            background: #30363d;
+            position: relative;
+            top: -12px;
+        }
+        .stage-complete + .pipeline-connector {
+            background: linear-gradient(90deg, #22c55e 0%, #30363d 100%);
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
         /* Step Info */
         .step-info {
             background: #0d1117;
@@ -594,7 +677,7 @@
                     <img src="{{ url_for('static', filename='kingkong.png') }}" class="monkey-logo" style="width: 150px; height: 150px; object-fit: cover;">
                 </div>
                 <div class="title-container">
-                    <div class="title-main" id="page-title">Project APE - Multi-Process Mode</div>
+                    <div class="title-main" id="page-title">Account Intelligence - Multi-Process Mode</div>
                     <div class="title-sub">Account Planning Engine</div>
                 </div>
             </div>
@@ -738,7 +821,7 @@
                     // Update mode in title
                     const mode = data.mode || 'deep';
                     const modeText = mode.charAt(0).toUpperCase() + mode.slice(1);
-                    document.getElementById('page-title').textContent = `Project APE - ${modeText} Mode`;
+                    document.getElementById('page-title').textContent = `Account Intelligence - ${modeText} Mode`;
 
                     // Show/hide stop button
                     document.getElementById('stopBtn').style.display = data.running > 0 ? 'inline-block' : 'none';
@@ -824,6 +907,42 @@
                             // Prepare notebook ID display
                             const nbShort = client.notebook_id ? (client.notebook_id.substring(0, 8) + '...') : 'Pending';
 
+                            // Map current step to pipeline stages
+                            const getPipelineStages = (step, progress) => {
+                                const stages = [
+                                    { id: 'download', icon: '📥', label: 'Download' },
+                                    { id: 'notebook', icon: '📓', label: 'Notebook' },
+                                    { id: 'research', icon: '🔍', label: 'Research' },
+                                    { id: 'analysis', icon: '💡', label: 'Analysis' },
+                                    { id: 'complete', icon: '✓', label: 'Complete' }
+                                ];
+
+                                let currentStage = 0;
+                                const stepLower = step.toLowerCase();
+
+                                if (stepLower.includes('download') || stepLower.includes('pdf')) currentStage = 0;
+                                else if (stepLower.includes('notebook') || stepLower.includes('creating')) currentStage = 1;
+                                else if (stepLower.includes('research') || stepLower.includes('ask')) currentStage = 2;
+                                else if (stepLower.includes('analysis') || stepLower.includes('chat') || stepLower.includes('prompt')) currentStage = 3;
+                                else if (stepLower.includes('complete') || progress === 100) currentStage = 4;
+
+                                return stages.map((stage, idx) => {
+                                    let stageClass = 'stage-waiting';
+                                    if (idx < currentStage) stageClass = 'stage-complete';
+                                    else if (idx === currentStage) stageClass = client.status === 'FAILED' ? 'stage-failed' : 'stage-running';
+
+                                    const connector = idx < stages.length - 1 ? '<div class="pipeline-connector"></div>' : '';
+
+                                    return `
+                                        <div class="pipeline-stage ${stageClass}">
+                                            <div class="stage-icon">${stage.icon}</div>
+                                            <div class="stage-label">${stage.label}</div>
+                                        </div>
+                                        ${connector}
+                                    `;
+                                }).join('');
+                            };
+
                             // Prepare actions HTML
                             let actionsHtml = '';
                             if (client.notebook_id) {
@@ -842,9 +961,14 @@
                                     <div class="client-name">${client.name}</div>
                                     <div class="status-pill pill-${client.status}">${client.status}</div>
                                 </div>
+
+                                <div class="pipeline">
+                                    ${getPipelineStages(client.step, client.progress)}
+                                </div>
+
                                 <div class="card-progress">
                                     <div class="card-progress-label">
-                                        <span style="color: #8b949e;">Pipeline Progress</span>
+                                        <span style="color: #8b949e;">Overall Progress</span>
                                         <span class="progress-percentage">${client.progress}%</span>
                                     </div>
                                     <div class="card-progress-bar">

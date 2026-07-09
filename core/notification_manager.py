@@ -47,7 +47,7 @@ def format_slack_payload(results: Dict) -> Dict:
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": "Project APE - Workflow Complete",
+                "text": "Account Intelligence - Workflow Complete",
             },
         },
         {

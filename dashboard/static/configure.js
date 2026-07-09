@@ -122,7 +122,63 @@ function updateClient(clientId, field, value) {
             }
         }
 
+        // Real-time Drive URL validation
+        if (field === 'folder' && value) {
+            validateDriveUrl(clientId, value);
+        }
+
         debouncedUpdatePreview();
+    }
+}
+
+// Real-time Drive URL validation with visual feedback
+async function validateDriveUrl(clientId, url) {
+    const inputElement = document.getElementById(`${clientId}_folder`);
+    const helperElement = inputElement.nextElementSibling;
+
+    // Clear previous validation state
+    inputElement.classList.remove('validation-success', 'validation-error');
+
+    // Skip empty values
+    if (!url.trim()) {
+        helperElement.innerHTML = 'Paste the full Google Drive folder URL or local folder path';
+        helperElement.className = 'form-help';
+        return;
+    }
+
+    // Show loading state
+    helperElement.innerHTML = '🔍 Validating...';
+    helperElement.className = 'form-help';
+
+    try {
+        const response = await fetch('/api/validate-drive-url', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ url })
+        });
+
+        const data = await response.json();
+
+        if (data.valid) {
+            inputElement.classList.add('validation-success');
+            if (data.folder_id) {
+                helperElement.innerHTML = `✅ Valid Drive URL (Folder ID: ${data.folder_id})`;
+                helperElement.className = 'form-help validation-success-text';
+            } else {
+                helperElement.innerHTML = '✅ Valid local path';
+                helperElement.className = 'form-help validation-success-text';
+            }
+        } else {
+            inputElement.classList.add('validation-error');
+            helperElement.innerHTML = `❌ ${data.error || 'Invalid URL format'}`;
+            helperElement.className = 'form-help validation-error-text';
+        }
+    } catch (error) {
+        helperElement.innerHTML = '⚠️ Could not validate URL';
+        helperElement.className = 'form-help';
     }
 }
 

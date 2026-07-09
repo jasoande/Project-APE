@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence" width="150"/>
 
   # Contributing Guide
 
-  **Project APE - Account Planning Engine**
+  **Account Intelligence - Account Planning Engine**
 
   Version 4.0.1 | July 2026
 </div>

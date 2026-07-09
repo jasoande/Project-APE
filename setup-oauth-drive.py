@@ -490,7 +490,7 @@ def secure_move_credentials(source: Path, dest: Path, mode: int = 0o600) -> None
 
 
 def main():
-    print_header("Project APE - Automated OAuth Setup (Security Hardened)")
+    print_header("Account Intelligence - Automated OAuth Setup (Security Hardened)")
 
     print("This wizard will guide you through setting up Google Drive access.")
     print("Estimated time: 5-10 minutes")
@@ -600,9 +600,9 @@ def main():
 
         if choice == "3":
             # Create new project
-            print("\nCreating a new Google Cloud project for Project APE...")
+            print("\nCreating a new Google Cloud project for Account Intelligence...")
 
-            default_name = "Project APE Drive Access"
+            default_name = "Account Intelligence Drive Access"
             project_name = input(f"Project name [{default_name}]: ").strip() or default_name
 
             # Generate project ID
@@ -708,7 +708,7 @@ def main():
             print()
             print("4. If prompted 'Configure Consent Screen':")
             print("   a. Choose 'External'")
-            print("   b. App name: 'Project APE'")
+            print("   b. App name: 'Account Intelligence'")
             print("   c. User support email: (your email)")
             print("   d. Developer contact: (your email)")
             print("   e. Click 'SAVE AND CONTINUE' (3 times)")
@@ -716,7 +716,7 @@ def main():
             print()
             print("5. Create OAuth client ID:")
             print("   a. Application type: 'Desktop app'")
-            print("   b. Name: 'Project APE Desktop'")
+            print("   b. Name: 'Account Intelligence Desktop'")
             print("   c. Click 'CREATE'")
             print()
             print("6. In the popup:")
@@ -785,7 +785,7 @@ def main():
         print("🌐 Your browser will open to sign in with Google.")
         print("   1. Sign in with your Google account")
         print("   2. You may see 'Google hasn't verified this app' - this is normal!")
-        print("      Click 'Advanced' → 'Go to Project APE (unsafe)'")
+        print("      Click 'Advanced' → 'Go to Account Intelligence (unsafe)'")
         print("   3. Click 'Allow' to grant Drive access")
         print("   4. Return here when you see 'Authentication successful'")
         print()

@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence" width="150"/>
 
   # Architecture Documentation
 
-  **Project APE - Account Planning Engine**
+  **Account Intelligence - Account Planning Engine**
 
   Version 4.0.1 | July 2026
 </div>
@@ -25,7 +25,7 @@
 
 ## System Overview
 
-Project APE is a containerized Python application that automates enterprise account planning using Google's NotebookLM platform. The system uses a multi-process orchestrator pattern: `main.py` spawns independent client pipeline processes (one per client), each running through a 5-phase workflow. A Flask/Waitress dashboard provides real-time monitoring via Server-Sent Events (SSE) and JSON status files.
+Account Intelligence is a containerized Python application that automates enterprise account planning using Google's NotebookLM platform. The system uses a multi-process orchestrator pattern: `main.py` spawns independent client pipeline processes (one per client), each running through a 5-phase workflow. A Flask/Waitress dashboard provides real-time monitoring via Server-Sent Events (SSE) and JSON status files.
 
 Key architectural properties:
 
@@ -229,7 +229,7 @@ Checkpoint files are stored as JSON in `logs/.checkpoints/{client_id}.json` and 
 
 ## Configuration System
 
-Project APE supports two configuration approaches:
+Account Intelligence supports two configuration approaches:
 
 ### 1. Web UI Configuration (Recommended)
 

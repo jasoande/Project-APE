@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="150"/>
   
   # Integration Guide
-  **Connecting Project APE to External Systems**
+  **Connecting Account Intelligence to External Systems**
   
   Version 4.0.1 | July 2026
 </div>
@@ -36,7 +36,7 @@
 - Higher latency
 
 **3. Webhook (Future)**
-- Project APE calls external endpoint
+- Account Intelligence calls external endpoint
 - Real-time notifications
 - Requires external endpoint
 
@@ -50,7 +50,7 @@
        │
        ▼
 ┌──────────────┐
-│ Project APE  │  Execute workflow
+│ Account Intelligence  │  Execute workflow
 │  Workflow    │  15-60 minutes
 └──────┬───────┘
        │
@@ -91,7 +91,7 @@ class SalesforceIntegration:
         )
     
     def upload_analysis(self, client_id, opportunity_id):
-        """Upload Project APE analysis to Salesforce Opportunity"""
+        """Upload Account Intelligence analysis to Salesforce Opportunity"""
         
         # Read analysis
         analysis_file = Path(f'docs_generated/{client_id}/Analysis.txt')
@@ -130,7 +130,7 @@ class SalesforceIntegration:
         
         task = self.sf.Task.create({
             'WhatId': opportunity_id,
-            'Subject': f'Review Project APE Analysis: {quality["client_name"]}',
+            'Subject': f'Review Account Intelligence Analysis: {quality["client_name"]}',
             'Description': f'Quality Score: {quality["overall_score"]}/10\n'
                           f'Sources: {quality["sources"]["total"]}\n'
                           f'Review analysis and identify next steps.',
@@ -176,7 +176,7 @@ class HubSpotIntegration:
         self.client = HubSpot(access_token=access_token)
     
     def update_deal(self, client_id, deal_id):
-        """Update HubSpot deal with Project APE insights"""
+        """Update HubSpot deal with Account Intelligence insights"""
         
         # Read outputs
         with open(f'docs_generated/{client_id}/Analysis.txt') as f:
@@ -236,13 +236,13 @@ default_args = {
 dag = DAG(
     'project_ape_weekly_research',
     default_args=default_args,
-    description='Weekly account research via Project APE',
+    description='Weekly account research via Account Intelligence',
     schedule_interval='0 2 * * 1',  # Monday 2 AM
     start_date=datetime(2026, 1, 1),
     catchup=False,
 )
 
-# Task 1: Run Project APE workflow
+# Task 1: Run Account Intelligence workflow
 run_workflow = BashOperator(
     task_id='run_project_ape',
     bash_command='cd /opt/project-ape && ./ape-run.sh --vars vars-weekly.py --mode fast',
@@ -334,13 +334,13 @@ class SlackNotifier:
     def send_start_notification(self, client_name, mode):
         """Notify workflow started"""
         message = {
-            "text": f"🚀 Project APE workflow started",
+            "text": f"🚀 Account Intelligence workflow started",
             "blocks": [
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Project APE Workflow Started*\n"
+                        "text": f"*Account Intelligence Workflow Started*\n"
                                f"Client: {client_name}\n"
                                f"Mode: {mode}\n"
                                f"Expected completion: {15 if mode=='fast' else 60} minutes"
@@ -361,7 +361,7 @@ class SlackNotifier:
         emoji = "🎉" if quality['overall_score'] >= 8.5 else "✅" if quality['overall_score'] >= 7.5 else "⚠️"
         
         message = {
-            "text": f"{emoji} Project APE workflow complete: {quality['client_name']}",
+            "text": f"{emoji} Account Intelligence workflow complete: {quality['client_name']}",
             "blocks": [
                 {
                     "type": "section",
@@ -426,7 +426,7 @@ class TeamsNotifier:
         
         # Create Teams card
         card = pymsteams.connectorcard(self.webhook_url)
-        card.title(f"Project APE Analysis Complete: {quality['client_name']}")
+        card.title(f"Account Intelligence Analysis Complete: {quality['client_name']}")
         card.text(f"Quality Score: {quality['overall_score']}/10")
         
         # Add sections
@@ -470,7 +470,7 @@ class SharePointIntegration:
         credentials = ClientCredential(client_id, client_secret)
         self.ctx = ClientContext(site_url).with_credentials(credentials)
     
-    def upload_analysis(self, client_id, folder_name="Project APE Reports"):
+    def upload_analysis(self, client_id, folder_name="Account Intelligence Reports"):
         """Upload analysis files to SharePoint"""
         
         # Get target folder
@@ -521,7 +521,7 @@ class ConfluenceIntegration:
         )
     
     def create_analysis_page(self, client_id, space_key, parent_page_id=None):
-        """Create Confluence page with Project APE analysis"""
+        """Create Confluence page with Account Intelligence analysis"""
         
         # Read analysis
         with open(f'docs_generated/{client_id}/Analysis.txt') as f:
@@ -550,7 +550,7 @@ class ConfluenceIntegration:
         # Create page
         page = self.confluence.create_page(
             space=space_key,
-            title=f"Project APE Analysis: {quality['client_name']}",
+            title=f"Account Intelligence Analysis: {quality['client_name']}",
             body=page_body,
             parent_id=parent_page_id
         )

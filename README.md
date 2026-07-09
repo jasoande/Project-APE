@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE - Account Planning Engine" width="200"/>
+  <img src="dashboard/static/kingkong.png" alt="Account Intelligence - Account Planning Engine" width="200"/>
   
-  # Project APE
+  # Account Intelligence
   **Account Planning Engine**
   
   AI-Powered Enterprise Account Planning Automation
@@ -11,7 +11,7 @@
 
 ## Overview
 
-Project APE automates enterprise account research using Google's NotebookLM platform. Upload client PDFs (or point to a Google Drive folder), and the engine conducts AI-driven web research, imports external sources, and generates comprehensive account intelligence -- reducing days of manual work to minutes.
+Account Intelligence automates enterprise account research using Google's NotebookLM platform. Upload client PDFs (or point to a Google Drive folder), and the engine conducts AI-driven web research, imports external sources, and generates comprehensive account intelligence -- reducing days of manual work to minutes.
 
 ## Features
 
@@ -48,7 +48,7 @@ Click **"Launch Workflow"** and watch real-time progress in the dashboard.
 
 ## Architecture
 
-Project APE uses a multi-process orchestration architecture:
+Account Intelligence uses a multi-process orchestration architecture:
 
 - **Orchestrator** (`main.py`) -- spawns independent client pipeline processes, manages lifecycle and status tracking
 - **Dashboard** (`dashboard/server.py`) -- Flask app served via Waitress WSGI, provides real-time monitoring with SSE, configuration wizard, and REST API

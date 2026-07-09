@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="150"/>
   
   # Performance Guide
   **Optimization and Scalability Best Practices**

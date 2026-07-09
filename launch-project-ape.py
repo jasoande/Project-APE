@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Project APE - Cross-Platform Launcher
+Account Intelligence - Cross-Platform Launcher
 =====================================
 Universal launcher for Windows, Linux, and macOS
 Double-click or run from terminal to launch the configuration dashboard

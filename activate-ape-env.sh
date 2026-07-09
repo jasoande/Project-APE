@@ -1,6 +1,6 @@
 #!/bin/bash
-# Project APE - Virtual Environment Activation Script
-# Source this script to activate the Project APE virtual environment
+# project ape Account Intelligence - Virtual Environment Activation Script
+# Source this script to activate the project ape Account Intelligence virtual environment
 
 VENV_DIR="$HOME/.project-ape-venv"
 
@@ -14,7 +14,7 @@ fi
 source "$VENV_DIR/bin/activate"
 
 if [[ "$VIRTUAL_ENV" == "$VENV_DIR" ]]; then
-    echo "✅ Project APE virtual environment activated"
+    echo "✅ project ape Account Intelligence virtual environment activated"
     echo "   Python: $(python3 --version)"
     echo "   NotebookLM CLI: $(notebooklm --version 2>&1 | head -1)"
     echo ""

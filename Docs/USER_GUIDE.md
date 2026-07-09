@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence" width="150"/>
 
   # User Guide
 
-  **Project APE - Account Planning Engine**
+  **Account Intelligence - Account Planning Engine**
 
   Version 4.0.1 | July 2026
 </div>
@@ -29,7 +29,7 @@
 
 ### Launch the Application
 
-The recommended way to start Project APE is with the GUI launcher. No terminal experience is required.
+The recommended way to start Account Intelligence is with the GUI launcher. No terminal experience is required.
 
 **macOS:**
 
@@ -249,7 +249,7 @@ All checks must pass before a workflow can proceed.
 
 ## Webhook Notifications
 
-Project APE can send a notification when a workflow completes. Add the following to your `vars.py`:
+Account Intelligence can send a notification when a workflow completes. Add the following to your `vars.py`:
 
 ```python
 NOTIFICATION_WEBHOOK_URL = "https://hooks.slack.com/services/T.../B.../xxx"

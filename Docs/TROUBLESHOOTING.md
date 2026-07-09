@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="150"/>
   
   # Troubleshooting Guide
-  **Project APE - Common Issues & Solutions**
+  **Account Intelligence - Common Issues & Solutions**
   
   Version 4.0.1
 </div>
@@ -209,7 +209,7 @@ Error: cannot listen on the TCP port: address already in use
 # Find container using port 8765
 podman ps | grep 8765
 
-# Stop all Project APE containers
+# Stop all Account Intelligence containers
 podman stop $(podman ps -aq --filter ancestor=project-ape)
 
 # Clean up stopped containers
@@ -659,7 +659,7 @@ ERROR | Failed to execute chat prompt
 
 **Retry Workflow:**
 ```bash
-# Project APE has built-in retry logic (5 attempts)
+# Account Intelligence has built-in retry logic (5 attempts)
 # If still failing, wait 10 minutes and retry
 ./developer-docs/ape-run.sh --vars ./vars.py --clients client --mode fast
 ```
@@ -1186,5 +1186,5 @@ Return to: [README.md](../README.md) | See also: [USER_GUIDE.md](USER_GUIDE.md)
 
 ---
 
-**Project APE - Troubleshooting Guide**  
+**Account Intelligence - Troubleshooting Guide**  
 Version 4.0.1 | June 30, 2026

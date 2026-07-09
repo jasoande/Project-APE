@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Project APE - Configuration Tool</title>
+    <title>Account Intelligence - Configuration Tool</title>
     <style>
         /* CSS Variables for theming */
         :root {
@@ -259,6 +259,17 @@
             border-color: #dc2626;
             background: rgba(220,38,38,0.05);
         }
+        /* Real-time validation states */
+        .form-input.validation-success {
+            border-color: #22c55e;
+            background: rgba(34,197,94,0.05);
+            box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
+        }
+        .form-input.validation-error {
+            border-color: #dc2626;
+            background: rgba(220,38,38,0.05);
+            box-shadow: 0 0 0 3px rgba(220,38,38,0.1);
+        }
         .form-error {
             color: #fca5a5;
             font-size: 0.85rem;
@@ -272,6 +283,15 @@
             color: #8b949e;
             font-size: 0.85rem;
             margin-top: 6px;
+            transition: color 0.3s ease;
+        }
+        .validation-success-text {
+            color: #86efac !important;
+            font-weight: 600;
+        }
+        .validation-error-text {
+            color: #fca5a5 !important;
+            font-weight: 600;
         }
 
         /* Settings Sections */
@@ -906,6 +926,152 @@
         .btn-remove:hover {
             background: rgba(248,81,73,0.3);
         }
+
+        /* Progressive Wizard Styles */
+        .wizard-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .wizard-overlay.active {
+            display: flex;
+        }
+        .wizard-modal {
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent-red);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(238,0,0,0.4);
+            animation: wizardSlideIn 0.3s ease-out;
+        }
+        @keyframes wizardSlideIn {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .wizard-header {
+            background: linear-gradient(135deg, #ee0000 0%, #cc0000 100%);
+            padding: 24px 30px;
+            border-radius: 14px 14px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .wizard-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .wizard-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .wizard-close:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .wizard-progress {
+            display: flex;
+            padding: 24px 30px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .wizard-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        .wizard-step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #30363d;
+            color: #8b949e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin: 0 auto 8px;
+            border: 2px solid #30363d;
+            transition: all 0.3s;
+        }
+        .wizard-step.active .wizard-step-number {
+            background: #ee0000;
+            color: #fff;
+            border-color: #ee0000;
+            box-shadow: 0 0 20px rgba(238,0,0,0.5);
+            transform: scale(1.1);
+        }
+        .wizard-step.completed .wizard-step-number {
+            background: #22c55e;
+            color: #fff;
+            border-color: #22c55e;
+        }
+        .wizard-step-label {
+            font-size: 0.85rem;
+            color: #8b949e;
+            font-weight: 600;
+        }
+        .wizard-step.active .wizard-step-label {
+            color: #e6edf3;
+        }
+        .wizard-step.completed .wizard-step-label {
+            color: #86efac;
+        }
+        .wizard-connector {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            right: -50%;
+            height: 2px;
+            background: #30363d;
+        }
+        .wizard-step.completed .wizard-connector {
+            background: #22c55e;
+        }
+        .wizard-step:last-child .wizard-connector {
+            display: none;
+        }
+        .wizard-content {
+            padding: 30px;
+            min-height: 300px;
+        }
+        .wizard-footer {
+            padding: 20px 30px;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-primary);
+            display: flex;
+            justify-content: space-between;
+            border-radius: 0 0 14px 14px;
+        }
+        .wizard-step-content {
+            display: none;
+        }
+        .wizard-step-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
     </style>
 </head>
 <body>
@@ -915,7 +1081,7 @@
                 <img src="{{ url_for('static', filename='kingkong.png') }}" class="monkey-logo" style="width: 150px; height: 150px; object-fit: cover;">
             </div>
             <div class="header-text">
-                <h1>⚙️ Project APE Configuration</h1>
+                <h1>⚙️ Account Intelligence Configuration</h1>
                 <p>Configure clients and generate vars.py configuration file</p>
                 <div class="header-nav">
                     <button class="theme-toggle" id="themeToggle" title="Toggle theme">
@@ -934,7 +1100,7 @@
         <div class="settings-section" style="margin-bottom: 30px;">
             <h3>🔧 System Tools</h3>
             <p class="form-help" style="margin-bottom: 20px;">
-                Administrative tools for managing the Project APE environment
+                Administrative tools for managing the Account Intelligence environment
             </p>
 
             <!-- System Status Panel -->
@@ -1212,6 +1378,24 @@
             <span>Processing...</span>
         </div>
 
+        <!-- Quick Setup Wizard Button -->
+        <div id="wizardBanner" style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, rgba(238,0,0,0.1) 0%, rgba(238,0,0,0.05) 100%); border: 2px solid #ee0000; border-radius: 12px; position: relative; display: none;">
+            <button type="button" onclick="dismissWizardBanner()" style="position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.1); border: none; color: #e6edf3; font-size: 1.5rem; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Dismiss">×</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding-right: 40px;">
+                <div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: #e6edf3; margin-bottom: 6px;">
+                        🧙 Quick Setup Wizard
+                    </div>
+                    <div style="font-size: 0.9rem; color: #8b949e;">
+                        Step-by-step guided setup for first-time configuration
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary" id="launchWizardBtn" style="padding: 12px 30px; font-size: 1rem;">
+                    Launch Wizard →
+                </button>
+            </div>
+        </div>
+
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab active" data-tab="clients">👥 Clients</button>
@@ -1381,7 +1565,7 @@
                 <div class="wizard-step" data-step="4">
                     <h3>Step 4: Authenticate with Google</h3>
                     <div class="auth-container">
-                        <p>Click the button below to open a browser window and grant Project APE access to your Google Drive.</p>
+                        <p>Click the button below to open a browser window and grant project ape access to your Google Drive.</p>
                         <div class="auth-status" id="auth-flow-status">
                             <div class="status-message">Ready to authenticate</div>
                         </div>
@@ -1599,5 +1783,318 @@
     </script>
     <script src="/static/configure.js?v=4.0.4"></script>
     <script src="/static/oauth-wizard.js?v=4.0.4"></script>
+
+    <!-- Quick Setup Wizard Modal -->
+    <div class="wizard-overlay" id="wizardOverlay" onclick="closeWizardIfClickedOutside(event)">
+        <div class="wizard-modal" onclick="event.stopPropagation()">
+            <div class="wizard-header">
+                <div class="wizard-title">🧙 Quick Setup Wizard</div>
+                <button type="button" class="wizard-close" onclick="closeWizard()">×</button>
+            </div>
+
+            <div class="wizard-progress">
+                <div class="wizard-step active" data-step="1">
+                    <div class="wizard-step-number">1</div>
+                    <div class="wizard-step-label">Welcome</div>
+                    <div class="wizard-connector"></div>
+                </div>
+                <div class="wizard-step" data-step="2">
+                    <div class="wizard-step-number">2</div>
+                    <div class="wizard-step-label">Add Client</div>
+                    <div class="wizard-connector"></div>
+                </div>
+                <div class="wizard-step" data-step="3">
+                    <div class="wizard-step-number">3</div>
+                    <div class="wizard-step-label">Review</div>
+                    <div class="wizard-connector"></div>
+                </div>
+                <div class="wizard-step" data-step="4">
+                    <div class="wizard-step-number">4</div>
+                    <div class="wizard-step-label">Launch</div>
+                </div>
+            </div>
+
+            <div class="wizard-content">
+                <!-- Step 1: Welcome -->
+                <div class="wizard-step-content active" id="wizard-step-1">
+                    <h2 style="margin-bottom: 16px; color: var(--text-primary);">Welcome to Account Intelligence!</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 24px; line-height: 1.8;">
+                        This wizard will guide you through setting up your first client in just a few simple steps.
+                    </p>
+                    <div style="background: rgba(238,0,0,0.05); border: 1px solid rgba(238,0,0,0.3); border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                        <div style="font-weight: 600; color: #ee0000; margin-bottom: 12px;">What you'll need:</div>
+                        <ul style="color: var(--text-secondary); line-height: 2; margin-left: 20px;">
+                            <li>Client name (e.g., "Acme Corporation")</li>
+                            <li>Google Drive folder URL with client documents</li>
+                            <li>Industry and subsegments (optional - can auto-detect)</li>
+                        </ul>
+                    </div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">
+                        <strong>Time required:</strong> ~2 minutes
+                    </div>
+                </div>
+
+                <!-- Step 2: Add Client -->
+                <div class="wizard-step-content" id="wizard-step-2">
+                    <h2 style="margin-bottom: 24px; color: var(--text-primary);">Add Your First Client</h2>
+                    <div class="form-group">
+                        <label class="form-label">Client Name<span class="required">*</span></label>
+                        <input type="text" class="form-input" id="wizard-client-name" placeholder="e.g., Acme Corporation">
+                        <div class="form-help" id="wizard-client-id-preview"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Google Drive Folder URL<span class="required">*</span></label>
+                        <input type="text" class="form-input" id="wizard-client-folder" placeholder="https://drive.google.com/drive/folders/...">
+                        <div class="form-help" id="wizard-folder-validation"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Industry (Optional)</label>
+                        <input type="text" class="form-input" id="wizard-client-industry" placeholder="e.g., technology, pharmaceuticals">
+                        <div class="form-help">Leave blank for AI auto-detection</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Subsegments (Optional)</label>
+                        <input type="text" class="form-input" id="wizard-client-subsegments" placeholder="e.g., cloud, AI, enterprise software">
+                        <div class="form-help">Comma-separated research areas</div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Review -->
+                <div class="wizard-step-content" id="wizard-step-3">
+                    <h2 style="margin-bottom: 24px; color: var(--text-primary);">Review Your Configuration</h2>
+                    <div style="background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 8px; padding: 20px;">
+                        <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-primary);">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Client Name</div>
+                            <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);" id="review-name">—</div>
+                        </div>
+                        <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-primary);">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Client ID</div>
+                            <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);" id="review-id">—</div>
+                        </div>
+                        <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-primary);">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Drive Folder</div>
+                            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); word-break: break-all;" id="review-folder">—</div>
+                        </div>
+                        <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-primary);">
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Industry</div>
+                            <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);" id="review-industry">Auto-detect</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Subsegments</div>
+                            <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);" id="review-subsegments">None specified</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Launch -->
+                <div class="wizard-step-content" id="wizard-step-4">
+                    <div style="text-align: center; padding: 40px 20px;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">🎉</div>
+                        <h2 style="margin-bottom: 16px; color: var(--text-primary);">Configuration Complete!</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 32px; line-height: 1.8;">
+                            Your client has been configured successfully. You can now launch the workflow or add more clients.
+                        </p>
+                        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-success" id="wizard-launch-btn" style="padding: 14px 32px; font-size: 1.05rem;">
+                                🚀 Launch Workflow
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="closeWizard()" style="padding: 14px 32px; font-size: 1.05rem;">
+                                ➕ Add More Clients
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wizard-footer">
+                <button type="button" class="btn btn-secondary" id="wizard-prev-btn" onclick="wizardPrevStep()" style="display: none;">
+                    ← Previous
+                </button>
+                <button type="button" class="btn btn-primary" id="wizard-next-btn" onclick="wizardNextStep()">
+                    Next →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Progressive Wizard JavaScript
+        let currentWizardStep = 1;
+        const totalWizardSteps = 4;
+        let wizardClientData = {};
+
+        // Show/hide wizard banner based on localStorage
+        function checkWizardBannerStatus() {
+            const dismissed = localStorage.getItem('wizardBannerDismissed');
+            const banner = document.getElementById('wizardBanner');
+            if (!dismissed) {
+                banner.style.display = 'block';
+            }
+        }
+
+        function dismissWizardBanner() {
+            localStorage.setItem('wizardBannerDismissed', 'true');
+            document.getElementById('wizardBanner').style.display = 'none';
+        }
+
+        // Check on page load
+        checkWizardBannerStatus();
+
+        document.getElementById('launchWizardBtn').addEventListener('click', () => {
+            document.getElementById('wizardOverlay').classList.add('active');
+            currentWizardStep = 1;
+            updateWizardUI();
+        });
+
+        function closeWizard() {
+            document.getElementById('wizardOverlay').classList.remove('active');
+            currentWizardStep = 1;
+            updateWizardUI();
+        }
+
+        function closeWizardIfClickedOutside(event) {
+            // Close wizard if clicked on the overlay (not the modal)
+            if (event.target.id === 'wizardOverlay') {
+                closeWizard();
+            }
+        }
+
+        function wizardNextStep() {
+            if (currentWizardStep === 2) {
+                // Validate step 2 inputs
+                const name = document.getElementById('wizard-client-name').value.trim();
+                const folder = document.getElementById('wizard-client-folder').value.trim();
+
+                if (!name || !folder) {
+                    alert('Please fill in Client Name and Drive Folder URL');
+                    return;
+                }
+
+                // Store data
+                wizardClientData = {
+                    name: name,
+                    id: sanitizeClientId(name),
+                    folder: folder,
+                    industry: document.getElementById('wizard-client-industry').value.trim(),
+                    subsegments: document.getElementById('wizard-client-subsegments').value.trim()
+                };
+
+                // Update review
+                document.getElementById('review-name').textContent = wizardClientData.name;
+                document.getElementById('review-id').textContent = wizardClientData.id;
+                document.getElementById('review-folder').textContent = wizardClientData.folder;
+                document.getElementById('review-industry').textContent = wizardClientData.industry || 'Auto-detect';
+                document.getElementById('review-subsegments').textContent = wizardClientData.subsegments || 'None specified';
+            }
+
+            if (currentWizardStep === 3) {
+                // Save configuration
+                clients = [wizardClientData];
+                saveConfiguration();
+            }
+
+            if (currentWizardStep < totalWizardSteps) {
+                currentWizardStep++;
+                updateWizardUI();
+            }
+        }
+
+        function wizardPrevStep() {
+            if (currentWizardStep > 1) {
+                currentWizardStep--;
+                updateWizardUI();
+            }
+        }
+
+        function updateWizardUI() {
+            // Update steps
+            document.querySelectorAll('.wizard-step').forEach((step, index) => {
+                const stepNum = index + 1;
+                step.classList.remove('active', 'completed');
+
+                if (stepNum < currentWizardStep) {
+                    step.classList.add('completed');
+                } else if (stepNum === currentWizardStep) {
+                    step.classList.add('active');
+                }
+            });
+
+            // Update content
+            document.querySelectorAll('.wizard-step-content').forEach((content, index) => {
+                content.classList.remove('active');
+                if (index + 1 === currentWizardStep) {
+                    content.classList.add('active');
+                }
+            });
+
+            // Update buttons
+            const prevBtn = document.getElementById('wizard-prev-btn');
+            const nextBtn = document.getElementById('wizard-next-btn');
+
+            prevBtn.style.display = currentWizardStep > 1 && currentWizardStep < 4 ? 'block' : 'none';
+
+            if (currentWizardStep === 4) {
+                nextBtn.style.display = 'none';
+            } else {
+                nextBtn.style.display = 'block';
+                nextBtn.textContent = currentWizardStep === 3 ? 'Save & Continue →' : 'Next →';
+            }
+        }
+
+        // Real-time client ID preview
+        document.getElementById('wizard-client-name').addEventListener('input', (e) => {
+            const id = sanitizeClientId(e.target.value);
+            const preview = document.getElementById('wizard-client-id-preview');
+            if (id) {
+                preview.textContent = `Client ID: ${id}`;
+                preview.style.color = '#86efac';
+            } else {
+                preview.textContent = '';
+            }
+        });
+
+        // Real-time folder validation
+        document.getElementById('wizard-client-folder').addEventListener('input', async (e) => {
+            const url = e.target.value.trim();
+            const validation = document.getElementById('wizard-folder-validation');
+
+            if (!url) {
+                validation.textContent = '';
+                return;
+            }
+
+            validation.textContent = '🔍 Validating...';
+            validation.className = 'form-help';
+
+            try {
+                const response = await fetch('/api/validate-drive-url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+
+                if (data.valid) {
+                    validation.textContent = `✅ Valid ${data.folder_id ? 'Drive URL' : 'path'}`;
+                    validation.className = 'form-help validation-success-text';
+                } else {
+                    validation.textContent = `❌ ${data.error || 'Invalid URL'}`;
+                    validation.className = 'form-help validation-error-text';
+                }
+            } catch (error) {
+                validation.textContent = '⚠️ Could not validate';
+                validation.className = 'form-help';
+            }
+        });
+
+        // Launch workflow from wizard
+        document.getElementById('wizard-launch-btn').addEventListener('click', () => {
+            closeWizard();
+            document.getElementById('saveAndLaunchBtn').click();
+        });
+    </script>
 </body>
 </html>

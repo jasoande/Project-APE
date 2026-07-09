@@ -1,4 +1,4 @@
-# Project APE Screenshots
+# Account Intelligence Screenshots
 
 This directory contains screenshots referenced in documentation and video tutorials.
 

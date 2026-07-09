@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="200"/>
+  <img src="dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="200"/>
   
   # CLAUDE.md
   
@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Project APE (Account Planning Engine)** - AI-powered enterprise account planning automation using Google's NotebookLM platform.
+**Account Intelligence (Account Planning Engine)** - AI-powered enterprise account planning automation using Google's NotebookLM platform.
 
 - **Current Version:** 4.0.1
 - **Architecture:** Containerized Python application with multi-process orchestration
@@ -61,7 +61,7 @@ podman ps | grep project-ape
 # View container logs
 podman logs -f <container-id>
 
-# Stop all Project APE containers
+# Stop all Account Intelligence containers
 podman stop $(podman ps -aq --filter ancestor=project-ape)
 ```
 

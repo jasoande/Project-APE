@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# Project APE - Direct Browser Launcher
+# Account Intelligence - Direct Browser Launcher
 # Double-click this file to open the configuration page in your browser
 #
 # This launcher opens the configuration UI directly without showing terminal

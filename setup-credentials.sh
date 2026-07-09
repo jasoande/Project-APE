@@ -1,5 +1,5 @@
 #!/bin/bash
-# Project APE - Credential Volume Setup
+# project ape Account Intelligence - Credential Volume Setup
 # Copies your host NotebookLM credentials to a persistent volume
 
 set -e

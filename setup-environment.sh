@@ -1,5 +1,5 @@
 #!/bin/bash
-# Project APE - Environment Setup Script
+# project ape Account Intelligence - Environment Setup Script
 # Installs Podman and NotebookLM CLI for end users
 
 set -e  # Exit on error
@@ -15,7 +15,7 @@ echo "========================================================================"
 echo "PROJECT APE - ENVIRONMENT SETUP"
 echo "========================================================================"
 echo
-echo "This script will install the required tools for running Project APE:"
+echo "This script will install the required tools for running project ape Account Intelligence:"
 echo
 if [[ "$OSTYPE" == "darwin"* ]]; then
     echo "  0. Homebrew (package manager for macOS, if not installed)"
@@ -25,7 +25,7 @@ echo "  2. Python 3.10+ (required for NotebookLM CLI)"
 echo "  3. Virtual Environment (isolated Python environment)"
 echo "  4. NotebookLM CLI (notebooklm-py with browser support)"
 echo
-echo "NOTE: Project APE pipeline runs in a pre-built container."
+echo "NOTE: project ape Account Intelligence pipeline runs in a pre-built container."
 echo "      Only NotebookLM CLI runs on your host machine."
 echo
 
@@ -133,7 +133,7 @@ if [[ "$OS" == "macOS" ]]; then
 
                 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
                     echo
-                    echo -e "${RED}ERROR: Homebrew is required for Project APE on macOS${NC}"
+                    echo -e "${RED}ERROR: Homebrew is required for project ape Account Intelligence on macOS${NC}"
                     echo
                     echo "To install Homebrew manually, run:"
                     echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
@@ -246,7 +246,7 @@ if [[ "$OS" == "macOS" ]]; then
 
         else
             echo
-            echo -e "${RED}ERROR: Homebrew is required for Project APE on macOS${NC}"
+            echo -e "${RED}ERROR: Homebrew is required for project ape Account Intelligence on macOS${NC}"
             echo
             echo "To install Homebrew manually later:"
             echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
@@ -503,7 +503,7 @@ else
     echo -e "${YELLOW}⚠️  Not authenticated with Google Cloud${NC}"
     echo
     echo "Opening browser for Google Cloud authentication..."
-    echo "This will allow Project APE to create service accounts."
+    echo "This will allow project ape Account Intelligence to create service accounts."
     echo
 
     gcloud auth login
@@ -651,7 +651,7 @@ echo "========================================================================"
 echo "STEP 4: VIRTUAL ENVIRONMENT SETUP"
 echo "========================================================================"
 echo
-echo "Creating isolated Python virtual environment for Project APE..."
+echo "Creating isolated Python virtual environment for project ape Account Intelligence..."
 echo
 
 # Define virtual environment path
@@ -849,8 +849,8 @@ ACTIVATION_SCRIPT="$(pwd)/activate-ape-env.sh"
 
 cat > "$ACTIVATION_SCRIPT" << 'ACTIVATION_EOF'
 #!/bin/bash
-# Project APE - Virtual Environment Activation Script
-# Source this script to activate the Project APE virtual environment
+# project ape Account Intelligence - Virtual Environment Activation Script
+# Source this script to activate the project ape Account Intelligence virtual environment
 
 VENV_DIR="$HOME/.project-ape-venv"
 
@@ -864,7 +864,7 @@ fi
 source "$VENV_DIR/bin/activate"
 
 if [[ "$VIRTUAL_ENV" == "$VENV_DIR" ]]; then
-    echo "✅ Project APE virtual environment activated"
+    echo "✅ project ape Account Intelligence virtual environment activated"
     echo "   Python: $(python3 --version)"
     echo "   NotebookLM CLI: $(notebooklm --version 2>&1 | head -1)"
     echo ""
@@ -908,7 +908,7 @@ echo
 
 echo -e "${YELLOW}IMPORTANT - Virtual Environment Usage:${NC}"
 echo "  The NotebookLM CLI is installed in an isolated virtual environment."
-echo "  This keeps Project APE dependencies separate from your system Python."
+echo "  This keeps project ape Account Intelligence dependencies separate from your system Python."
 echo
 echo "  To use NotebookLM CLI in future terminal sessions:"
 echo "    ${GREEN}source ./activate-ape-env.sh${NC}"
@@ -943,7 +943,7 @@ fi
 echo "  5. Setup credentials for container:"
 echo "     ./setup-credentials.sh"
 echo
-echo "  6. Launch Project APE:"
+echo "  6. Launch project ape Account Intelligence:"
 echo "     ./launch_ape.sh fast     # Fast mode (15-20 min)"
 echo "     ./launch_ape.sh deep     # Deep mode (35-40 min)"
 echo
@@ -955,7 +955,7 @@ echo "     https://notebooklm.google.com"
 echo
 
 echo -e "${BLUE}Useful Commands (after activating venv):${NC}"
-echo "  source ./activate-ape-env.sh       # Activate Project APE environment"
+echo "  source ./activate-ape-env.sh       # Activate project ape Account Intelligence environment"
 echo "  notebooklm login                   # Authenticate with NotebookLM"
 echo "  notebooklm list                    # List your notebooks"
 echo "  deactivate                         # Exit virtual environment"
@@ -965,7 +965,7 @@ echo
 
 echo "For detailed documentation, see:"
 echo "  README.md                          # Complete user guide"
-echo "  EXECUTIVE-SUMMARY.md               # Why Project APE?"
+echo "  EXECUTIVE-SUMMARY.md               # Why project ape Account Intelligence?"
 echo "  SERVICE-ACCOUNT-SETUP.md           # Service account creation"
 echo "  QUICKSTART.md                      # Quick reference"
 echo

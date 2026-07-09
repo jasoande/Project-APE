@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="150"/>
   
   # Installation Guide
-  **Project APE - Account Planning Engine**
+  **Account Intelligence - Account Planning Engine**
 </div>
 
 ---
@@ -50,7 +50,7 @@
 
 ## Installation Methods
 
-Project APE supports three installation methods:
+Account Intelligence supports three installation methods:
 
 | Method | Best For | Complexity |
 |--------|----------|-----------|
@@ -109,7 +109,7 @@ podman --version
 ### Step 5: Clone Repository
 
 ```bash
-# Clone Project APE repository
+# Clone Account Intelligence repository
 git clone https://github.com/yourusername/project-ape.git
 cd project-ape
 ```
@@ -359,7 +359,7 @@ sudo dnf install -y podman
 
 Download and install Podman Desktop from: https://podman-desktop.io/
 
-### Step 2: Pull Project APE Image
+### Step 2: Pull Account Intelligence Image
 
 ```bash
 # Pull latest stable release
@@ -453,7 +453,7 @@ notebooklm list
 2. Select **"External"** user type
 3. Click **"Create"**
 4. Fill in required fields:
-   - **App name**: Project APE
+   - **App name**: Account Intelligence
    - **User support email**: Your email
    - **Developer contact**: Your email
 5. Click **"Save and Continue"**
@@ -475,7 +475,7 @@ notebooklm list
 6. Click **"Download JSON"** (downloads `client_secret_*.json`)
 7. Click **"OK"**
 
-#### Step 5: Configure Project APE
+#### Step 5: Configure Account Intelligence
 
 **Option A: Automated Setup (Recommended)**
 
@@ -511,7 +511,7 @@ python3 setup-oauth-drive-improved.py
 
 1. Script opens browser automatically
 2. Sign in with Google account
-3. Click **"Advanced"** → **"Go to Project APE (unsafe)"**
+3. Click **"Advanced"** → **"Go to Account Intelligence (unsafe)"**
    - This warning appears because app is in testing mode (normal)
 4. Click **"Allow"** to grant permissions
 5. Browser shows: **"The authentication flow has completed"**
@@ -784,6 +784,6 @@ If you encounter issues not covered here:
 
 ---
 
-**Installation complete! You're ready to start using Project APE.**
+**Installation complete! You're ready to start using Account Intelligence.**
 
 Return to: [README.md](../README.md) | Continue to: [User Guide](USER_GUIDE.md)

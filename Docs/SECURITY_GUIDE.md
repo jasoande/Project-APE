@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence" width="150"/>
 
   # Security Guide
 
@@ -27,7 +27,7 @@
 
 ## Overview
 
-Project APE follows defense-in-depth security principles across its web dashboard, subprocess execution, credential management, and container deployment. This guide documents the security controls in place and the rationale behind each.
+Account Intelligence follows defense-in-depth security principles across its web dashboard, subprocess execution, credential management, and container deployment. This guide documents the security controls in place and the rationale behind each.
 
 ---
 

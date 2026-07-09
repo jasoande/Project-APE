@@ -1,12 +1,12 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="150"/>
 </div>
 
-# Project APE Web Configuration Tool - User Guide
+# Account Intelligence Web Configuration Tool - User Guide
 
 ## Quick Start
 
-The web configuration tool provides an easy, form-based interface to create and manage your Project APE client configurations without manually editing Python code.
+The web configuration tool provides an easy, form-based interface to create and manage your Account Intelligence client configurations without manually editing Python code.
 
 ### Accessing the Tool
 
@@ -115,7 +115,7 @@ Look for:
    ```bash
    cp ~/Downloads/vars.py .
    ```
-   or manually copy the downloaded file to your Project APE directory
+   or manually copy the downloaded file to your Account Intelligence directory
 
 3. **Validate the new configuration**:
    ```bash
@@ -335,7 +335,7 @@ If you leave industry/subsegments blank:
 - Check Python path issues: `python3 -c "import vars; print(vars.clients)"`
 
 ### Pipeline Issues
-- See main Project APE documentation
+- See main Account Intelligence documentation
 - Check logs in `logs/` directory
 - Monitor dashboard for specific error messages
 
@@ -385,6 +385,6 @@ Subsegments: (leave blank for auto-detection)
 **Version**: Phase 1 MVP  
 **Last Updated**: June 2026  
 **Related Docs**: 
-- [README.md](../README.md) - Main Project APE documentation
+- [README.md](../README.md) - Main Account Intelligence documentation
 - [GETTING-STARTED.md](../developer-docs/GETTING-STARTED.md) - Setup guide
 - [example-vars.py](../example-vars.py) - Configuration template

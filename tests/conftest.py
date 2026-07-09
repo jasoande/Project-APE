@@ -1,4 +1,4 @@
-"""Shared test fixtures for Project APE test suite."""
+"""Shared test fixtures for Account Intelligence test suite."""
 
 import sys
 from pathlib import Path
@@ -15,7 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 def tmp_vars_py(tmp_path):
     """Create a temporary vars.py with valid configuration for test_client."""
     vars_content = '''\
-"""Test configuration for Project APE."""
+"""Test configuration for Account Intelligence."""
 
 from pathlib import Path
 

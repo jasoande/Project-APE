@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence" width="150"/>
 
   # API Reference
 
@@ -25,7 +25,7 @@
 
 ## Overview
 
-The Project APE dashboard exposes a REST API at `http://localhost:8765`. All endpoints return JSON unless otherwise noted. SSE (Server-Sent Events) endpoints stream `text/event-stream` responses.
+The Account Intelligence dashboard exposes a REST API at `http://localhost:8765`. All endpoints return JSON unless otherwise noted. SSE (Server-Sent Events) endpoints stream `text/event-stream` responses.
 
 **Base URL:** `http://localhost:8765`
 

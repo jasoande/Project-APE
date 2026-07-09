@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="200"/>
+  <img src="dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="200"/>
   
-  # Contributing to Project APE
+  # Contributing to Account Intelligence
   
   **Developer Contribution Guidelines**
 </div>
@@ -369,8 +369,8 @@ By contributing, you agree your contributions will be licensed under the MIT Lic
 
 ---
 
-**Thank you for contributing to Project APE!**
+**Thank you for contributing to Account Intelligence!**
 
 <div align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE" width="100"/>
+  <img src="dashboard/static/kingkong.png" alt="Account Intelligence" width="100"/>
 </div>

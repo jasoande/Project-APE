@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="../dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="150"/>
+  <img src="../dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="150"/>
   
   # Frequently Asked Questions
   **Common Questions and Answers**
@@ -28,9 +28,9 @@
 
 ## General Questions
 
-### What is Project APE?
+### What is Account Intelligence?
 
-**Project APE (Account Planning Engine)** is an AI-powered automation platform that transforms enterprise account research from multi-day manual processes into 15-20 minute automated workflows. It uses Google's NotebookLM platform to automatically research companies, analyze industries, and generate comprehensive intelligence reports.
+**Account Intelligence (Account Planning Engine)** is an AI-powered automation platform that transforms enterprise account research from multi-day manual processes into 15-20 minute automated workflows. It uses Google's NotebookLM platform to automatically research companies, analyze industries, and generate comprehensive intelligence reports.
 
 **Key capabilities:**
 - Automatically imports 40-180 external sources per client
@@ -41,7 +41,7 @@
 
 ---
 
-### Who uses Project APE?
+### Who uses Account Intelligence?
 
 **Primary users:**
 - **Enterprise sales teams** - Account planning and prospect research
@@ -57,9 +57,9 @@
 
 ---
 
-### What makes Project APE different from manual research?
+### What makes Account Intelligence different from manual research?
 
-| Manual Research | Project APE |
+| Manual Research | Account Intelligence |
 |-----------------|-------------|
 | 16-24 hours per account | 15-20 minutes (Fast mode) |
 | 10-20 sources reviewed | 40-180 sources automatically imported |
@@ -102,7 +102,7 @@ After initial setup, adding new clients takes ~2 minutes via web UI.
 
 ### Do I need to know how to code?
 
-**No.** Project APE is designed for zero-terminal operation.
+**No.** Account Intelligence is designed for zero-terminal operation.
 
 **What you DO:**
 - Double-click launcher file
@@ -807,7 +807,7 @@ kubectl apply -f k8s/ingress.yaml
 **Yes (custom integration required):**
 
 **Example workflow:**
-1. Trigger Project APE workflow from Salesforce Opportunity
+1. Trigger Account Intelligence workflow from Salesforce Opportunity
 2. Upload analysis to Opportunity notes
 3. Update custom field with quality score
 
@@ -873,9 +873,9 @@ def create_ppt_from_analysis(client_id):
 
 ## Costs and Licensing
 
-### Is Project APE free?
+### Is Account Intelligence free?
 
-**Project APE itself: Yes, MIT License (free and open source)**
+**Account Intelligence itself: Yes, MIT License (free and open source)**
 
 **API usage costs (Google):**
 - **NotebookLM API:** Free (as of July 2026)
@@ -909,14 +909,14 @@ def create_ppt_from_analysis(client_id):
 - No warranty provided (AS-IS)
 
 **You can:**
-- Sell services using Project APE
+- Sell services using Account Intelligence
 - Include in commercial products
 - Customize for internal use
 - Deploy for clients
 
 **You cannot:**
 - Hold authors liable
-- Use Project APE trademark without permission
+- Use Account Intelligence trademark without permission
 
 **See:** [LICENSE](../LICENSE) file for full terms.
 

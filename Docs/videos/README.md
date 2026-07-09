@@ -1,6 +1,6 @@
-# Project APE Video Tutorials
+# Account Intelligence Video Tutorials
 
-This directory contains video tutorials for Project APE. Videos provide step-by-step visual guides to help users get started and make the most of the platform.
+This directory contains video tutorials for Account Intelligence. Videos provide step-by-step visual guides to help users get started and make the most of the platform.
 
 ---
 
@@ -26,7 +26,7 @@ This directory contains video tutorials for Project APE. Videos provide step-by-
 - **Recording Guide**: [`/docs/OAUTH_VIDEO_RECORDING_GUIDE.md`](../OAUTH_VIDEO_RECORDING_GUIDE.md)
 
 **Prerequisites for Recording**:
-- Project APE dashboard running locally
+- Account Intelligence dashboard running locally
 - Google Cloud Console account with project created
 - Screen recording software installed
 - Microphone for voice-over
@@ -62,7 +62,7 @@ Until videos are recorded, users can follow these text-based guides:
 ### 1. Complete Workflow Walkthrough
 **Estimated Duration**: 10-15 minutes
 **Topics**:
-- Overview of Project APE capabilities
+- Overview of Account Intelligence capabilities
 - OAuth setup (brief)
 - Client configuration from spreadsheet
 - Launching a workflow
@@ -169,7 +169,7 @@ git push
 - Analytics
 
 **Setup**:
-1. Create "Project APE Tutorials" playlist
+1. Create "Account Intelligence Tutorials" playlist
 2. Upload as public or unlisted
 3. Enable captions (auto or manual)
 4. Embed in documentation
@@ -215,7 +215,7 @@ All videos should include:
 
 ## License
 
-All video content in this directory is subject to the same license as the Project APE project (see main LICENSE file).
+All video content in this directory is subject to the same license as the Account Intelligence project (see main LICENSE file).
 
 By contributing videos, you agree to license your contribution under the same terms.
 

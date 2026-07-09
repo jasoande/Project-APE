@@ -1256,7 +1256,7 @@ def main():
     import argparse
     import importlib.util
 
-    parser = argparse.ArgumentParser(description="Project APE - Client Pipeline")
+    parser = argparse.ArgumentParser(description="Account Intelligence - Client Pipeline")
     parser.add_argument("client_id", help="Client identifier")
     parser.add_argument("--mode", choices=["fast", "deep", "update"], default="fast")
     parser.add_argument("--status-file", type=Path, required=True)

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Project APE - Environment Setup</title>
+    <title>Account Intelligence - Environment Setup</title>
     <style>
         :root {
             --bg-primary: #0f1419;
@@ -523,7 +523,7 @@
             </div>
             <div class="header-text">
                 <h1>Environment Setup</h1>
-                <p>Automated dependency installation for Project APE</p>
+                <p>Automated dependency installation for Account Intelligence</p>
                 <div class="header-nav">
                     <a href="/configure">&#8592; Back to Configuration</a>
                     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
@@ -540,7 +540,7 @@
         <div class="welcome-hero">
             <img src="{{ url_for('static', filename='kingkong.png') }}" class="hero-logo">
             <h2>Setting Up Your Environment</h2>
-            <p>Project APE will check and install all required dependencies automatically. Sit back while we get everything ready.</p>
+            <p>Account Intelligence will check and install all required dependencies automatically. Sit back while we get everything ready.</p>
         </div>
 
         <!-- Progress -->
@@ -598,13 +598,13 @@
                     <div class="step-icon" id="step-3-icon">&#x1F4E4;</div>
                     <div class="step-info">
                         <h3>Podman Container Runtime</h3>
-                        <p>Runs Project APE workflows in isolated containers</p>
+                        <p>Runs Account Intelligence workflows in isolated containers</p>
                     </div>
                     <span class="step-badge pending" id="step-3-badge">Pending</span>
                 </div>
                 <div class="step-body" id="step-3-body">
                     <div class="step-body-inner">
-                        <p class="step-description">Podman provides rootless container execution, ensuring Project APE runs consistently across different machines without requiring Docker or root privileges.</p>
+                        <p class="step-description">Podman provides rootless container execution, ensuring Account Intelligence runs consistently across different machines without requiring Docker or root privileges.</p>
                         <div id="step-3-details"></div>
                         <div class="step-actions" id="step-3-actions"></div>
                     </div>
@@ -634,7 +634,7 @@
                     <div class="step-icon" id="step-5-icon">&#x1F40D;</div>
                     <div class="step-info">
                         <h3>Python 3.10+</h3>
-                        <p>Required runtime for the NotebookLM CLI and Project APE</p>
+                        <p>Required runtime for the NotebookLM CLI and Account Intelligence</p>
                     </div>
                     <span class="step-badge pending" id="step-5-badge">Pending</span>
                 </div>
@@ -658,7 +658,7 @@
                 </div>
                 <div class="step-body" id="step-6-body">
                     <div class="step-body-inner">
-                        <p class="step-description">A dedicated virtual environment keeps Project APE dependencies isolated from your system Python, preventing version conflicts with other projects.</p>
+                        <p class="step-description">A dedicated virtual environment keeps Account Intelligence dependencies isolated from your system Python, preventing version conflicts with other projects.</p>
                         <div id="step-6-details"></div>
                         <div class="step-actions" id="step-6-actions"></div>
                     </div>

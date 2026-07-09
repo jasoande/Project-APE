@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="dashboard/static/kingkong.png" alt="Project APE - King Kong Logo" width="180"/>
+  <img src="dashboard/static/kingkong.png" alt="Account Intelligence - King Kong Logo" width="180"/>
   
-  # Project APE Quick Start Guide
+  # Account Intelligence Quick Start Guide
   
   **5 Minutes to Your First Account Intelligence Report**
   
@@ -47,7 +47,7 @@ The first time you launch, dependencies install automatically (2-5 minutes).
 
 ## 🚀 Launch (1 Click)
 
-### Step 2: Start Project APE
+### Step 2: Start Account Intelligence
 
 **Choose your platform:**
 
@@ -509,7 +509,7 @@ https://notebooklm.google.com/notebook/abc123xyz
 - [USER_GUIDE.md](Docs/USER_GUIDE.md) - Workflow best practices, quality optimization
 - [ARCHITECTURE.md](Docs/ARCHITECTURE.md) - How it works under the hood
 - [TROUBLESHOOTING.md](Docs/TROUBLESHOOTING.md) - Common issues and solutions
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Customize and extend Project APE
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Customize and extend Account Intelligence
 
 ---
 

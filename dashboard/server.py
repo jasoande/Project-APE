@@ -156,6 +156,12 @@ def get_config(vars_path: Path = None):
     return config
 
 
+@app.route('/ping')
+def ping():
+    """Lightweight health check for fast startup validation (no heavy imports or JSON)."""
+    return 'ok', 200, {'Content-Type': 'text/plain'}
+
+
 @app.route('/health')
 def health():
     """Health check endpoint for monitoring."""
@@ -605,6 +611,7 @@ def generate_config():
 
 
 @app.route('/api/validate-drive-url', methods=['POST'])
+@csrf.exempt if csrf else lambda f: f  # Read-only validation, no state modification
 def validate_drive_url():
     """Validate Drive URL format using regex (no API call)."""
     try:
@@ -616,6 +623,13 @@ def validate_drive_url():
             }), 400
 
         url = data['url']
+
+        # Reject empty/whitespace-only URLs
+        if not url or not url.strip():
+            return jsonify({
+                'valid': False,
+                'error': 'URL cannot be empty'
+            })
 
         # Same regex as drive_manager.py
         folder_id_match = re.search(r'/folders/([a-zA-Z0-9_-]+)', url)
@@ -1187,6 +1201,7 @@ def check_auth_status():
 
 
 @app.route('/api/notebooklm-login', methods=['POST'])
+@csrf.exempt if csrf else lambda f: f  # Login trigger doesn't modify state server-side
 def notebooklm_login():
     """
     Trigger NotebookLM login flow.
@@ -1309,17 +1324,21 @@ def notebooklm_login():
 
         return jsonify({
             'success': True,
-            'message': 'Login flow initiated. A browser window should open for authentication.',
+            'message': 'Login process started in background. Check your browser for the authentication window.',
             'instructions': [
-                'A browser window should open automatically for Google login.',
-                'If no browser opens, run this command in your terminal:',
-                '  notebooklm login',
+                '🔍 Look for a browser window that just opened asking you to sign in with Google.',
                 '',
-                'After login completes:',
-                '✅ Credentials will automatically sync to container',
-                '✅ You can launch workflows immediately',
+                'If no browser window appeared:',
+                '  1. Check if popup blockers are preventing the window',
+                '  2. Or run this command in your terminal instead:',
+                '     notebooklm login',
                 '',
-                'The authentication status will update automatically once login is complete.'
+                'After you complete the Google login:',
+                '✅ Credentials will automatically sync',
+                '✅ This page will update to show "Authenticated"',
+                '✅ You can then launch workflows',
+                '',
+                '⏱️  Checking authentication status every 5 seconds...'
             ]
         })
 
@@ -1842,7 +1861,7 @@ def start_oauth_flow():
             try:
                 creds = flow.run_local_server(
                     port=0,
-                    success_message='✅ Authentication successful! You can close this window and return to Project APE.',
+                    success_message='✅ Authentication successful! You can close this window and return to Account Intelligence.',
                     open_browser=True
                 )
             except Exception as e:

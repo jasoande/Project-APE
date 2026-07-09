@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# Project APE - Local Workflow Runner
+# project ape Account Intelligence - Local Workflow Runner
 # Runs workflows using the virtual environment Python interpreter
 #
 # Usage:
@@ -28,7 +28,7 @@ NC='\033[0m' # No Color
 
 # Show help if requested
 if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
-    echo "Project APE - Account Planning Engine v3.2.0"
+    echo "project ape Account Intelligence - Account Planning Engine v3.2.0"
     echo ""
     echo "Usage:"
     echo "  ./run-workflow.sh fast                      # All clients, fast mode (15-20 min)"

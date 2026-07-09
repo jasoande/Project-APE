@@ -190,7 +190,7 @@ def format_workflow_summary(workflow: Dict[str, Any]) -> str:
     """
     lines = [
         "═══════════════════════════════════════════════",
-        "  Project APE - Detected Workflow",
+        "  Account Intelligence - Detected Workflow",
         "═══════════════════════════════════════════════",
         "",
         f"Mode:           {workflow['mode'].upper()}",
@@ -227,7 +227,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Detect Project APE workflow configuration",
+        description="Detect Account Intelligence workflow configuration",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
