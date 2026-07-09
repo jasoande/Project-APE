@@ -1,40 +1,119 @@
+# Account Intelligence - Git Ignore File
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
 venv/
 ENV/
-.venv
-*.egg-info/
-dist/
-build/
-
-# Project APE
-logs/*.log
-.multi_process_status/*.json
-.multi_process_status/.workflow_pid
-docs_generated/
-.drive_cache/
-client_data/
-
-# Keep directory structure
-!logs/.gitkeep
-!.multi_process_status/.gitkeep
-
-# Credentials
-credentials/*.json
-.notebooklm/
-*.backup.*
+env/
+.project-ape-venv/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
+*~
 .DS_Store
+
+# Logs
+*.log
+logs/*.log
+dashboard-startup.log
+.consolidation_timestamps/
+
+# Runtime Data
+.multi_process_status/
+*.pid
+*.seed
+*.pid.lock
+
+# Test Coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Documentation Builds
+docs/_build/
+site/
+
+# Credentials (NEVER COMMIT)
+credentials/*.json
+!credentials/.gitkeep
+.notebooklm/
+token_drive.json
+*.pem
+*.key
+.env
+.env.local
+
+# Client Data (user-specific)
+client_data/
+docs_generated/
+.drive_cache/
+
+# Configuration (user-specific)
+vars.py
+!example-vars.py
+!container-vars.py
+
+# Container artifacts
+*.tar
+*.tar.gz
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+.claude/
+
+# OS-specific
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Project-specific
+.worktree_*
+worktree-*/
+test-results/
+test_*.py
+!tests/test_*.py
