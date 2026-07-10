@@ -176,79 +176,55 @@ else
     esac
 fi
 
-# macOS: Ensure Podman machine is initialized and running with Apple Hypervisor
+# macOS: Ensure Project APE Podman machine exists with Apple Hypervisor
 if [[ "$OS" == "macOS" ]] && [[ "$PODMAN_INSTALLED" == "true" ]]; then
     echo
     echo "Checking Podman machine status..."
 
-    # Get list of all machines
-    MACHINE_LIST=$(podman machine list --format "{{.Name}}" 2>/dev/null)
+    # Use dedicated machine name for Project APE
+    PROJECT_APE_MACHINE="project-ape-applehv"
 
-    if [[ -z "$MACHINE_LIST" ]]; then
-        # No machines exist - create new one with applehv
-        echo "No Podman machine found. Initializing..."
-        echo "Using Apple Hypervisor (applehv) for native macOS virtualization..."
-        podman machine init --provider applehv
-        echo -e "${GREEN}✅ Podman machine initialized with Apple Hypervisor${NC}"
-    else
-        # Machines exist - check provider of each one
-        NEED_RECREATE=false
+    # Check if Project APE machine exists
+    if podman machine list --format "{{.Name}}" 2>/dev/null | grep -q "^${PROJECT_APE_MACHINE}$"; then
+        echo -e "${GREEN}✅ Project APE Podman machine exists: ${PROJECT_APE_MACHINE}${NC}"
 
-        while IFS= read -r MACHINE_NAME; do
-            [[ -z "$MACHINE_NAME" ]] && continue
-
-            # Get provider for this machine
-            MACHINE_PROVIDER=$(podman machine inspect "$MACHINE_NAME" --format "{{.Provider}}" 2>/dev/null || echo "unknown")
-
-            echo "Found machine: $MACHINE_NAME (provider: $MACHINE_PROVIDER)"
-
-            if [[ "$MACHINE_PROVIDER" != "applehv" ]]; then
-                echo -e "${YELLOW}⚠️  Machine '$MACHINE_NAME' uses provider: ${MACHINE_PROVIDER}${NC}"
-                echo "   Apple Hypervisor (applehv) is required for best performance on macOS."
-                NEED_RECREATE=true
-
-                # Stop machine if running
-                echo "   Stopping machine '$MACHINE_NAME'..."
-                podman machine stop "$MACHINE_NAME" 2>/dev/null || true
-                sleep 2  # Give it time to fully stop
-
-                # Delete the machine completely
-                echo "   Deleting machine '$MACHINE_NAME'..."
-                if podman machine rm -f "$MACHINE_NAME"; then
-                    echo -e "   ${GREEN}✅ Deleted machine '$MACHINE_NAME'${NC}"
-
-                    # Verify deletion
-                    if podman machine list --format "{{.Name}}" 2>/dev/null | grep -q "^${MACHINE_NAME}$"; then
-                        echo -e "   ${RED}❌ ERROR: Machine '$MACHINE_NAME' still exists after deletion!${NC}"
-                        exit 1
-                    fi
-                else
-                    echo -e "   ${RED}❌ ERROR: Failed to delete machine '$MACHINE_NAME'${NC}"
-                    echo "   Please delete manually: podman machine rm -f $MACHINE_NAME"
-                    exit 1
-                fi
-            fi
-        done <<< "$MACHINE_LIST"
-
-        if [[ "$NEED_RECREATE" == "true" ]]; then
-            echo
-            echo "Creating new Podman machine with Apple Hypervisor..."
-            podman machine init --provider applehv
-            echo -e "${GREEN}✅ Podman machine initialized with Apple Hypervisor${NC}"
+        # Verify it's using applehv
+        MACHINE_PROVIDER=$(podman machine inspect "$PROJECT_APE_MACHINE" --format "{{.Provider}}" 2>/dev/null || echo "unknown")
+        if [[ "$MACHINE_PROVIDER" == "applehv" ]]; then
+            echo "   Provider: ${MACHINE_PROVIDER} ✓"
         else
-            echo -e "${GREEN}✅ Podman machine exists with correct provider (applehv)${NC}"
+            echo -e "${YELLOW}⚠️  Warning: Machine is using provider: ${MACHINE_PROVIDER}${NC}"
+            echo "   Expected: applehv"
+        fi
+    else
+        # Project APE machine doesn't exist - create it
+        echo "Project APE Podman machine not found."
+        echo "Creating dedicated machine: ${PROJECT_APE_MACHINE}"
+        echo "Using Apple Hypervisor (applehv) for native macOS virtualization..."
+        echo
+
+        # Create machine with specific name and applehv provider
+        if podman machine init "$PROJECT_APE_MACHINE" --provider applehv; then
+            echo -e "${GREEN}✅ Created Podman machine: ${PROJECT_APE_MACHINE}${NC}"
+        else
+            echo -e "${RED}❌ ERROR: Failed to create Podman machine${NC}"
+            exit 1
         fi
     fi
 
-    # Check if machine is running
-    MACHINE_RUNNING=$(podman machine list --format "{{.Running}}" 2>/dev/null | head -1)
+    # Check if Project APE machine is running
+    MACHINE_RUNNING=$(podman machine list --format "{{.Name}}\t{{.Running}}" 2>/dev/null | grep "^${PROJECT_APE_MACHINE}" | awk '{print $2}')
     if [[ "$MACHINE_RUNNING" != "true" ]]; then
-        echo "Starting Podman machine..."
-        podman machine start
+        echo "Starting Podman machine: ${PROJECT_APE_MACHINE}..."
+        podman machine start "$PROJECT_APE_MACHINE"
         echo -e "${GREEN}✅ Podman machine started${NC}"
     else
         echo -e "${GREEN}✅ Podman machine is running${NC}"
     fi
+
+    # Set this machine as default connection
+    echo "Setting ${PROJECT_APE_MACHINE} as active Podman connection..."
+    podman system connection default "${PROJECT_APE_MACHINE}-root" 2>/dev/null || true
 
     # Verify Podman is responsive
     echo "Verifying Podman connection..."
@@ -256,7 +232,7 @@ if [[ "$OS" == "macOS" ]] && [[ "$PODMAN_INSTALLED" == "true" ]]; then
         echo -e "${GREEN}✅ Podman is working correctly${NC}"
     else
         echo -e "${YELLOW}⚠️  Podman connection test failed${NC}"
-        echo "   Try running: podman machine stop && podman machine start"
+        echo "   Try running: podman machine stop ${PROJECT_APE_MACHINE} && podman machine start ${PROJECT_APE_MACHINE}"
     fi
 fi
 
