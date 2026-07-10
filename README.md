@@ -54,7 +54,8 @@ Account Intelligence transforms enterprise account planning by automating resear
 - **Anti-thundering-herd protection** to prevent API quota exhaustion
 
 ### 🔒 Enterprise Security
-- **SSL/HTTPS support** — Optional TLS encryption for dashboard access
+- **SSL/HTTPS enforced** — All dashboard communication encrypted with TLS
+- **Automatic certificate management** — Self-signed certs auto-generate and auto-renew
 - **CSRF protection** on all POST endpoints
 - **Path traversal prevention** with regex validation
 - **No embedded secrets** — OAuth2 flow for all credentials

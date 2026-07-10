@@ -160,10 +160,11 @@ cat .multi_process_status/clientname.json
 **`launch-project-ape.py` (Primary Entry Point):**
 - Cross-platform launcher (Windows, macOS, Linux)
 - Automatic virtual environment setup (`~/.project-ape-venv`)
-- Dependency installation on first run (Flask, notebooklm-py, pypdf, etc.)
-- SSL-aware: checks vars.py for SSL configuration, launches appropriate server
-- Starts dashboard server in background (server.py for HTTP, server_gevent.py for HTTPS)
-- Opens browser to http://localhost:8765/configure or https://localhost:8765/configure (based on SSL config)
+- Dependency installation on first run (Flask, notebooklm-py, pypdf, gevent, etc.)
+- **Automatic SSL certificate generation** on first launch (self-signed, 365-day validity)
+- Certificate auto-renewal when <30 days remaining or expired
+- Starts dashboard server in background (server_gevent.py with HTTPS)
+- Opens browser to https://localhost:8765/configure
 - Designed for double-click execution (zero terminal required)
 
 **`dashboard/config_generator.py`:**
