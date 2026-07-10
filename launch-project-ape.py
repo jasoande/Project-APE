@@ -320,10 +320,13 @@ def main():
     print(f"Platform: {platform.system()} {platform.release()}")
 
     # Determine protocol and set CONFIG_URL early
-    protocol, _ = check_ssl_config()
+    protocol, server_script = check_ssl_config()
     CONFIG_URL = f"{protocol}://localhost:{DASHBOARD_PORT}/configure"
 
+    if protocol == "https":
+        print(f"🔒 SSL/HTTPS enabled")
     print(f"Dashboard: {CONFIG_URL}")
+    print(f"Server: {server_script.name}")
     print()
 
     # Check if server is already running

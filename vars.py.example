@@ -80,6 +80,9 @@ persona = "enterprise technology consultant"
 DRIVE_CONFIG = {
     'cache_enabled': True,
     'cache_ttl_hours': 24,
+    'max_file_size_mb': 50,  # Maximum file size to download (Google API supports up to 5GB)
+    'export_google_docs': True,  # Auto-convert Google Docs/Sheets to PDF
+    'recursive': False,  # Don't scan subfolders
 }
 
 # ============================================================================
