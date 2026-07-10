@@ -105,49 +105,10 @@ app = Flask(__name__,
             template_folder=str(SCRIPT_DIR / 'templates'),
             static_folder=str(SCRIPT_DIR / 'static'))
 
-# --- Security: Proxy Support ---
-# If running behind a reverse proxy (nginx, Apache, etc.), trust proxy headers
-# This allows request.is_secure to work correctly for HTTPS enforcement
-if os.environ.get('BEHIND_PROXY', '').lower() == 'true':
-    from werkzeug.middleware.proxy_fix import ProxyFix
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-    print("✅ Proxy headers enabled (X-Forwarded-Proto, X-Forwarded-Host)", file=sys.stderr)
-
 # --- Security: CSRF Protection ---
-def _get_or_create_secret_key() -> str:
-    """
-    Get persistent Flask secret key from disk, or create one if it doesn't exist.
-    Prevents CSRF token invalidation on server restart.
-    """
-    secret_key_dir = Path.home() / '.project-ape'
-    secret_key_file = secret_key_dir / 'flask_secret.key'
-
-    try:
-        secret_key_dir.mkdir(mode=0o700, exist_ok=True)
-
-        if secret_key_file.exists():
-            secret_key = secret_key_file.read_text().strip()
-            if len(secret_key) == 64:  # Valid hex key (32 bytes = 64 hex chars)
-                return secret_key
-            else:
-                print(f"⚠️  Invalid secret key format, regenerating", file=sys.stderr)
-
-        # Generate new secret key
-        import secrets
-        secret_key = secrets.token_hex(32)
-        secret_key_file.write_text(secret_key)
-        secret_key_file.chmod(0o600)
-        print(f"✅ Generated new Flask secret key: {secret_key_file}", file=sys.stderr)
-        return secret_key
-
-    except Exception as e:
-        print(f"⚠️  Failed to persist secret key: {e}, using ephemeral key", file=sys.stderr)
-        import secrets
-        return secrets.token_hex(32)
-
 try:
     from flask_wtf.csrf import CSRFProtect, generate_csrf
-    app.config['SECRET_KEY'] = _get_or_create_secret_key()
+    app.config['SECRET_KEY'] = os.urandom(32).hex()
     app.config['WTF_CSRF_TIME_LIMIT'] = None
     csrf = CSRFProtect(app)
     print("✅ CSRF protection enabled", file=sys.stderr)
@@ -161,55 +122,6 @@ def inject_csrf_token():
     if generate_csrf:
         return {'csrf_token': generate_csrf}
     return {'csrf_token': lambda: ''}
-
-# --- Security: HTTPS and Security Headers ---
-@app.before_request
-def enforce_https():
-    """
-    Enforce HTTPS in production environments.
-    Only active when FORCE_HTTPS environment variable is set to 'true'.
-    """
-    force_https = os.environ.get('FORCE_HTTPS', '').lower() == 'true'
-
-    if force_https and not request.is_secure:
-        # Redirect HTTP to HTTPS
-        url = request.url.replace('http://', 'https://', 1)
-        return redirect(url, code=301)
-
-@app.after_request
-def set_security_headers(response):
-    """
-    Add security headers to all responses.
-
-    Headers added:
-    - Strict-Transport-Security: Enforce HTTPS for 1 year
-    - X-Content-Type-Options: Prevent MIME-type sniffing
-    - X-Frame-Options: Prevent clickjacking
-    - X-XSS-Protection: Enable browser XSS filter
-    - Content-Security-Policy: Restrict resource loading (self-only)
-    """
-    # Only add HSTS if HTTPS is enforced
-    force_https = os.environ.get('FORCE_HTTPS', '').lower() == 'true'
-    if force_https:
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-
-    # Always add these headers
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-
-    # Content Security Policy - allow self only (prevents XSS)
-    # Inline scripts/styles allowed for dashboard functionality
-    response.headers['Content-Security-Policy'] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data:; "
-        "font-src 'self'; "
-        "connect-src 'self'"
-    )
-
-    return response
 
 # --- Security: Path Traversal Protection ---
 _SAFE_TOKEN_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
@@ -298,7 +210,7 @@ def ping():
 
 @app.route('/health')
 def health():
-    """Basic health check endpoint for monitoring (lightweight)."""
+    """Health check endpoint for monitoring."""
     try:
         import threading
         import psutil
@@ -333,266 +245,6 @@ def health():
             'status': 'unhealthy',
             'error': _safe_error(e, "operation")
         }), 500
-
-
-@app.route('/health/detailed')
-def health_detailed():
-    """
-    Comprehensive health check endpoint with detailed subsystem status.
-
-    Returns JSON with status for:
-    - NotebookLM authentication
-    - Google Drive OAuth
-    - Disk space
-    - Process health
-    - Credential expiry warnings
-    """
-    from datetime import datetime, timedelta
-    import shutil
-    import subprocess
-    import threading
-
-    checks = {}
-    overall_healthy = True
-
-    # Check 1: NotebookLM Authentication
-    try:
-        sys.path.insert(0, str(PROJECT_ROOT / 'core'))
-        from auth_manager import AuthManager
-
-        auth_mgr = AuthManager()
-        is_authenticated = auth_mgr.is_authenticated()
-
-        checks['notebooklm_auth'] = {
-            'status': 'ok' if is_authenticated else 'error',
-            'authenticated': is_authenticated,
-            'message': 'NotebookLM authenticated' if is_authenticated else 'NotebookLM not authenticated - run: notebooklm login'
-        }
-
-        if not is_authenticated:
-            overall_healthy = False
-
-    except Exception as e:
-        checks['notebooklm_auth'] = {
-            'status': 'error',
-            'message': f'Failed to check NotebookLM auth: {str(e)}'
-        }
-        overall_healthy = False
-
-    # Check 2: Drive OAuth Token Validity
-    try:
-        drive_token_path = Path.home() / '.project-ape' / 'drive_token.json'
-
-        if not drive_token_path.exists():
-            checks['drive_auth'] = {
-                'status': 'warn',
-                'message': 'Drive OAuth token not found - run: python3 setup-oauth-drive.py'
-            }
-        else:
-            import json
-            token_data = json.loads(drive_token_path.read_text())
-
-            if 'expiry' in token_data:
-                try:
-                    # Parse expiry datetime (ISO format)
-                    expiry_str = token_data['expiry']
-                    # Handle both with and without microseconds
-                    for fmt in ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S']:
-                        try:
-                            expiry = datetime.strptime(expiry_str, fmt)
-                            break
-                        except ValueError:
-                            continue
-                    else:
-                        # Couldn't parse, treat as ISO format
-                        expiry = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
-
-                    days_left = (expiry - datetime.now(expiry.tzinfo or None)).days
-
-                    if days_left < 0:
-                        checks['drive_auth'] = {
-                            'status': 'error',
-                            'message': f'Drive OAuth token expired {abs(days_left)} days ago',
-                            'days_until_expiry': days_left
-                        }
-                        overall_healthy = False
-                    elif days_left < 7:
-                        checks['drive_auth'] = {
-                            'status': 'warn',
-                            'message': f'Drive OAuth token expires in {days_left} days - refresh recommended',
-                            'days_until_expiry': days_left
-                        }
-                    else:
-                        checks['drive_auth'] = {
-                            'status': 'ok',
-                            'message': f'Drive OAuth token valid ({days_left} days remaining)',
-                            'days_until_expiry': days_left
-                        }
-                except Exception as parse_error:
-                    checks['drive_auth'] = {
-                        'status': 'warn',
-                        'message': f'Drive token exists but expiry check failed: {str(parse_error)}'
-                    }
-            else:
-                checks['drive_auth'] = {
-                    'status': 'ok',
-                    'message': 'Drive OAuth token exists (no expiry info)'
-                }
-
-    except Exception as e:
-        checks['drive_auth'] = {
-            'status': 'error',
-            'message': f'Failed to check Drive auth: {str(e)}'
-        }
-        overall_healthy = False
-
-    # Check 3: Disk Space
-    try:
-        total, used, free = shutil.disk_usage(PROJECT_ROOT)
-        free_gb = free / (1024**3)
-        total_gb = total / (1024**3)
-        percent_used = (used / total) * 100
-
-        if free_gb < 1.0:
-            checks['disk_space'] = {
-                'status': 'error',
-                'message': f'Critical: Only {free_gb:.1f} GB free',
-                'free_gb': round(free_gb, 2),
-                'total_gb': round(total_gb, 2),
-                'percent_used': round(percent_used, 1)
-            }
-            overall_healthy = False
-        elif free_gb < 5.0:
-            checks['disk_space'] = {
-                'status': 'warn',
-                'message': f'Low disk space: {free_gb:.1f} GB free',
-                'free_gb': round(free_gb, 2),
-                'total_gb': round(total_gb, 2),
-                'percent_used': round(percent_used, 1)
-            }
-        else:
-            checks['disk_space'] = {
-                'status': 'ok',
-                'message': f'{free_gb:.1f} GB free',
-                'free_gb': round(free_gb, 2),
-                'total_gb': round(total_gb, 2),
-                'percent_used': round(percent_used, 1)
-            }
-
-    except Exception as e:
-        checks['disk_space'] = {
-            'status': 'error',
-            'message': f'Failed to check disk space: {str(e)}'
-        }
-
-    # Check 4: Process Health (zombie processes, thread count)
-    try:
-        import psutil
-        import os
-
-        current_process = psutil.Process(os.getpid())
-        thread_count = threading.active_count()
-
-        # Check for zombie child processes
-        zombie_count = 0
-        for child in current_process.children(recursive=True):
-            if child.status() == psutil.STATUS_ZOMBIE:
-                zombie_count += 1
-
-        if zombie_count > 0:
-            checks['process_health'] = {
-                'status': 'warn',
-                'message': f'{zombie_count} zombie process(es) detected',
-                'thread_count': thread_count,
-                'zombie_count': zombie_count
-            }
-        elif thread_count > 250:
-            checks['process_health'] = {
-                'status': 'warn',
-                'message': f'High thread count: {thread_count}',
-                'thread_count': thread_count,
-                'zombie_count': 0
-            }
-        else:
-            checks['process_health'] = {
-                'status': 'ok',
-                'message': f'{thread_count} threads active',
-                'thread_count': thread_count,
-                'zombie_count': 0
-            }
-
-    except ImportError:
-        checks['process_health'] = {
-            'status': 'ok',
-            'message': 'psutil not available, basic check only',
-            'thread_count': threading.active_count()
-        }
-    except Exception as e:
-        checks['process_health'] = {
-            'status': 'error',
-            'message': f'Failed to check process health: {str(e)}'
-        }
-
-    # Check 5: NotebookLM CLI Availability
-    try:
-        result = subprocess.run(
-            ['notebooklm', '--version'],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-
-        if result.returncode == 0:
-            checks['notebooklm_cli'] = {
-                'status': 'ok',
-                'message': 'NotebookLM CLI available',
-                'version': result.stdout.strip() if result.stdout else 'unknown'
-            }
-        else:
-            checks['notebooklm_cli'] = {
-                'status': 'error',
-                'message': 'NotebookLM CLI not working',
-                'error': result.stderr.strip() if result.stderr else 'unknown error'
-            }
-            overall_healthy = False
-
-    except FileNotFoundError:
-        checks['notebooklm_cli'] = {
-            'status': 'error',
-            'message': 'NotebookLM CLI not installed - run: pip install notebooklm-py'
-        }
-        overall_healthy = False
-    except subprocess.TimeoutExpired:
-        checks['notebooklm_cli'] = {
-            'status': 'warn',
-            'message': 'NotebookLM CLI check timed out'
-        }
-    except Exception as e:
-        checks['notebooklm_cli'] = {
-            'status': 'error',
-            'message': f'Failed to check NotebookLM CLI: {str(e)}'
-        }
-        overall_healthy = False
-
-    # Determine overall status
-    status_priority = {'error': 3, 'warn': 2, 'ok': 1}
-    highest_severity = max([status_priority.get(check.get('status', 'ok'), 1) for check in checks.values()])
-
-    if highest_severity == 3:
-        overall_status = 'unhealthy'
-        status_code = 503
-    elif highest_severity == 2:
-        overall_status = 'degraded'
-        status_code = 200  # Still operational, just warnings
-    else:
-        overall_status = 'healthy'
-        status_code = 200
-
-    return jsonify({
-        'status': overall_status,
-        'timestamp': datetime.now().isoformat(),
-        'checks': checks
-    }), status_code
 
 
 @app.route('/')
@@ -877,6 +529,7 @@ def stream_overall_logs():
             max_idle_time = 600  # 10 minutes max with no new content (handles deep mode)
             idle_iterations = 0
             max_iterations = max_idle_time * 2
+
             # Send existing content from all files
             for log_file in log_files:
                 try:
@@ -2340,8 +1993,6 @@ def test_drive_access():
             # Save refreshed token
             with open(token_file, 'w') as f:
                 f.write(creds.to_json())
-            # Secure file permissions (owner read/write only)
-            os.chmod(token_file, 0o600)
 
         service = build('drive', 'v3', credentials=creds)
         results = service.files().list(

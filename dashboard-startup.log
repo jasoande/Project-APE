@@ -1,1 +1,16 @@
 ⚠️  flask-wtf not installed, CSRF protection disabled
+[AUTH] NotebookLM login completed successfully
+[AUTH] Setting up Google Cloud ADC...
+[AUTH] ✅ Application Default Credentials configured
+[AUTH] Setting quota project: itpc-gcp-global-revenue-claude...
+[AUTH] ✅ Quota project set: itpc-gcp-global-revenue-claude
+[AUTH] Syncing credentials to container volume...
+[AUTH] ✅ Credentials synced to container successfully
+[2] Sandbox: CanCreateUserNamespace() clone() failure: EPERM
+[SAVE-CONFIG] SCRIPT_DIR: /home/jasona/Project-APE/dashboard
+[SAVE-CONFIG] SCRIPT_DIR.parent: /home/jasona/Project-APE
+[SAVE-CONFIG] vars_path: /home/jasona/Project-APE/vars.py
+[SAVE-CONFIG] vars_path.exists(): False
+[WORKFLOW] Starting workflow: /home/jasona/.project-ape-venv/bin/python3 /home/jasona/Project-APE/main.py --mode fast --clients merck blue_yonder organon panasonic_avionics hershey lord_abbett --skip-preflight
+[WORKFLOW] Working directory: /home/jasona/Project-APE
+[WORKFLOW] Workflow process started (PID: 7383)
