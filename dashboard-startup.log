@@ -282,3 +282,76 @@ ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate u
 127.0.0.1 - - [2026-07-10 12:33:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001817
 127.0.0.1 - - [2026-07-10 12:33:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001874
 127.0.0.1 - - [2026-07-10 12:33:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001705
+127.0.0.1 - - [2026-07-10 12:33:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000694
+127.0.0.1 - - [2026-07-10 12:34:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000605
+127.0.0.1 - - [2026-07-10 12:34:58] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001642
+127.0.0.1 - - [2026-07-10 12:35:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001633
+127.0.0.1 - - [2026-07-10 12:35:58] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001050
+127.0.0.1 - - [2026-07-10 12:36:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001707
+127.0.0.1 - - [2026-07-10 12:36:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001682
+127.0.0.1 - - [2026-07-10 12:37:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001550
+127.0.0.1 - - [2026-07-10 12:37:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001481
+127.0.0.1 - - [2026-07-10 12:38:28] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001616
+127.0.0.1 - - [2026-07-10 12:38:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001624
+127.0.0.1 - - [2026-07-10 12:39:28] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001667
+127.0.0.1 - - [2026-07-10 12:39:58] "GET /api/check-auth-status HTTP/1.1" 200 196 0.001692
+127.0.0.1 - - [2026-07-10 12:40:28] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001784
+127.0.0.1 - - [2026-07-10 12:40:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.002136
+127.0.0.1 - - [2026-07-10 12:41:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001670
+127.0.0.1 - - [2026-07-10 12:41:58] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001515
+127.0.0.1 - - [2026-07-10 12:42:28] "GET /api/check-auth-status HTTP/1.1" 200 198 0.003704
+127.0.0.1 - - [2026-07-10 12:42:58] "GET /api/check-auth-status HTTP/1.1" 200 198 0.000904
+127.0.0.1 - - [2026-07-10 12:43:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001445
+127.0.0.1 - - [2026-07-10 12:43:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.002684
+127.0.0.1 - - [2026-07-10 12:44:28] "GET /api/check-auth-status HTTP/1.1" 200 196 0.001078
+127.0.0.1 - - [2026-07-10 12:44:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001627
+127.0.0.1 - - [2026-07-10 12:45:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001192
+127.0.0.1 - - [2026-07-10 12:45:58] "GET /api/check-auth-status HTTP/1.1" 200 196 0.001303
+127.0.0.1 - - [2026-07-10 12:46:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001076
+127.0.0.1 - - [2026-07-10 12:46:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001630
+127.0.0.1 - - [2026-07-10 12:47:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001466
+127.0.0.1 - - [2026-07-10 12:47:58] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001074
+127.0.0.1 - - [2026-07-10 12:48:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001060
+127.0.0.1 - - [2026-07-10 12:48:58] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001460
+127.0.0.1 - - [2026-07-10 12:49:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.002337
+127.0.0.1 - - [2026-07-10 12:49:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.002094
+127.0.0.1 - - [2026-07-10 12:50:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001052
+127.0.0.1 - - [2026-07-10 12:50:58] "GET /api/check-auth-status HTTP/1.1" 200 196 0.001768
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:51:28Z <Greenlet at 0x10b046f20: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b097460 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:51:28] "GET /api/check-auth-status HTTP/1.1" 200 198 0.000733
+127.0.0.1 - - [2026-07-10 12:51:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001664
+127.0.0.1 - - [2026-07-10 12:52:28] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001107
+127.0.0.1 - - [2026-07-10 12:52:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001304
+127.0.0.1 - - [2026-07-10 12:53:28] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001036
+127.0.0.1 - - [2026-07-10 12:53:58] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001791
+127.0.0.1 - - [2026-07-10 12:54:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000428
+127.0.0.1 - - [2026-07-10 12:54:58] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001675
+127.0.0.1 - - [2026-07-10 12:55:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.002312
+127.0.0.1 - - [2026-07-10 12:55:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000656
+127.0.0.1 - - [2026-07-10 12:56:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001693
+127.0.0.1 - - [2026-07-10 12:56:58] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001754
+127.0.0.1 - - [2026-07-10 12:57:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001681
+127.0.0.1 - - [2026-07-10 12:57:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000926
+127.0.0.1 - - [2026-07-10 12:58:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001896
+127.0.0.1 - - [2026-07-10 12:58:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001656
