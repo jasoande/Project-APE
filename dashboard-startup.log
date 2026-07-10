@@ -1,16 +1,284 @@
-⚠️  flask-wtf not installed, CSRF protection disabled
-[AUTH] NotebookLM login completed successfully
-[AUTH] Setting up Google Cloud ADC...
-[AUTH] ✅ Application Default Credentials configured
-[AUTH] Setting quota project: itpc-gcp-global-revenue-claude...
-[AUTH] ✅ Quota project set: itpc-gcp-global-revenue-claude
-[AUTH] Syncing credentials to container volume...
-[AUTH] ✅ Credentials synced to container successfully
-[2] Sandbox: CanCreateUserNamespace() clone() failure: EPERM
-[SAVE-CONFIG] SCRIPT_DIR: /home/jasona/Project-APE/dashboard
-[SAVE-CONFIG] SCRIPT_DIR.parent: /home/jasona/Project-APE
-[SAVE-CONFIG] vars_path: /home/jasona/Project-APE/vars.py
-[SAVE-CONFIG] vars_path.exists(): False
-[WORKFLOW] Starting workflow: /home/jasona/.project-ape-venv/bin/python3 /home/jasona/Project-APE/main.py --mode fast --clients merck blue_yonder organon panasonic_avionics hershey lord_abbett --skip-preflight
-[WORKFLOW] Working directory: /home/jasona/Project-APE
-[WORKFLOW] Workflow process started (PID: 7383)
+✅ CSRF protection enabled
+127.0.0.1 - - [2026-07-10 12:27:32] "GET /configure HTTP/1.1" 200 84772 0.006816
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:27:33Z <Greenlet at 0x10b046f20: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b0f8980 o)> failed with SSLError
+
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:27:33Z <Greenlet at 0x10b1142c0: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b0f89f0 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:27:33] "GET /configure HTTP/1.1" 200 84772 0.000756
+127.0.0.1 - - [2026-07-10 12:27:33] "GET /static/kingkong.png HTTP/1.1" 200 335456 0.042271
+127.0.0.1 - - [2026-07-10 12:27:33] "GET /static/configure.js?v=4.0.4 HTTP/1.1" 200 84148 0.001549
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:27:33Z <Greenlet at 0x10b114b80: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b13fa10 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:27:33] "GET /static/oauth-wizard.js?v=4.0.4 HTTP/1.1" 200 16462 0.000810
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:27:33Z <Greenlet at 0x10b114c20: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b13fe00 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:27:33] "GET /api/system-status HTTP/1.1" 200 305 0.000414
+127.0.0.1 - - [2026-07-10 12:27:33] "GET /api/oauth-status HTTP/1.1" 200 432 0.001414
+127.0.0.1 - - [2026-07-10 12:27:33] "GET /api/cache-stats HTTP/1.1" 200 1401 0.005592
+127.0.0.1 - - [2026-07-10 12:27:33] "GET /api/check-auth-status HTTP/1.1" 200 198 0.000770
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:27:33Z <Greenlet at 0x10b1151c0: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b16c050 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:27:33] "POST /api/generate-config HTTP/1.1" 400 189 0.003464
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:27:33Z <Greenlet at 0x10b115440: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b16c130 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:27:33] "POST /api/generate-config HTTP/1.1" 400 189 0.002059
+127.0.0.1 - - [2026-07-10 12:27:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.002123
+127.0.0.1 - - [2026-07-10 12:28:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000944
+127.0.0.1 - - [2026-07-10 12:28:28] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001904
+127.0.0.1 - - [2026-07-10 12:28:33] "GET /api/check-auth-status HTTP/1.1" 200 195 0.001710
+127.0.0.1 - - [2026-07-10 12:29:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000561
+127.0.0.1 - - [2026-07-10 12:29:03] "GET /api/check-auth-status HTTP/1.1" 200 198 0.000517
+127.0.0.1 - - [2026-07-10 12:29:33] "GET /api/check-auth-status HTTP/1.1" 200 198 0.001295
+127.0.0.1 - - [2026-07-10 12:30:03] "GET /api/check-auth-status HTTP/1.1" 200 198 0.002072
+127.0.0.1 - - [2026-07-10 12:30:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001815
+127.0.0.1 - - [2026-07-10 12:30:33] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000880
+127.0.0.1 - - [2026-07-10 12:31:03] "GET /api/check-auth-status HTTP/1.1" 200 198 0.002172
+127.0.0.1 - - [2026-07-10 12:31:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001150
+127.0.0.1 - - [2026-07-10 12:31:33] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000792
+127.0.0.1 - - [2026-07-10 12:32:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000808
+127.0.0.1 - - [2026-07-10 12:32:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.002098
+127.0.0.1 - - [2026-07-10 12:32:33] "GET /api/check-auth-status HTTP/1.1" 200 198 0.000479
+127.0.0.1 - - [2026-07-10 12:32:58] "GET /configure HTTP/1.1" 200 84772 0.000688
+127.0.0.1 - - [2026-07-10 12:32:58] "GET /configure HTTP/1.1" 200 84621 0.000628
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:32:58Z <Greenlet at 0x10b114860: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b13fe00 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:32:58] "GET /static/kingkong.png HTTP/1.1" 200 335456 0.005722
+127.0.0.1 - - [2026-07-10 12:32:58] "GET /static/configure.js?v=4.0.4 HTTP/1.1" 200 84148 0.000836
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:32:58Z <Greenlet at 0x10b114860: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b097460 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:32:58] "GET /static/oauth-wizard.js?v=4.0.4 HTTP/1.1" 200 16462 0.000779
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:32:58Z <Greenlet at 0x10b046f20: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b13f8c0 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:32:58] "GET /api/system-status HTTP/1.1" 200 305 0.000307
+127.0.0.1 - - [2026-07-10 12:32:58] "GET /api/oauth-status HTTP/1.1" 200 432 0.000605
+127.0.0.1 - - [2026-07-10 12:32:58] "GET /api/check-auth-status HTTP/1.1" 200 197 0.000252
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:32:58Z <Greenlet at 0x10b046f20: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b097460 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:32:58] "GET /api/cache-stats HTTP/1.1" 200 1401 0.003762
+127.0.0.1 - - [2026-07-10 12:32:58] "POST /api/generate-config HTTP/1.1" 400 189 0.000345
+Traceback (most recent call last):
+  File "src/gevent/greenlet.py", line 912, in gevent._gevent_cgreenlet.Greenlet.run
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/baseserver.py", line 34, in _handle_and_close_when_done
+    return handle(*args_tuple)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/server.py", line 209, in wrap_socket_and_handle
+    with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
+                         ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 893, in wrap_socket
+    return SSLSocket(sock=sock, keyfile=keyfile, certfile=certfile,
+                     server_side=server_side, cert_reqs=cert_reqs,
+    ...<2 lines>...
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 351, in __init__
+    self.do_handshake()
+    ~~~~~~~~~~~~~~~~~^^
+  File "/Users/jasona/.project-ape-venv/lib/python3.14/site-packages/gevent/ssl.py", line 740, in do_handshake
+    self._sslobj.do_handshake()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1082)
+2026-07-10T16:32:58Z <Greenlet at 0x10b1154e0: _handle_and_close_when_done(<bound method StreamServer.wrap_socket_and_handle , <bound method StreamServer.do_close of <WSGIServer, (<gevent._socket3.socket [closed] at 0x10b0f8d70 o)> failed with SSLError
+
+127.0.0.1 - - [2026-07-10 12:32:59] "POST /api/generate-config HTTP/1.1" 400 189 0.000777
+127.0.0.1 - - [2026-07-10 12:33:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001817
+127.0.0.1 - - [2026-07-10 12:33:03] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001874
+127.0.0.1 - - [2026-07-10 12:33:28] "GET /api/check-auth-status HTTP/1.1" 200 197 0.001705

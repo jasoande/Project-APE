@@ -95,9 +95,12 @@ python3 launch-project-ape.py
 
 This automatically:
 - Creates a virtual environment at `~/.project-ape-venv`
-- Installs all dependencies (Flask, notebooklm-py, pypdf, google-api-python-client, etc.)
-- Starts the dashboard server
-- Opens your browser to http://localhost:8765/configure
+- Installs all dependencies (Flask, notebooklm-py, pypdf, google-api-python-client, gevent, etc.)
+- **Auto-generates SSL certificates** (first launch only)
+- Starts the dashboard server with HTTPS
+- Opens your browser to https://localhost:8765/configure
+
+**Note:** Your browser will show a security warning (normal for self-signed certificates). Click "Advanced" → "Proceed to localhost"
 
 **3. Follow the setup wizard**
 
@@ -110,28 +113,7 @@ The web UI walks you through:
 
 Click **"Launch Workflow"** and watch real-time progress in the dashboard.
 
-### Optional: Enable HTTPS/SSL
-
-For secure local development with HTTPS:
-
-```bash
-# Cross-platform (recommended for Windows)
-python3 setup-ssl-local.py
-
-# Linux/macOS alternative
-./setup-ssl-local.sh
-```
-
-Then edit `vars.py`:
-```python
-SSL_ENABLED = True
-SSL_CERT_PATH = "certs/cert.pem"
-SSL_KEY_PATH = "certs/key.pem"
-```
-
-Restart the dashboard and access via `https://localhost:8765`
-
-📚 **See:** [Docs/SSL_SETUP_LOCAL.md](Docs/SSL_SETUP_LOCAL.md) for detailed SSL setup guide
+**Note:** All communication uses HTTPS for security. SSL certificates are automatically managed (generation, renewal).
 
 ---
 

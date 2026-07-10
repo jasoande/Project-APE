@@ -1162,7 +1162,7 @@ def start_workflow():
             'success': True,
             'message': 'Workflow started in background',
             'pid': workflow_result.get('pid'),
-            'dashboard_url': workflow.get('dashboard_url', 'http://localhost:8765')
+            'dashboard_url': workflow.get('dashboard_url', 'https://localhost:8765')
         })
 
     except Exception as e:

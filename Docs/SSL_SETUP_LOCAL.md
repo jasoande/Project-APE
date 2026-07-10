@@ -3,11 +3,38 @@
 
 ## Overview
 
-This guide shows how to enable HTTPS for local development of the Account Intelligence dashboard. For local development on `localhost`, we use **self-signed certificates** (the standard approach). Let's Encrypt requires a publicly accessible domain, so it's only used for production deployments.
+**As of version 3.0, SSL certificates are automatically generated** - no manual setup required!
+
+This guide is provided for reference and troubleshooting. In normal operation, the launcher (`launch-project-ape.py`) handles all SSL setup automatically.
+
+For local development on `localhost`, we use **self-signed certificates** (the standard approach). Let's Encrypt requires a publicly accessible domain, so it's only used for production deployments.
 
 ---
 
-## Quick Setup (5 minutes)
+## Automatic Setup (v3.0+)
+
+**The default and recommended approach:**
+
+```bash
+python3 launch-project-ape.py
+```
+
+On first launch, this automatically:
+- Checks if OpenSSL is available
+- Generates 4096-bit RSA self-signed certificate
+- Stores certificates in `certs/` directory
+- Sets proper file permissions
+- Starts dashboard with HTTPS enabled
+
+**No manual setup required!**
+
+---
+
+## Manual Setup (Optional - For Reference Only)
+
+You generally don't need to run these scripts manually. They're kept for troubleshooting or advanced use cases.
+
+## Quick Manual Setup (5 minutes)
 
 ### Automated Setup (Recommended)
 

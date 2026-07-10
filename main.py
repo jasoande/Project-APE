@@ -47,10 +47,9 @@ STATUS_DIR = getattr(config, 'STATUS_DIR', SCRIPT_DIR / ".multi_process_status")
 LOGS_DIR = getattr(config, 'LOGS_DIR', SCRIPT_DIR / "logs")
 DASHBOARD_PORT = config.DASHBOARD_PORT
 
-# SSL configuration
-SSL_ENABLED = getattr(config, 'SSL_ENABLED', False)
-DASHBOARD_PROTOCOL = "https" if SSL_ENABLED else "http"
-DASHBOARD_URL = f"{DASHBOARD_PROTOCOL}://localhost:{DASHBOARD_PORT}"
+# SSL is always enabled
+DASHBOARD_PROTOCOL = "https"
+DASHBOARD_URL = f"https://localhost:{DASHBOARD_PORT}"
 
 # Setup logging
 logging.basicConfig(
@@ -127,7 +126,8 @@ class ProcessManager:
         except:
             pass  # lsof might not be available on all systems
 
-        dashboard_script = SCRIPT_DIR / "dashboard" / "server.py"
+        # Always use gevent server (supports HTTPS)
+        dashboard_script = SCRIPT_DIR / "dashboard" / "server_gevent.py"
         dashboard_log = LOGS_DIR / "dashboard.log"
 
         log_handle = open(dashboard_log, 'w', buffering=1)
@@ -150,7 +150,7 @@ class ProcessManager:
         import ssl
 
         # For HTTPS with self-signed certs, disable verification
-        ssl_context = ssl._create_unverified_context() if SSL_ENABLED else None
+        ssl_context = ssl._create_unverified_context()
 
         for attempt in range(max_retries):
             try:
@@ -535,7 +535,7 @@ def main():
                     f"{DASHBOARD_URL}/api/shutdown",
                     method='POST'
                 )
-                ssl_context = ssl._create_unverified_context() if SSL_ENABLED else None
+                ssl_context = ssl._create_unverified_context()
                 urllib.request.urlopen(req, timeout=2, context=ssl_context)
             except Exception as e:
                 # Ignore errors - dashboard might already be down

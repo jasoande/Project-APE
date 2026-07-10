@@ -20,6 +20,7 @@ import os
 from pathlib import Path
 from urllib.request import urlopen
 from urllib.error import URLError
+from ssl_manager import ensure_certificates, check_openssl_available, get_openssl_install_instructions, check_legacy_ssl_config
 
 # Configuration
 DASHBOARD_PORT = 8765
@@ -40,48 +41,43 @@ def get_script_directory():
     return Path(__file__).parent.resolve()
 
 
-def check_ssl_config():
-    """Check if SSL is enabled in vars.py and return protocol and server script to use"""
+def ensure_ssl_setup():
+    """
+    Ensure SSL certificates exist and are valid. Auto-generates if needed.
+
+    Returns:
+        True if SSL is ready, exits with error if setup fails
+    """
     script_dir = get_script_directory()
+    certs_dir = script_dir / "certs"
     vars_path = script_dir / "vars.py"
 
-    ssl_enabled = False
+    # Check for legacy SSL_ENABLED configuration
+    is_legacy, warning = check_legacy_ssl_config(vars_path)
+    if is_legacy:
+        print(warning)
 
-    # Try to read SSL configuration from vars.py
-    if vars_path.exists():
-        try:
-            # Read vars.py and check for SSL_ENABLED
-            with open(vars_path, 'r') as f:
-                content = f.read()
-                # Simple check for SSL_ENABLED = True
-                if 'SSL_ENABLED' in content and 'True' in content:
-                    # More precise check
-                    for line in content.split('\n'):
-                        line = line.strip()
-                        if line.startswith('SSL_ENABLED') and '=' in line:
-                            value = line.split('=')[1].strip()
-                            if value in ('True', 'true', '1'):
-                                ssl_enabled = True
-                                break
-        except Exception:
-            pass  # If we can't read vars.py, default to HTTP
+    # Check OpenSSL availability
+    openssl_available, openssl_version = check_openssl_available()
+    if not openssl_available:
+        print("❌ Error: OpenSSL not found")
+        print("   OpenSSL is required for SSL certificate generation.")
+        print(get_openssl_install_instructions())
+        sys.exit(1)
 
-    # Determine protocol and which server to use
-    if ssl_enabled:
-        protocol = "https"
-        # Use gevent server for SSL support
-        server_script = script_dir / "dashboard" / "server_gevent.py"
+    # Ensure certificates exist and are valid
+    print("🔒 Checking SSL certificates...")
+    if not ensure_certificates(certs_dir):
+        print("❌ Failed to generate SSL certificates")
+        print("   Check logs above for errors")
+        sys.exit(1)
 
-        # Fall back to regular server if gevent server doesn't exist
-        if not server_script.exists():
-            print("⚠️  SSL enabled but gevent server not found, falling back to HTTP")
-            protocol = "http"
-            server_script = script_dir / "dashboard" / "server.py"
-    else:
-        protocol = "http"
-        server_script = script_dir / "dashboard" / "server.py"
+    print("✅ SSL certificates ready")
+    print(f"   Certificate: {certs_dir / 'cert.pem'}")
+    print(f"   Key: {certs_dir / 'key.pem'}")
+    print()
 
-    return protocol, server_script
+    return True
 
 
 def get_venv_python():
@@ -210,16 +206,18 @@ def start_server():
     script_dir = get_script_directory()
     venv_python = get_venv_python()
 
-    # Check SSL configuration and determine which server to use
-    protocol, server_script = check_ssl_config()
+    # Ensure SSL is set up BEFORE starting server
+    ensure_ssl_setup()
+
+    # Always use gevent server (supports HTTPS)
+    server_script = script_dir / "dashboard" / "server_gevent.py"
 
     # Verify server script exists
     if not server_script.exists():
         print(f"❌ Error: Dashboard server not found at {server_script}")
         sys.exit(1)
 
-    if protocol == "https":
-        print(f"🔒 SSL/HTTPS enabled - using {server_script.name}")
+    print(f"🔒 Starting HTTPS dashboard (gevent server)")
 
     # Check if venv exists AND is functional (has dependencies installed)
     venv_exists = venv_python.exists()
@@ -319,14 +317,12 @@ def main():
     print("=" * 70)
     print(f"Platform: {platform.system()} {platform.release()}")
 
-    # Determine protocol and set CONFIG_URL early
-    protocol, server_script = check_ssl_config()
-    CONFIG_URL = f"{protocol}://localhost:{DASHBOARD_PORT}/configure"
+    # SSL is always enabled - set HTTPS URL
+    CONFIG_URL = f"https://localhost:{DASHBOARD_PORT}/configure"
 
-    if protocol == "https":
-        print(f"🔒 SSL/HTTPS enabled")
+    print(f"🔒 SSL/HTTPS: Always enabled")
     print(f"Dashboard: {CONFIG_URL}")
-    print(f"Server: {server_script.name}")
+    print(f"Server: server_gevent.py")
     print()
 
     # Check if server is already running

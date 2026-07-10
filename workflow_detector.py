@@ -132,7 +132,7 @@ def detect_workflow(vars_module) -> Dict[str, Any]:
         'drive_enabled': drive_enabled,
         'cache_enabled': cache_enabled,
         'dashboard_port': dashboard_port,
-        'dashboard_url': f"http://localhost:{dashboard_port}"
+        'dashboard_url': f"https://localhost:{dashboard_port}"
     }
 
 
