@@ -108,7 +108,8 @@ brew install --cask google-chrome
 podman --version
 
 # Initialize Podman machine (if not done by Podman Desktop)
-podman machine init
+# macOS: Use Apple Hypervisor for native virtualization
+podman machine init --provider applehv
 podman machine start
 ```
 
@@ -353,8 +354,8 @@ Container installation provides the easiest deployment path across all platforms
 # Verify installation
 podman --version
 
-# Initialize machine (if needed)
-podman machine init
+# Initialize machine (if needed) - Use Apple Hypervisor on macOS
+podman machine init --provider applehv
 podman machine start
 ```
 
