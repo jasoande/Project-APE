@@ -176,41 +176,55 @@ else
     esac
 fi
 
-# macOS: Ensure Podman machine is initialized and running
+# macOS: Ensure Podman machine is initialized and running with Apple Hypervisor
 if [[ "$OS" == "macOS" ]] && [[ "$PODMAN_INSTALLED" == "true" ]]; then
     echo
     echo "Checking Podman machine status..."
 
-    # Check if any machine exists
-    if ! podman machine list --format "{{.Name}}" 2>/dev/null | grep -q .; then
+    # Get list of all machines
+    MACHINE_LIST=$(podman machine list --format "{{.Name}}" 2>/dev/null)
+
+    if [[ -z "$MACHINE_LIST" ]]; then
+        # No machines exist - create new one with applehv
         echo "No Podman machine found. Initializing..."
         echo "Using Apple Hypervisor (applehv) for native macOS virtualization..."
         podman machine init --provider applehv
         echo -e "${GREEN}✅ Podman machine initialized with Apple Hypervisor${NC}"
     else
-        # Machine exists - check if it's using the correct provider
-        MACHINE_NAME=$(podman machine list --format "{{.Name}}" 2>/dev/null | head -1)
-        MACHINE_PROVIDER=$(podman machine inspect "$MACHINE_NAME" --format "{{.Provider}}" 2>/dev/null || echo "unknown")
+        # Machines exist - check provider of each one
+        NEED_RECREATE=false
 
-        if [[ "$MACHINE_PROVIDER" != "applehv" ]]; then
-            echo -e "${YELLOW}⚠️  Existing machine uses provider: ${MACHINE_PROVIDER}${NC}"
-            echo "   Apple Hypervisor (applehv) is recommended for best performance on macOS."
+        while IFS= read -r MACHINE_NAME; do
+            [[ -z "$MACHINE_NAME" ]] && continue
+
+            # Get provider for this machine
+            MACHINE_PROVIDER=$(podman machine inspect "$MACHINE_NAME" --format "{{.Provider}}" 2>/dev/null || echo "unknown")
+
+            echo "Found machine: $MACHINE_NAME (provider: $MACHINE_PROVIDER)"
+
+            if [[ "$MACHINE_PROVIDER" != "applehv" ]]; then
+                echo -e "${YELLOW}⚠️  Machine '$MACHINE_NAME' uses provider: ${MACHINE_PROVIDER}${NC}"
+                echo "   Apple Hypervisor (applehv) is required for best performance on macOS."
+                NEED_RECREATE=true
+
+                # Stop machine if running
+                echo "   Stopping machine '$MACHINE_NAME'..."
+                podman machine stop "$MACHINE_NAME" 2>/dev/null || true
+
+                # Delete the machine completely
+                echo "   Deleting machine '$MACHINE_NAME'..."
+                podman machine rm -f "$MACHINE_NAME"
+                echo -e "   ${GREEN}✅ Deleted old machine '$MACHINE_NAME'${NC}"
+            fi
+        done <<< "$MACHINE_LIST"
+
+        if [[ "$NEED_RECREATE" == "true" ]]; then
             echo
-            echo "Removing old machine and creating new one with applehv..."
-
-            # Stop if running
-            podman machine stop "$MACHINE_NAME" 2>/dev/null || true
-
-            # Remove old machine
-            podman machine rm -f "$MACHINE_NAME"
-            echo -e "${GREEN}✅ Removed old machine${NC}"
-
-            # Create new machine with applehv
-            echo "Initializing new machine with Apple Hypervisor..."
+            echo "Creating new Podman machine with Apple Hypervisor..."
             podman machine init --provider applehv
             echo -e "${GREEN}✅ Podman machine initialized with Apple Hypervisor${NC}"
         else
-            echo -e "${GREEN}✅ Podman machine exists (provider: applehv)${NC}"
+            echo -e "${GREEN}✅ Podman machine exists with correct provider (applehv)${NC}"
         fi
     fi
 
