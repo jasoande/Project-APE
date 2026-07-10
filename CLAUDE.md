@@ -161,8 +161,9 @@ cat .multi_process_status/clientname.json
 - Cross-platform launcher (Windows, macOS, Linux)
 - Automatic virtual environment setup (`~/.project-ape-venv`)
 - Dependency installation on first run (Flask, notebooklm-py, pypdf, etc.)
-- Starts dashboard server in background
-- Opens browser to http://localhost:8765/configure
+- SSL-aware: checks vars.py for SSL configuration, launches appropriate server
+- Starts dashboard server in background (server.py for HTTP, server_gevent.py for HTTPS)
+- Opens browser to http://localhost:8765/configure or https://localhost:8765/configure (based on SSL config)
 - Designed for double-click execution (zero terminal required)
 
 **`dashboard/config_generator.py`:**

@@ -23,9 +23,11 @@ from urllib.error import URLError
 
 # Configuration
 DASHBOARD_PORT = 8765
-CONFIG_URL = f"http://localhost:{DASHBOARD_PORT}/configure"
 MAX_WAIT_SECONDS = 10
 CHECK_INTERVAL = 0.5
+
+# Will be set after checking SSL configuration
+CONFIG_URL = None
 
 # Platform detection
 IS_WINDOWS = platform.system() == "Windows"
@@ -36,6 +38,50 @@ IS_LINUX = platform.system() == "Linux"
 def get_script_directory():
     """Get the directory containing this script, works when double-clicked or run from terminal"""
     return Path(__file__).parent.resolve()
+
+
+def check_ssl_config():
+    """Check if SSL is enabled in vars.py and return protocol and server script to use"""
+    script_dir = get_script_directory()
+    vars_path = script_dir / "vars.py"
+
+    ssl_enabled = False
+
+    # Try to read SSL configuration from vars.py
+    if vars_path.exists():
+        try:
+            # Read vars.py and check for SSL_ENABLED
+            with open(vars_path, 'r') as f:
+                content = f.read()
+                # Simple check for SSL_ENABLED = True
+                if 'SSL_ENABLED' in content and 'True' in content:
+                    # More precise check
+                    for line in content.split('\n'):
+                        line = line.strip()
+                        if line.startswith('SSL_ENABLED') and '=' in line:
+                            value = line.split('=')[1].strip()
+                            if value in ('True', 'true', '1'):
+                                ssl_enabled = True
+                                break
+        except Exception:
+            pass  # If we can't read vars.py, default to HTTP
+
+    # Determine protocol and which server to use
+    if ssl_enabled:
+        protocol = "https"
+        # Use gevent server for SSL support
+        server_script = script_dir / "dashboard" / "server_gevent.py"
+
+        # Fall back to regular server if gevent server doesn't exist
+        if not server_script.exists():
+            print("⚠️  SSL enabled but gevent server not found, falling back to HTTP")
+            protocol = "http"
+            server_script = script_dir / "dashboard" / "server.py"
+    else:
+        protocol = "http"
+        server_script = script_dir / "dashboard" / "server.py"
+
+    return protocol, server_script
 
 
 def get_venv_python():
@@ -51,10 +97,13 @@ def get_venv_python():
     return python_path
 
 
-def is_server_running():
+def is_server_running(config_url):
     """Check if the dashboard server is already running"""
     try:
-        with urlopen(CONFIG_URL, timeout=2) as response:
+        # For HTTPS with self-signed certs, we need to handle SSL errors
+        import ssl
+        context = ssl._create_unverified_context()
+        with urlopen(config_url, timeout=2, context=context) as response:
             return response.status == 200
     except (URLError, TimeoutError, OSError):
         return False
@@ -160,12 +209,21 @@ def start_server():
     """Start the dashboard server in background"""
     script_dir = get_script_directory()
     venv_python = get_venv_python()
-    server_script = script_dir / "dashboard" / "server.py"
+
+    # Check SSL configuration and determine which server to use
+    protocol, server_script = check_ssl_config()
+
+    # Update global CONFIG_URL with correct protocol
+    global CONFIG_URL
+    CONFIG_URL = f"{protocol}://localhost:{DASHBOARD_PORT}/configure"
 
     # Verify server script exists
     if not server_script.exists():
         print(f"❌ Error: Dashboard server not found at {server_script}")
         sys.exit(1)
+
+    if protocol == "https":
+        print(f"🔒 SSL/HTTPS enabled - using {server_script.name}")
 
     # Check if venv exists AND is functional (has dependencies installed)
     venv_exists = venv_python.exists()
@@ -236,7 +294,7 @@ def wait_for_server_ready():
 
     max_checks = int(MAX_WAIT_SECONDS / CHECK_INTERVAL)
     for i in range(max_checks):
-        if is_server_running():
+        if is_server_running(CONFIG_URL):
             print("✅ Dashboard server is ready")
             return True
         time.sleep(CHECK_INTERVAL)
