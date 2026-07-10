@@ -17,11 +17,8 @@ echo "========================================================================"
 echo
 echo "This script will install the required tools for running project ape Account Intelligence:"
 echo
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "  0. Homebrew (package manager for macOS, if not installed)"
-fi
-echo "  1. Podman (container runtime)"
-echo "  2. Python 3.10+ (required for NotebookLM CLI)"
+echo "  1. Podman Desktop (container runtime)"
+echo "  2. Python 3.11+ (required for NotebookLM CLI)"
 echo "  3. Virtual Environment (isolated Python environment)"
 echo "  4. NotebookLM CLI (notebooklm-py with browser support)"
 echo
@@ -58,229 +55,55 @@ echo "Detected OS: ${OS}"
 echo
 
 # ==============================================================================
-# STEP 0: Homebrew Installation (macOS only)
+# STEP 0: Prerequisites Check
 # ==============================================================================
 
-if [[ "$OS" == "macOS" ]]; then
-    echo "========================================================================"
-    echo "STEP 0: HOMEBREW VERIFICATION (macOS)"
-    echo "========================================================================"
-    echo
-    echo "Homebrew is the package manager for macOS and is required for:"
-    echo "  - Podman (container runtime)"
-    echo "  - Python 3 (if not already installed)"
-    echo
+echo "========================================================================"
+echo "STEP 0: PREREQUISITES CHECK"
+echo "========================================================================"
+echo
+echo "Checking system prerequisites..."
+echo
 
-    if command -v brew &> /dev/null; then
-        echo -e "${GREEN}✅ Homebrew is already installed${NC}"
-        BREW_VERSION=$(brew --version | head -1)
-        echo "   ${BREW_VERSION}"
-        echo "   Location: $(which brew)"
+# Check for required tools
+PREREQS_OK=true
 
-        # Check if brew is in PATH properly
-        if [[ "$(which brew)" == "/opt/homebrew/bin/brew" ]] || [[ "$(which brew)" == "/usr/local/bin/brew" ]]; then
-            echo -e "${GREEN}✅ Homebrew is properly configured in PATH${NC}"
-        else
-            echo -e "${YELLOW}⚠️  Homebrew found at unusual location: $(which brew)${NC}"
-        fi
-
-        # Update Homebrew to latest version
-        echo
-        echo "Updating Homebrew to latest version..."
-        brew update || {
-            echo -e "${YELLOW}⚠️  Homebrew update failed, but continuing...${NC}"
-            echo "   You may want to run 'brew doctor' later to check for issues"
-        }
-
-    else
-        echo -e "${YELLOW}⚠️  Homebrew is not installed${NC}"
-        echo
-        echo "Homebrew must be installed before continuing."
-        echo
-
-        # In auto-setup mode, proceed with installation automatically
-        if [[ -n "$AUTO_SETUP" ]]; then
-            echo "Automatic mode: Installing Homebrew..."
-            echo
-            INSTALL_BREW=true
-        else
-            echo "Would you like to install Homebrew now? (Recommended)"
-            echo
-            read -p "Install Homebrew? (y/n) " -n 1 -r
-            echo
-            INSTALL_BREW=false
-            [[ $REPLY =~ ^[Yy]$ ]] && INSTALL_BREW=true
-        fi
-
-        if $INSTALL_BREW; then
-            echo
-            echo "========================================================================"
-            echo "INSTALLING HOMEBREW"
-            echo "========================================================================"
-            echo
-            echo "The Homebrew installation script will:"
-            echo "  1. Download and install Homebrew"
-            echo "  2. Install Command Line Tools for Xcode (if needed)"
-            echo "  3. Configure your shell environment"
-            echo
-            echo "This may take 5-10 minutes and will require your password."
-            echo
-
-            # In auto-setup mode, skip the second confirmation
-            if [[ -z "$AUTO_SETUP" ]]; then
-                read -p "Continue with Homebrew installation? (y/n) " -n 1 -r
-                echo
-
-                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                    echo
-                    echo -e "${RED}ERROR: Homebrew is required for project ape Account Intelligence on macOS${NC}"
-                    echo
-                    echo "To install Homebrew manually, run:"
-                    echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-                    echo
-                    echo "Then run this setup script again."
-                    exit 1
-                fi
-            fi
-
-            echo
-            echo "Installing Homebrew..."
-            echo
-
-            # Run official Homebrew installation script
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-            if [ $? -ne 0 ]; then
-                echo
-                echo -e "${RED}ERROR: Homebrew installation failed${NC}"
-                echo
-                echo "Please install Homebrew manually:"
-                echo "  1. Visit: https://brew.sh"
-                echo "  2. Follow the installation instructions"
-                echo "  3. Run this setup script again"
-                exit 1
-            fi
-
-            echo
-            echo -e "${GREEN}✅ Homebrew installed successfully${NC}"
-            echo
-
-            # Detect architecture for proper brew path
-            ARCH=$(uname -m)
-            if [[ "$ARCH" == "arm64" ]]; then
-                # Apple Silicon (M1/M2/M3/M4)
-                BREW_PREFIX="/opt/homebrew"
-                BREW_BIN="${BREW_PREFIX}/bin/brew"
-            else
-                # Intel Mac
-                BREW_PREFIX="/usr/local"
-                BREW_BIN="${BREW_PREFIX}/bin/brew"
-            fi
-
-            # Add Homebrew to PATH for this session
-            if [ -f "$BREW_BIN" ]; then
-                echo "Configuring Homebrew in current session..."
-                eval "$($BREW_BIN shellenv)"
-
-                # Verify brew is now available
-                if command -v brew &> /dev/null; then
-                    echo -e "${GREEN}✅ Homebrew is now available in PATH${NC}"
-                    echo "   Location: $(which brew)"
-                else
-                    echo -e "${RED}ERROR: Homebrew installed but not in PATH${NC}"
-                    echo
-                    echo "Please add Homebrew to your PATH manually:"
-                    if [[ "$ARCH" == "arm64" ]]; then
-                        echo '  echo '\''eval "$(/opt/homebrew/bin/brew shellenv)"'\'' >> ~/.zprofile'
-                        echo '  eval "$(/opt/homebrew/bin/brew shellenv)"'
-                    else
-                        echo '  echo '\''eval "$(/usr/local/bin/brew shellenv)"'\'' >> ~/.zprofile'
-                        echo '  eval "$(/usr/local/bin/brew shellenv)"'
-                    fi
-                    exit 1
-                fi
-
-                # Configure shell profile for future sessions
-                echo
-                echo "Configuring shell profile for future sessions..."
-
-                # Determine which shell profile to use
-                if [[ -f "$HOME/.zprofile" ]] || [[ "$SHELL" == *"zsh"* ]]; then
-                    PROFILE_FILE="$HOME/.zprofile"
-                    SHELL_NAME="zsh"
-                elif [[ -f "$HOME/.bash_profile" ]]; then
-                    PROFILE_FILE="$HOME/.bash_profile"
-                    SHELL_NAME="bash"
-                else
-                    PROFILE_FILE="$HOME/.profile"
-                    SHELL_NAME="sh"
-                fi
-
-                # Add brew shellenv to profile if not already present
-                BREW_SHELLENV_CMD="eval \"\$($BREW_BIN shellenv)\""
-                if ! grep -q "brew shellenv" "$PROFILE_FILE" 2>/dev/null; then
-                    echo
-                    echo "Adding Homebrew to $PROFILE_FILE..."
-                    echo "" >> "$PROFILE_FILE"
-                    echo "# Homebrew" >> "$PROFILE_FILE"
-                    echo "$BREW_SHELLENV_CMD" >> "$PROFILE_FILE"
-                    echo -e "${GREEN}✅ Homebrew added to $PROFILE_FILE${NC}"
-                else
-                    echo -e "${GREEN}✅ Homebrew already configured in $PROFILE_FILE${NC}"
-                fi
-
-                echo
-                echo -e "${BLUE}NOTE:${NC} For Homebrew to work in new terminal sessions, either:"
-                echo "  1. Close and reopen your terminal, OR"
-                echo "  2. Run: source $PROFILE_FILE"
-                echo
-
-            else
-                echo -e "${RED}ERROR: Homebrew binary not found at expected location${NC}"
-                echo "   Expected: $BREW_BIN"
-                echo
-                echo "Please check your Homebrew installation:"
-                echo "  brew doctor"
-                exit 1
-            fi
-
-        else
-            echo
-            echo -e "${RED}ERROR: Homebrew is required for project ape Account Intelligence on macOS${NC}"
-            echo
-            echo "To install Homebrew manually later:"
-            echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-            echo
-            echo "Then run this setup script again."
-            exit 1
-        fi
+# Check for Python 3
+if command -v python3 &> /dev/null; then
+    PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+    echo -e "${GREEN}✅ Python 3 found: ${PYTHON_VERSION}${NC}"
+else
+    echo -e "${YELLOW}⚠️  Python 3 not found${NC}"
+    if [[ "$OS" == "macOS" ]]; then
+        echo "   Download from: https://www.python.org/downloads/"
     fi
+    PREREQS_OK=false
+fi
 
-    # Verify Homebrew is working properly
-    echo
-    echo "Verifying Homebrew installation..."
-    if brew --version &> /dev/null; then
-        echo -e "${GREEN}✅ Homebrew is working correctly${NC}"
-
-        # Optional: Run brew doctor for diagnostics (non-blocking)
-        echo
-        echo "Running Homebrew diagnostics..."
-        if brew doctor &> /tmp/brew-doctor.log; then
-            echo -e "${GREEN}✅ Homebrew health check passed${NC}"
-        else
-            echo -e "${YELLOW}⚠️  Homebrew has some warnings (non-critical)${NC}"
-            echo "   See /tmp/brew-doctor.log for details"
-            echo "   You can run 'brew doctor' manually to review"
-        fi
+# macOS-specific checks
+if [[ "$OS" == "macOS" ]]; then
+    # Check for Xcode Command Line Tools (required for many operations)
+    if xcode-select -p &> /dev/null; then
+        echo -e "${GREEN}✅ Xcode Command Line Tools installed${NC}"
     else
-        echo -e "${RED}ERROR: Homebrew is not functioning properly${NC}"
-        echo
-        echo "Please run 'brew doctor' to diagnose issues"
+        echo -e "${YELLOW}⚠️  Xcode Command Line Tools not found${NC}"
+        echo "   Installing Command Line Tools..."
+        xcode-select --install
+        echo "   Please complete the installation and run this script again."
         exit 1
     fi
-
-    echo
 fi
+
+if [[ "$PREREQS_OK" == "false" ]]; then
+    echo
+    echo -e "${RED}ERROR: Missing required prerequisites${NC}"
+    echo "Please install the items listed above and run this script again."
+    exit 1
+fi
+
+echo
+echo -e "${GREEN}✅ All prerequisites met${NC}"
+echo
 
 # ==============================================================================
 # STEP 1: Install Podman
@@ -406,23 +229,26 @@ else
     GCLOUD_INSTALLED=false
     case $OS in
         macOS)
-            echo "Installing Google Cloud SDK on macOS via Homebrew..."
+            echo "Installing Google Cloud SDK on macOS..."
             echo
+            echo "Please download and install the Google Cloud SDK from:"
+            echo "  https://cloud.google.com/sdk/docs/install"
+            echo
+            echo "1. Download the macOS installer (either interactive or tar.gz)"
+            echo "2. Follow the installation instructions"
+            echo "3. Run 'gcloud init' to complete setup"
+            echo
+            read -p "Press Enter after installing gcloud..."
 
-            # Install google-cloud-sdk cask
-            brew install --cask google-cloud-sdk
-
-            GCLOUD_INSTALLED=true
-            echo -e "${GREEN}✅ Google Cloud SDK installed successfully${NC}"
-
-            # Add gcloud to PATH for current session
-            if [ -f "/opt/homebrew/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.bash.inc" ]; then
-                source "/opt/homebrew/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.bash.inc"
-            elif [ -f "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.bash.inc" ]; then
-                source "/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.bash.inc"
+            # Verify installation
+            if command -v gcloud &> /dev/null; then
+                GCLOUD_INSTALLED=true
+                echo -e "${GREEN}✅ Google Cloud SDK installed successfully${NC}"
+                gcloud --version | head -1
+            else
+                echo -e "${RED}❌ gcloud not found. Please install from https://cloud.google.com/sdk/docs/install${NC}"
+                exit 1
             fi
-
-            gcloud --version | head -1
             ;;
 
         RHEL/Fedora)
@@ -585,21 +411,24 @@ fi
 if [[ "$NEED_UPGRADE" == "true" ]]; then
     case $OS in
         macOS)
-            echo "Installing Python 3.14 via Homebrew..."
-            brew install python@3.14
+            echo -e "${YELLOW}Python 3.11+ is required${NC}"
+            echo
+            echo "Please download and install Python from:"
+            echo "  https://www.python.org/downloads/"
+            echo
+            echo "Download the macOS installer (.pkg file) and run it."
+            echo
+            read -p "Press Enter after installing Python..."
 
-            # Update PYTHON_CMD to use newly installed Homebrew Python
-            if [ -x "/opt/homebrew/bin/python3" ]; then
-                PYTHON_CMD="/opt/homebrew/bin/python3"
-            elif [ -x "/usr/local/bin/python3" ]; then
-                PYTHON_CMD="/usr/local/bin/python3"
-            else
+            # Verify installation
+            if command -v python3 &> /dev/null; then
                 PYTHON_CMD="python3"
+                echo -e "${GREEN}✅ Python installed successfully${NC}"
+                $PYTHON_CMD --version
+            else
+                echo -e "${RED}❌ Python not found. Please install from https://www.python.org/downloads/${NC}"
+                exit 1
             fi
-
-            echo -e "${GREEN}✅ Python 3.14 installed${NC}"
-            $PYTHON_CMD --version
-            echo "Using: $(which $PYTHON_CMD)"
             ;;
 
         RHEL/Fedora)
