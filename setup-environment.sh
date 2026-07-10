@@ -299,16 +299,25 @@ else
     PODMAN_INSTALLED=false
     case $OS in
         macOS)
-            echo "Installing Podman on macOS via Homebrew..."
+            echo "Installing Podman on macOS..."
             echo
+            echo "Please download and install Podman Desktop from:"
+            echo "  https://podman-desktop.io/downloads"
+            echo
+            echo "Download the macOS .dmg installer, open it, and drag Podman Desktop to Applications."
+            echo "Then run Podman Desktop to complete setup."
+            echo
+            read -p "Press Enter after installing Podman Desktop..."
 
-            # Homebrew is already verified in STEP 0
-            # Install podman
-            brew install podman
-
-            PODMAN_INSTALLED=true
-            echo -e "${GREEN}✅ Podman installed successfully${NC}"
-            podman --version
+            # Verify installation
+            if command -v podman &> /dev/null; then
+                PODMAN_INSTALLED=true
+                echo -e "${GREEN}✅ Podman installed successfully${NC}"
+                podman --version
+            else
+                echo -e "${RED}❌ Podman not found. Please install from https://podman-desktop.io/downloads${NC}"
+                exit 1
+            fi
             ;;
 
         RHEL/Fedora)

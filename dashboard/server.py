@@ -2317,16 +2317,28 @@ def setup_check_podman():
 
 @app.route('/api/setup/install-podman', methods=['POST'])
 def setup_install_podman():
-    """Install Podman."""
+    """Install Podman - provides installation instructions."""
     try:
-        import subprocess
         import platform
 
         system = platform.system()
 
         if system == 'Darwin':  # macOS
-            result = subprocess.run(['brew', 'install', 'podman'], capture_output=True, text=True, timeout=300)
+            return jsonify({
+                'success': False,
+                'manual_install_required': True,
+                'instructions': 'Please download and install Podman Desktop from https://podman-desktop.io/downloads'
+            }), 400
+        elif system == 'Windows':
+            return jsonify({
+                'success': False,
+                'manual_install_required': True,
+                'instructions': 'Please download and install Podman Desktop from https://podman-desktop.io/downloads'
+            }), 400
         elif system == 'Linux':
+            # Linux can auto-install via package manager
+            import subprocess
+
             # Detect distro
             if Path('/etc/redhat-release').exists():
                 result = subprocess.run(['sudo', 'dnf', 'install', '-y', 'podman'],
@@ -2337,25 +2349,21 @@ def setup_install_podman():
                                       capture_output=True, text=True, timeout=300)
             else:
                 return jsonify({'success': False, 'error': 'Unsupported Linux distribution'}), 400
+
+            if result.returncode == 0 or 'already installed' in result.stdout.lower():
+                # Verify installation
+                version_result = subprocess.run(['podman', '--version'], capture_output=True, text=True)
+                version = version_result.stdout.strip()
+
+                return jsonify({
+                    'success': True,
+                    'version': version
+                })
+            else:
+                return jsonify({'success': False, 'error': result.stderr}), 400
         else:
             return jsonify({'success': False, 'error': 'Unsupported operating system'}), 400
 
-        if result.returncode == 0 or 'already installed' in result.stdout.lower():
-            # Verify installation
-            version_result = subprocess.run(['podman', '--version'], capture_output=True, text=True)
-            version = version_result.stdout.strip()
-
-            # Initialize Podman machine on macOS
-            if system == 'Darwin':
-                subprocess.run(['podman', 'machine', 'init'], capture_output=True, timeout=60)
-                subprocess.run(['podman', 'machine', 'start'], capture_output=True, timeout=120)
-
-            return jsonify({
-                'success': True,
-                'version': version
-            })
-        else:
-            return jsonify({'success': False, 'error': result.stderr}), 400
     except subprocess.TimeoutExpired:
         return jsonify({'success': False, 'error': 'Installation timed out'}), 408
     except Exception as e:

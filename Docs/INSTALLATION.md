@@ -94,16 +94,22 @@ brew install --cask google-chrome
 
 ### Step 4: Install Podman (Optional, for Containers)
 
-```bash
-# Install Podman
-brew install podman
+**Download Podman Desktop:**
 
-# Initialize Podman machine
+1. Visit https://podman-desktop.io/downloads
+2. Download the macOS .dmg installer
+3. Open the .dmg and drag Podman Desktop to Applications
+4. Launch Podman Desktop to complete setup
+
+**Verify installation:**
+
+```bash
+# Verify Podman is installed
+podman --version
+
+# Initialize Podman machine (if not done by Podman Desktop)
 podman machine init
 podman machine start
-
-# Verify installation
-podman --version
 ```
 
 ### Step 5: Clone Repository
@@ -339,8 +345,15 @@ Container installation provides the easiest deployment path across all platforms
 
 **macOS:**
 
+1. Download Podman Desktop from https://podman-desktop.io/downloads
+2. Open the .dmg installer and drag to Applications
+3. Launch Podman Desktop to complete setup
+
 ```bash
-brew install podman
+# Verify installation
+podman --version
+
+# Initialize machine (if needed)
 podman machine init
 podman machine start
 ```
@@ -357,7 +370,10 @@ sudo dnf install -y podman
 
 **Windows:**
 
-Download and install Podman Desktop from: https://podman-desktop.io/
+1. Download Podman Desktop from https://podman-desktop.io/downloads
+2. Run the installer (.exe)
+3. Follow the installation wizard
+4. Launch Podman Desktop to complete setup
 
 ### Step 2: Pull Account Intelligence Image
 
@@ -672,13 +688,12 @@ python3 setup-oauth-drive-improved.py
 
 **Solution**:
 
-```bash
-# macOS
-brew install podman
-podman machine init
-podman machine start
+**macOS/Windows:**
+1. Download Podman Desktop from https://podman-desktop.io/downloads
+2. Install and launch Podman Desktop
 
-# Linux
+**Linux:**
+```bash
 sudo apt-get install podman  # Ubuntu/Debian
 sudo dnf install podman      # RHEL/Fedora
 ```
