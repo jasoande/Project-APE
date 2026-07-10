@@ -47,6 +47,11 @@ STATUS_DIR = getattr(config, 'STATUS_DIR', SCRIPT_DIR / ".multi_process_status")
 LOGS_DIR = getattr(config, 'LOGS_DIR', SCRIPT_DIR / "logs")
 DASHBOARD_PORT = config.DASHBOARD_PORT
 
+# SSL configuration
+SSL_ENABLED = getattr(config, 'SSL_ENABLED', False)
+DASHBOARD_PROTOCOL = "https" if SSL_ENABLED else "http"
+DASHBOARD_URL = f"{DASHBOARD_PROTOCOL}://localhost:{DASHBOARD_PORT}"
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -142,10 +147,19 @@ class ProcessManager:
         max_retries = 20  # Max ~10 seconds total (0.5 + 20*0.3 + backoff)
 
         import urllib.request
+        import ssl
+
+        # For HTTPS with self-signed certs, disable verification
+        ssl_context = ssl._create_unverified_context() if SSL_ENABLED else None
+
         for attempt in range(max_retries):
             try:
                 # Use lightweight /ping endpoint for fast startup validation
-                urllib.request.urlopen(f"http://localhost:{DASHBOARD_PORT}/ping", timeout=0.5)
+                urllib.request.urlopen(
+                    f"{DASHBOARD_URL}/ping",
+                    timeout=0.5,
+                    context=ssl_context
+                )
                 dashboard_running = True
                 logger.info(f"   Dashboard responded after {0.5 + attempt * 0.3:.1f}s")
                 break
@@ -168,13 +182,12 @@ class ProcessManager:
                 pass
             raise RuntimeError(f"Dashboard failed to start - check {dashboard_log}")
 
-        dashboard_url = f"http://localhost:{DASHBOARD_PORT}"
-        logger.info(f"   URL: {dashboard_url}")
+        logger.info(f"   URL: {DASHBOARD_URL}")
         logger.info("   ✅ Dashboard server running")
 
         # Open in browser
         try:
-            webbrowser.open(dashboard_url)
+            webbrowser.open(DASHBOARD_URL)
             logger.info("   ✅ Dashboard opened in browser")
         except:
             logger.warning("   Could not open browser automatically")
@@ -489,7 +502,7 @@ def main():
             logger.warning(f"   ⚠️  Notification failed: {e}")
 
         if not args.no_dashboard:
-            logger.info(f"\n📊 Dashboard: http://localhost:{DASHBOARD_PORT}")
+            logger.info(f"\n📊 Dashboard: {DASHBOARD_URL}")
             logger.info("   Dashboard will remain running for 5 minutes after completion")
             logger.info("   Press Ctrl+C to stop immediately")
 
@@ -516,12 +529,14 @@ def main():
         if not args.no_dashboard:
             try:
                 import urllib.request
+                import ssl
                 logger.info("   Requesting dashboard shutdown via API...")
                 req = urllib.request.Request(
-                    f"http://localhost:{DASHBOARD_PORT}/api/shutdown",
+                    f"{DASHBOARD_URL}/api/shutdown",
                     method='POST'
                 )
-                urllib.request.urlopen(req, timeout=2)
+                ssl_context = ssl._create_unverified_context() if SSL_ENABLED else None
+                urllib.request.urlopen(req, timeout=2, context=ssl_context)
             except Exception as e:
                 # Ignore errors - dashboard might already be down
                 logger.debug(f"   Dashboard API call failed (expected): {e}")
