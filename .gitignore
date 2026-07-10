@@ -74,6 +74,7 @@ credentials/*.json
 token_drive.json
 *.pem
 *.key
+certs/
 .env
 .env.local
 
