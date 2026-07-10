@@ -9,13 +9,44 @@ This guide shows how to enable HTTPS for local development of the Account Intell
 
 ## Quick Setup (5 minutes)
 
-### Step 1: Create Certificate Directory
+### Automated Setup (Recommended)
+
+**Cross-platform Python script (works on Windows, macOS, Linux):**
+```bash
+python3 setup-ssl-local.py
+```
+
+**Or bash script (Linux/macOS only):**
+```bash
+./setup-ssl-local.sh
+```
+
+Both scripts automatically:
+- Create `certs/` directory
+- Generate 4096-bit RSA self-signed certificate
+- Set proper file permissions
+- Verify certificate details
+- Check vars.py configuration
+- Provide next steps
+
+**Which script to use:**
+| Platform | Recommended | Alternative |
+|----------|-------------|-------------|
+| **Windows** | `python3 setup-ssl-local.py` | Manual setup below |
+| **macOS** | `./setup-ssl-local.sh` | `python3 setup-ssl-local.py` |
+| **Linux** | `./setup-ssl-local.sh` | `python3 setup-ssl-local.py` |
+
+### Manual Setup (Alternative)
+
+If you prefer manual setup or the scripts aren't working:
+
+**Step 1: Create Certificate Directory**
 
 ```bash
 mkdir -p certs
 ```
 
-### Step 2: Generate Self-Signed Certificate
+**Step 2: Generate Self-Signed Certificate**
 
 ```bash
 openssl req -x509 -newkey rsa:4096 -nodes \

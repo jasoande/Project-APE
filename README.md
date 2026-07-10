@@ -54,6 +54,7 @@ Account Intelligence transforms enterprise account planning by automating resear
 - **Anti-thundering-herd protection** to prevent API quota exhaustion
 
 ### 🔒 Enterprise Security
+- **SSL/HTTPS support** — Optional TLS encryption for dashboard access
 - **CSRF protection** on all POST endpoints
 - **Path traversal prevention** with regex validation
 - **No embedded secrets** — OAuth2 flow for all credentials
@@ -108,6 +109,29 @@ The web UI walks you through:
 **4. Launch your first workflow**
 
 Click **"Launch Workflow"** and watch real-time progress in the dashboard.
+
+### Optional: Enable HTTPS/SSL
+
+For secure local development with HTTPS:
+
+```bash
+# Cross-platform (recommended for Windows)
+python3 setup-ssl-local.py
+
+# Linux/macOS alternative
+./setup-ssl-local.sh
+```
+
+Then edit `vars.py`:
+```python
+SSL_ENABLED = True
+SSL_CERT_PATH = "certs/cert.pem"
+SSL_KEY_PATH = "certs/key.pem"
+```
+
+Restart the dashboard and access via `https://localhost:8765`
+
+📚 **See:** [Docs/SSL_SETUP_LOCAL.md](Docs/SSL_SETUP_LOCAL.md) for detailed SSL setup guide
 
 ---
 
