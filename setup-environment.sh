@@ -210,11 +210,23 @@ if [[ "$OS" == "macOS" ]] && [[ "$PODMAN_INSTALLED" == "true" ]]; then
                 # Stop machine if running
                 echo "   Stopping machine '$MACHINE_NAME'..."
                 podman machine stop "$MACHINE_NAME" 2>/dev/null || true
+                sleep 2  # Give it time to fully stop
 
                 # Delete the machine completely
                 echo "   Deleting machine '$MACHINE_NAME'..."
-                podman machine rm -f "$MACHINE_NAME"
-                echo -e "   ${GREEN}✅ Deleted old machine '$MACHINE_NAME'${NC}"
+                if podman machine rm -f "$MACHINE_NAME"; then
+                    echo -e "   ${GREEN}✅ Deleted machine '$MACHINE_NAME'${NC}"
+
+                    # Verify deletion
+                    if podman machine list --format "{{.Name}}" 2>/dev/null | grep -q "^${MACHINE_NAME}$"; then
+                        echo -e "   ${RED}❌ ERROR: Machine '$MACHINE_NAME' still exists after deletion!${NC}"
+                        exit 1
+                    fi
+                else
+                    echo -e "   ${RED}❌ ERROR: Failed to delete machine '$MACHINE_NAME'${NC}"
+                    echo "   Please delete manually: podman machine rm -f $MACHINE_NAME"
+                    exit 1
+                fi
             fi
         done <<< "$MACHINE_LIST"
 
