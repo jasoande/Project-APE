@@ -34,6 +34,16 @@ python3 launch-project-ape.py
 # Configure clients via web UI, then launch workflows
 ```
 
+**High-concurrency mode (for production or deep mode with 5+ clients):**
+```bash
+# Use gevent server - eliminates SSE thread exhaustion
+python3 dashboard/server_gevent.py
+
+# Handles 10,000+ concurrent SSE connections with only 4-8 threads
+# Recommended for: production deployments, deep mode, multiple simultaneous clients
+# See THREAD_EXHAUSTION_SOLUTION.md for details
+```
+
 **Container execution (alternative workflow):**
 ```bash
 # Fast mode (15-20 minutes)

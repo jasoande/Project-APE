@@ -241,6 +241,8 @@ class DriveManager:
             token_file.parent.mkdir(parents=True, exist_ok=True)
             with open(token_file, 'w') as f:
                 f.write(creds.to_json())
+            # Secure file permissions (owner read/write only)
+            os.chmod(token_file, 0o600)
 
         return creds
 
@@ -600,6 +602,8 @@ class DriveManager:
         token_file.parent.mkdir(parents=True, exist_ok=True)
         with open(token_file, 'w') as f:
             f.write(creds.to_json())
+        # Secure file permissions (owner read/write only)
+        os.chmod(token_file, 0o600)
 
         print(f"\n✅ Credentials saved to: {token_file}")
         return True
