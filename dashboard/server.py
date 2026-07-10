@@ -2736,15 +2736,39 @@ def setup_install_notebooklm():
 
 
 def run_server(port=8765, debug=False):
-    """Run the Flask server."""
+    """Run the Flask server with optional SSL/HTTPS support."""
     import signal
     import sys
     import threading
+    import importlib.util
+
+    # Load SSL configuration from vars.py if available
+    ssl_enabled = False
+    ssl_cert = ''
+    ssl_key = ''
+    try:
+        vars_path = Path(__file__).parent.parent / "vars.py"
+        if vars_path.exists():
+            spec = importlib.util.spec_from_file_location("vars", vars_path)
+            vars_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(vars_module)
+
+            ssl_enabled = getattr(vars_module, 'SSL_ENABLED', False)
+            ssl_cert = getattr(vars_module, 'SSL_CERT_PATH', '')
+            ssl_key = getattr(vars_module, 'SSL_KEY_PATH', '')
+    except Exception:
+        pass
+
+    protocol = "http"
+    if ssl_enabled and ssl_cert and ssl_key:
+        protocol = "https"
 
     print(f"\n📊 Dashboard server starting...")
-    print(f"   URL: http://localhost:{port}")
+    print(f"   URL: {protocol}://localhost:{port}")
     print(f"   Refresh: Every 2 seconds")
     print(f"   Logs: Real-time streaming")
+    if ssl_enabled:
+        print(f"   SSL: {'Enabled' if ssl_cert and ssl_key else 'Disabled (cert/key not found)'}")
     print(f"   STATUS_DIR: {STATUS_DIR}")
     print(f"   LOGS_DIR: {LOGS_DIR}")
     print(f"   Initial threads: {threading.active_count()}")

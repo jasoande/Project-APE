@@ -197,6 +197,15 @@ DASHBOARD_PORT = 8765
 DASHBOARD_REFRESH_INTERVAL = 2  # seconds
 
 # ==============================================================================
+# SSL/HTTPS CONFIGURATION (Optional)
+# ==============================================================================
+# Enable HTTPS for secure dashboard access
+
+SSL_ENABLED = False  # Set to True to enable HTTPS
+SSL_CERT_PATH = ""   # Path to SSL certificate file (e.g., "certs/cert.pem")
+SSL_KEY_PATH = ""    # Path to SSL private key file (e.g., "certs/key.pem")
+
+# ==============================================================================
 # EXECUTION TIMING PROFILES
 # ==============================================================================
 

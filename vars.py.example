@@ -19,6 +19,16 @@ LOGS_DIR = Path(__file__).parent / "logs"
 DASHBOARD_PORT = 8765
 
 # ============================================================================
+# SSL/HTTPS CONFIGURATION (Optional)
+# ============================================================================
+# Enable HTTPS for secure dashboard access
+# Leave empty or comment out to use HTTP (default)
+
+SSL_ENABLED = False  # Set to True to enable HTTPS
+SSL_CERT_PATH = ""   # Path to SSL certificate file (e.g., "certs/cert.pem")
+SSL_KEY_PATH = ""    # Path to SSL private key file (e.g., "certs/key.pem")
+
+# ============================================================================
 # CLIENT CONFIGURATION
 # ============================================================================
 # List your client IDs (lowercase, underscores, used for folder/file names)

@@ -31,6 +31,27 @@ def run_server():
     import os
     from gevent.pywsgi import WSGIServer
 
+    # Load SSL configuration from vars.py if available
+    try:
+        import importlib.util
+        vars_path = PROJECT_ROOT / "vars.py"
+        if vars_path.exists():
+            spec = importlib.util.spec_from_file_location("vars", vars_path)
+            vars_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(vars_module)
+
+            ssl_enabled = getattr(vars_module, 'SSL_ENABLED', False)
+            ssl_cert_path = getattr(vars_module, 'SSL_CERT_PATH', '')
+            ssl_key_path = getattr(vars_module, 'SSL_KEY_PATH', '')
+        else:
+            ssl_enabled = False
+            ssl_cert_path = ''
+            ssl_key_path = ''
+    except Exception:
+        ssl_enabled = False
+        ssl_cert_path = ''
+        ssl_key_path = ''
+
     # Create directories
     STATUS_DIR.mkdir(parents=True, exist_ok=True)
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -39,18 +60,40 @@ def run_server():
     port = int(os.environ.get('DASHBOARD_PORT', 8765))
     host = os.environ.get('DASHBOARD_HOST', '127.0.0.1')
 
+    # Check SSL configuration
+    ssl_kwargs = {}
+    protocol = "http"
+    if ssl_enabled and ssl_cert_path and ssl_key_path:
+        cert_file = PROJECT_ROOT / ssl_cert_path
+        key_file = PROJECT_ROOT / ssl_key_path
+
+        if cert_file.exists() and key_file.exists():
+            ssl_kwargs = {
+                'keyfile': str(key_file),
+                'certfile': str(cert_file)
+            }
+            protocol = "https"
+            print(f"🔒 SSL/HTTPS enabled")
+        else:
+            print(f"⚠️  SSL enabled but certificate files not found:")
+            if not cert_file.exists():
+                print(f"   Certificate: {cert_file} (not found)")
+            if not key_file.exists():
+                print(f"   Key: {key_file} (not found)")
+            print(f"   Falling back to HTTP")
+
     print(f"")
-    print(f"🚀 Dashboard (Gevent mode) starting on http://{host}:{port}")
+    print(f"🚀 Dashboard (Gevent mode) starting on {protocol}://{host}:{port}")
     print(f"   Using gevent WSGI server (greenlet-based)")
     print(f"   Supports 10,000+ concurrent SSE connections")
     print(f"   Thread exhaustion: ELIMINATED ✅")
     print(f"")
-    print(f"📊 Dashboard URL: http://{host}:{port}")
-    print(f"⚙️  Configure:     http://{host}:{port}/configure")
+    print(f"📊 Dashboard URL: {protocol}://{host}:{port}")
+    print(f"⚙️  Configure:     {protocol}://{host}:{port}/configure")
     print(f"")
 
-    # Create WSGI server
-    http_server = WSGIServer((host, port), app)
+    # Create WSGI server with optional SSL
+    http_server = WSGIServer((host, port), app, **ssl_kwargs)
 
     try:
         http_server.serve_forever()
