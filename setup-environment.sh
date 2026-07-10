@@ -829,6 +829,8 @@ echo "Installing web dashboard and core dependencies..."
     flask>=3.0.0 \
     werkzeug>=3.0.0 \
     waitress>=3.0.0 \
+    gevent>=24.0.0 \
+    greenlet>=3.0.0 \
     python-dotenv>=1.0.0 \
     pypdf>=4.0.0 \
     Pillow>=10.0.0 \

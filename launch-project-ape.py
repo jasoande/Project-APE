@@ -213,10 +213,6 @@ def start_server():
     # Check SSL configuration and determine which server to use
     protocol, server_script = check_ssl_config()
 
-    # Update global CONFIG_URL with correct protocol
-    global CONFIG_URL
-    CONFIG_URL = f"{protocol}://localhost:{DASHBOARD_PORT}/configure"
-
     # Verify server script exists
     if not server_script.exists():
         print(f"❌ Error: Dashboard server not found at {server_script}")
@@ -316,15 +312,22 @@ def open_browser():
 
 def main():
     """Main launcher logic"""
+    global CONFIG_URL
+
     print("=" * 70)
     print("PROJECT APE - Account Planning Engine")
     print("=" * 70)
     print(f"Platform: {platform.system()} {platform.release()}")
+
+    # Determine protocol and set CONFIG_URL early
+    protocol, _ = check_ssl_config()
+    CONFIG_URL = f"{protocol}://localhost:{DASHBOARD_PORT}/configure"
+
     print(f"Dashboard: {CONFIG_URL}")
     print()
 
     # Check if server is already running
-    if is_server_running():
+    if is_server_running(CONFIG_URL):
         print("✅ Dashboard server is already running")
         open_browser()
         print()
@@ -333,6 +336,7 @@ def main():
 
     # Server not running, start it
     print("🚀 Server not detected, starting new instance...")
+    print()
 
     if not start_server():
         print("\n❌ Failed to start dashboard server")
