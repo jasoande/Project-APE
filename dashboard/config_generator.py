@@ -541,6 +541,7 @@ default_mode = "{default_mode}"
 # ==============================================================================
 
 DASHBOARD_PORT = {dashboard_port}
+DASHBOARD_HOST = "127.0.0.1"  # Use "0.0.0.0" to allow external connections
 DASHBOARD_REFRESH_INTERVAL = {dashboard_refresh}  # seconds
 
 # ==============================================================================

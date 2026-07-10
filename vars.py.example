@@ -17,6 +17,7 @@ from pathlib import Path
 STATUS_DIR = Path(__file__).parent / ".multi_process_status"
 LOGS_DIR = Path(__file__).parent / "logs"
 DASHBOARD_PORT = 8765
+DASHBOARD_HOST = "127.0.0.1"  # Use "0.0.0.0" to allow external connections
 
 # ============================================================================
 # SSL/HTTPS CONFIGURATION (Optional)

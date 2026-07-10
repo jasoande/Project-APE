@@ -31,7 +31,7 @@ def run_server():
     import os
     from gevent.pywsgi import WSGIServer
 
-    # Load SSL configuration from vars.py if available
+    # Load SSL and host configuration from vars.py if available
     try:
         import importlib.util
         vars_path = PROJECT_ROOT / "vars.py"
@@ -43,22 +43,25 @@ def run_server():
             ssl_enabled = getattr(vars_module, 'SSL_ENABLED', False)
             ssl_cert_path = getattr(vars_module, 'SSL_CERT_PATH', '')
             ssl_key_path = getattr(vars_module, 'SSL_KEY_PATH', '')
+            dashboard_host = getattr(vars_module, 'DASHBOARD_HOST', '127.0.0.1')
         else:
             ssl_enabled = False
             ssl_cert_path = ''
             ssl_key_path = ''
+            dashboard_host = '127.0.0.1'
     except Exception:
         ssl_enabled = False
         ssl_cert_path = ''
         ssl_key_path = ''
+        dashboard_host = '127.0.0.1'
 
     # Create directories
     STATUS_DIR.mkdir(parents=True, exist_ok=True)
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Get port
+    # Get port and host (environment variables override vars.py)
     port = int(os.environ.get('DASHBOARD_PORT', 8765))
-    host = os.environ.get('DASHBOARD_HOST', '127.0.0.1')
+    host = os.environ.get('DASHBOARD_HOST', dashboard_host)
 
     # Check SSL configuration
     ssl_kwargs = {}
