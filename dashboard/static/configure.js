@@ -1793,6 +1793,9 @@ async function startUpdateNotebookSources() {
     progressPanel.style.display = 'block';
     progressContent.textContent = '';
 
+    // Scroll to progress panel so user can see it
+    progressPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
     // Disable update button during operation
     const updateBtn = document.getElementById('updateNotebookSourcesBtn');
     const originalBtnText = updateBtn.textContent;
@@ -1805,6 +1808,11 @@ async function startUpdateNotebookSources() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clients: selectedClients })
         });
+
+        // Check if response is OK
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
 
         // Stream progress updates
         const reader = response.body.getReader();

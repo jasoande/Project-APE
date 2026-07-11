@@ -1600,6 +1600,246 @@ def refresh_sources():
     return Response(generate_refresh_progress(), mimetype='text/event-stream')
 
 
+@app.route('/api/update-notebook-sources', methods=['POST'])
+@csrf.exempt if csrf else lambda f: f  # SSE streaming endpoint, CSRF handled by parent page
+def update_notebook_sources():
+    """
+    Update sources in existing NotebookLM notebooks.
+
+    Downloads fresh PDFs from Drive, consolidates them, and replaces sources
+    in existing notebooks (does NOT re-run ask/chat prompts).
+
+    Request JSON:
+    {
+        "clients": ["merck", "blue_yonder"] // Optional: specific clients, or omit for all
+    }
+
+    Returns Server-Sent Events stream with progress updates.
+    """
+    import importlib.util
+    from pathlib import Path
+    import time
+
+    # Get request data BEFORE generator starts (while in request context)
+    request_data = request.get_json() or {}
+    selected_clients_input = request_data.get('clients', [])
+
+    def generate_update_progress():
+        """Generator that streams update progress via SSE."""
+        try:
+            # Load vars.py configuration
+            vars_path = PROJECT_ROOT / "vars.py"
+            if not vars_path.exists():
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Configuration file (vars.py) not found'})}\n\n"
+                return
+
+            spec = importlib.util.spec_from_file_location("config", vars_path)
+            config = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(config)
+
+            # Use clients from outer scope (captured when request context was active)
+            selected_clients = selected_clients_input
+
+            # If no clients specified, update all configured clients
+            all_clients = getattr(config, 'clients', [])
+            if not selected_clients:
+                selected_clients = all_clients
+
+            # Validate selected clients exist in config
+            invalid_clients = [c for c in selected_clients if c not in all_clients]
+            if invalid_clients:
+                yield f"data: {json.dumps({'type': 'error', 'message': f'Invalid clients: {', '.join(invalid_clients)}'})}\n\n"
+                return
+
+            total_clients = len(selected_clients)
+            if total_clients == 0:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'No clients configured to update'})}\n\n"
+                return
+
+            yield f"data: {json.dumps({'type': 'info', 'message': f'Starting notebook source update for {total_clients} client(s)...'})}\n\n"
+
+            # Import required modules
+            from core.drive_manager import DriveManager
+            from core.pdf_consolidator_fast import FastPDFConsolidator
+            from core.notebook_manager import NotebookManager
+            from core.source_manager import SourceManager
+
+            drive_config = getattr(config, 'DRIVE_CONFIG', {})
+
+            # Track results
+            total_updated = 0
+            errors = []
+
+            # Update each client
+            for idx, client_id in enumerate(selected_clients, 1):
+                try:
+                    client_name = getattr(config, f"{client_id}_name", client_id)
+                    folder_url = getattr(config, f"{client_id}_folder", None)
+
+                    if not folder_url:
+                        error_msg = f"No folder configured for {client_name}"
+                        errors.append(error_msg)
+                        yield f"data: {json.dumps({'type': 'warning', 'message': f'⚠️  {error_msg}'})}\n\n"
+                        continue
+
+                    yield f"data: {json.dumps({'type': 'progress', 'current': idx, 'total': total_clients, 'client': client_name})}\n\n"
+                    yield f"data: {json.dumps({'type': 'info', 'message': f'📝 Updating {client_name} ({idx}/{total_clients})...'})}\n\n"
+
+                    # Step 1: Find existing notebook
+                    yield f"data: {json.dumps({'type': 'info', 'message': f'  🔍 Looking for existing notebook...'})}\n\n"
+                    notebook_mgr = NotebookManager(client_id=client_id)
+                    notebook_id = notebook_mgr.find_notebook_by_name(client_name)
+
+                    if not notebook_id:
+                        error_msg = f"No notebook found for {client_name} (run a workflow first)"
+                        errors.append(error_msg)
+                        yield f"data: {json.dumps({'type': 'warning', 'message': f'⚠️  {error_msg}'})}\n\n"
+                        continue
+
+                    yield f"data: {json.dumps({'type': 'success', 'message': f'  ✅ Found notebook: {notebook_id}'})}\n\n"
+
+                    # Step 2: Download fresh PDFs from Drive (or use local folder)
+                    yield f"data: {json.dumps({'type': 'info', 'message': f'  📥 Downloading fresh PDFs...'})}\n\n"
+
+                    # Check if this is a Drive folder or local folder
+                    is_drive = 'drive.google.com' in folder_url or folder_url.startswith('drive://')
+
+                    if is_drive:
+                        # Download from Drive with force refresh
+                        with DriveManager(
+                            client_id=client_id,
+                            folder_spec=folder_url,
+                            cache_enabled=True,
+                            force_refresh=True,
+                            config=drive_config
+                        ) as client_folder:
+                            file_count = len([f for f in Path(client_folder).iterdir() if f.is_file() and f.name != 'metadata.json'])
+                            yield f"data: {json.dumps({'type': 'success', 'message': f'  ✅ Downloaded {file_count} files from Drive'})}\n\n"
+
+                            # Step 3: Consolidate PDFs with timestamped filename matching pipeline convention
+                            yield f"data: {json.dumps({'type': 'info', 'message': f'  📄 Consolidating PDFs...'})}\n\n"
+                            from datetime import datetime
+                            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+                            consolidated_filename = f"{client_name}-Consolidated-{timestamp}.pdf"
+
+                            consolidator = FastPDFConsolidator(
+                                client_id=client_id,
+                                client_folder=Path(client_folder),
+                                output_name=consolidated_filename
+                            )
+                            consolidated_pdf = consolidator.consolidate()
+                    else:
+                        # Use local folder
+                        client_folder = Path(folder_url)
+                        if not client_folder.exists():
+                            error_msg = f"Local folder not found: {folder_url}"
+                            errors.append(error_msg)
+                            yield f"data: {json.dumps({'type': 'error', 'message': f'❌ {error_msg}'})}\n\n"
+                            continue
+
+                        file_count = len([f for f in client_folder.glob('*.pdf')])
+                        yield f"data: {json.dumps({'type': 'success', 'message': f'  ✅ Found {file_count} files in local folder'})}\n\n"
+
+                        # Step 3: Consolidate PDFs with timestamped filename matching pipeline convention
+                        yield f"data: {json.dumps({'type': 'info', 'message': f'  📄 Consolidating PDFs...'})}\n\n"
+                        from datetime import datetime
+                        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+                        consolidated_filename = f"{client_name}-Consolidated-{timestamp}.pdf"
+
+                        consolidator = FastPDFConsolidator(
+                            client_id=client_id,
+                            client_folder=client_folder,
+                            output_name=consolidated_filename
+                        )
+                        consolidated_pdf = consolidator.consolidate()
+
+                    if not consolidated_pdf or not consolidated_pdf.exists():
+                        error_msg = f"Failed to consolidate PDFs for {client_name}"
+                        errors.append(error_msg)
+                        yield f"data: {json.dumps({'type': 'error', 'message': f'❌ {error_msg}'})}\n\n"
+                        continue
+
+                    yield f"data: {json.dumps({'type': 'success', 'message': f'  ✅ Created consolidated PDF: {consolidated_pdf.name}'})}\n\n"
+
+                    # Step 4: Remove old consolidated PDF sources from notebook
+                    yield f"data: {json.dumps({'type': 'info', 'message': f'  🗑️  Removing old sources...'})}\n\n"
+                    source_mgr = SourceManager(notebook_id=notebook_id, client_id=client_id)
+
+                    # Get all sources
+                    sources = source_mgr.list_sources()
+                    # Search for ANY consolidated PDF (handles renamed notebooks)
+                    # Look for: "{anything}-Consolidated-{timestamp}.pdf" OR "{client_id}-One.pdf"
+                    old_sources = [
+                        s for s in sources
+                        if s.get('title', '').endswith('.pdf') and (
+                            '-Consolidated-' in s.get('title', '') or
+                            s.get('title', '') == f"{client_id}-One.pdf"
+                        )
+                    ]
+
+                    removed_count = 0
+                    for old_source in old_sources:
+                        source_id = old_source.get('id', '')
+                        if source_mgr._delete_source(source_id):
+                            removed_count += 1
+                            old_title = old_source.get('title', 'Unknown')
+                            yield f"data: {json.dumps({'type': 'info', 'message': f'    🗑️  Removed: {old_title}'})}\n\n"
+                            time.sleep(1)  # Rate limiting
+
+                    if removed_count > 0:
+                        yield f"data: {json.dumps({'type': 'success', 'message': f'  ✅ Removed {removed_count} old source(s)'})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'type': 'info', 'message': f'  ℹ️  No old sources to remove'})}\n\n"
+
+                    # Step 5: Add new consolidated PDF to notebook
+                    yield f"data: {json.dumps({'type': 'info', 'message': f'  📤 Uploading new consolidated PDF...'})}\n\n"
+
+                    if source_mgr.add_file_source(consolidated_pdf):
+                        yield f"data: {json.dumps({'type': 'success', 'message': f'  ✅ Added new source: {consolidated_pdf.name}'})}\n\n"
+
+                        # Wait for processing
+                        yield f"data: {json.dumps({'type': 'info', 'message': f'  ⏳ Waiting for source processing (30s)...'})}\n\n"
+                        time.sleep(30)
+
+                        yield f"data: {json.dumps({'type': 'success', 'message': f'✅ {client_name}: Notebook sources updated successfully!'})}\n\n"
+                        total_updated += 1
+                    else:
+                        error_msg = f"Failed to add new source for {client_name}"
+                        errors.append(error_msg)
+                        yield f"data: {json.dumps({'type': 'error', 'message': f'❌ {error_msg}'})}\n\n"
+
+                except Exception as e:
+                    error_msg = f"{client_name}: {str(e)}"
+                    errors.append(error_msg)
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'❌ {error_msg}'})}\n\n"
+                    import traceback
+                    print(f"[UPDATE-NOTEBOOK-SOURCES] Error updating {client_id}: {traceback.format_exc()}", file=sys.stderr)
+
+            # Send completion summary
+            summary = {
+                'type': 'complete',
+                'success': len(errors) == 0,
+                'total_clients': total_clients,
+                'successful': total_updated,
+                'failed': len(errors),
+                'errors': errors
+            }
+
+            yield f"data: {json.dumps(summary)}\n\n"
+
+            if len(errors) == 0:
+                yield f"data: {json.dumps({'type': 'success', 'message': f'✅ Update complete! {total_updated} notebook(s) updated successfully'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'warning', 'message': f'⚠️  Update completed with {len(errors)} error(s)'})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Update failed: {str(e)}'})}\n\n"
+            import traceback
+            print(f"[UPDATE-NOTEBOOK-SOURCES] Fatal error: {traceback.format_exc()}", file=sys.stderr)
+
+    return Response(generate_update_progress(), mimetype='text/event-stream')
+
+
 @app.route('/api/cache-stats', methods=['GET'])
 def cache_stats():
     """

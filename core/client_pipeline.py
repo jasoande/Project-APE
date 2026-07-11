@@ -282,11 +282,10 @@ class ClientPipeline:
             # Step 2: Get or Create Notebook (with deduplication)
             self.update_status("Checking for existing notebook...", 10)
 
-            # Generate notebook name in format: DEV_{client_id}-TEST
-            # Always use client_id to ensure readable, consistent names
-            notebook_name = f"DEV_{self.client_id}-TEST"
+            # Use client_name from configuration (no auto-injection of DEV/TEST prefixes)
+            notebook_name = self.client_name
 
-            logger.info(f"[{self.client_id}] Generated notebook name: {notebook_name}")
+            logger.info(f"[{self.client_id}] Using notebook name: {notebook_name}")
 
             # Check if notebook exists
             existing_notebook = self.notebook_manager.find_notebook_by_name(notebook_name)
@@ -506,7 +505,7 @@ class ClientPipeline:
 
     def _create_notebook_step(self) -> Tuple[bool, str]:
         """Create or get notebook - returns (success, notebook_id)."""
-        notebook_name = f"DEV_{self.client_id}-TEST"
+        notebook_name = self.client_name
         existing_notebook = self.notebook_manager.find_notebook_by_name(notebook_name)
 
         # Track if this is a new notebook
@@ -1186,7 +1185,7 @@ class ClientPipeline:
 
             # Step 3: Find Existing Notebook
             self.update_status("Finding existing notebook...", 15)
-            notebook_name = f"DEV_{self.client_id}-TEST"
+            notebook_name = self.client_name
 
             existing_notebook = self.notebook_manager.find_notebook_by_name(notebook_name)
             if not existing_notebook:

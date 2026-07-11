@@ -325,6 +325,7 @@
             margin: 16px 0;
             overflow-x: auto;
             padding: 4px 0;
+            scroll-behavior: smooth;
         }
         .pipeline-stage {
             flex: 1;
@@ -956,13 +957,13 @@
                             }
 
                             return `
-                            <div class="card">
+                            <div class="card" data-client-id="${client.id}">
                                 <div class="card-header">
                                     <div class="client-name">${client.name}</div>
                                     <div class="status-pill pill-${client.status}">${client.status}</div>
                                 </div>
 
-                                <div class="pipeline">
+                                <div class="pipeline" data-current-stage="${currentStage}">
                                     ${getPipelineStages(client.step, client.progress)}
                                 </div>
 
@@ -1005,6 +1006,32 @@
                     const now = new Date();
                     document.getElementById('lastUpdate').textContent =
                         'Last updated: ' + now.toLocaleTimeString();
+
+                    // Auto-scroll pipeline to active phase (after DOM update)
+                    setTimeout(() => {
+                        document.querySelectorAll('.pipeline').forEach(pipeline => {
+                            const activeStage = pipeline.querySelector('.stage-running, .stage-failed');
+                            if (activeStage) {
+                                // Scroll the active stage into view (centered if possible)
+                                activeStage.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'nearest',
+                                    inline: 'center'
+                                });
+                            } else {
+                                // If complete, scroll to the last stage
+                                const completeStages = pipeline.querySelectorAll('.stage-complete');
+                                if (completeStages.length > 0) {
+                                    const lastStage = completeStages[completeStages.length - 1];
+                                    lastStage.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'nearest',
+                                        inline: 'center'
+                                    });
+                                }
+                            }
+                        });
+                    }, 100);  // Small delay to ensure DOM is updated
                 })
                 .catch(err => {
                     console.error('Failed to fetch status:', err);
