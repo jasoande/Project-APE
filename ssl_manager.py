@@ -164,7 +164,8 @@ def generate_certificate(certs_dir: Path,
     except Exception as e:
         return False, f"Failed to create certs directory: {e}"
 
-    # Generate certificate using OpenSSL
+    # Generate certificate using OpenSSL with Subject Alternative Names (SANs)
+    # Modern browsers require SANs for localhost certificates
     cmd = [
         "openssl", "req",
         "-x509",
@@ -173,7 +174,8 @@ def generate_certificate(certs_dir: Path,
         "-keyout", str(key_file),
         "-out", str(cert_file),
         "-days", str(validity_days),
-        "-subj", "/C=US/ST=State/L=City/O=Development/OU=Local/CN=localhost"
+        "-subj", "/C=US/ST=State/L=City/O=Development/OU=Local/CN=localhost",
+        "-addext", "subjectAltName=DNS:localhost,DNS:*.localhost,IP:127.0.0.1"
     ]
 
     try:
