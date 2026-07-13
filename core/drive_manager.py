@@ -122,7 +122,7 @@ class DriveManager:
         # OAuth is the only supported authentication method
         self.export_google_docs = self.config.get('export_google_docs', True)
         self.recursive = self.config.get('recursive', False)
-        self.max_file_size_mb = self.config.get('max_file_size_mb', 50)
+        self.max_file_size_mb = self.config.get('max_file_size_mb', 2048)  # 2GB limit for NotebookLM
         self.cache_ttl_hours = self.config.get('cache_ttl_hours', 24)
 
     def __enter__(self) -> Path:

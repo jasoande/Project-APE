@@ -251,7 +251,7 @@ DRIVE_CONFIG = {{
     'cache_ttl_hours': 24,
     'export_google_docs': True,
     'recursive': False,
-    'max_file_size_mb': 50,
+    'max_file_size_mb': 2048,  # 2GB limit for NotebookLM
 }}
 
 # ==============================================================================
@@ -261,7 +261,7 @@ DRIVE_CONFIG = {{
 PDF_CONSOLIDATION = {{
     'enabled': True,
     'output_suffix': '-One.pdf',
-    'max_file_size_mb': 500,
+    'max_file_size_mb': 2048,  # 2GB limit for NotebookLM
 }}
 
 # ==============================================================================
@@ -428,13 +428,13 @@ def generate_vars_py_full(clients_data: List[Dict], settings: Dict) -> str:
         'cache_ttl_hours': 24,
         'export_google_docs': True,
         'recursive': False,
-        'max_file_size_mb': 50,
+        'max_file_size_mb': 2048,  # 2GB limit for NotebookLM
     })
 
     pdf_consolidation = settings.get('PDF_CONSOLIDATION', {
         'enabled': True,
         'output_suffix': '-One.pdf',
-        'max_file_size_mb': 500,
+        'max_file_size_mb': 2048,  # 2GB limit for NotebookLM
     })
 
     gemini_config = settings.get('GEMINI_AGENT_CONFIG', {
