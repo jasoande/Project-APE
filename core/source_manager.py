@@ -29,6 +29,9 @@ class SourceManager:
         """
         self.client_id = client_id
         self.notebook_id = notebook_id
+        self._cached_sources = None
+        self._cache_time = 0.0
+        self._CACHE_TTL = 10.0
 
     def add_file_source(self, file_path: Path) -> bool:
         """
@@ -52,6 +55,7 @@ class SourceManager:
 
             if result.returncode == 0:
                 logger.info(f"[{self.client_id}] ✅ Added source: {file_path.name}")
+                self._invalidate_source_cache()
                 return True
             else:
                 logger.error(f"[{self.client_id}] Failed to add source: {result.stderr}")
@@ -83,6 +87,7 @@ class SourceManager:
 
             if result.returncode == 0:
                 logger.info(f"[{self.client_id}] ✅ Deleted source: {source_id}")
+                self._invalidate_source_cache()
                 return True
             else:
                 logger.error(f"[{self.client_id}] Failed to delete source: {result.stderr}")
@@ -209,6 +214,8 @@ class SourceManager:
         # Retry configuration - Deep mode uses 3 attempts for critical failures, fast mode uses 5
         max_attempts = 3 if mode == "deep" else 5
         base_delay = 30.0  # Start with 30s delay
+
+        self._invalidate_source_cache()
 
         try:
             logger.info(f"[{self.client_id}] Running research: {query_file.name} ({mode} mode, {max_attempts} attempt{'s' if max_attempts > 1 else ''})")
@@ -426,13 +433,25 @@ class SourceManager:
 
         return metadata
 
+    def _invalidate_source_cache(self):
+        """Invalidate the cached source list after mutations."""
+        self._cached_sources = None
+        self._cache_time = 0.0
+
     def list_sources(self) -> List[Dict]:
         """
         List all sources in the notebook.
 
+        Returns cached results if within TTL to avoid redundant subprocess calls.
+
         Returns:
             List of source dicts with id, title, url
         """
+        now = time.time()
+        if self._cached_sources is not None and (now - self._cache_time) < self._CACHE_TTL:
+            return self._cached_sources
+
+        sources = []
         try:
             result = subprocess.run(
                 ["notebooklm", "source", "list", "-n", self.notebook_id, "--json"],
@@ -443,24 +462,24 @@ class SourceManager:
 
             if result.returncode != 0:
                 logger.error(f"[{self.client_id}] Failed to list sources")
-                return []
+                return sources
 
             try:
                 data = json.loads(result.stdout)
-                # Handle both dict format {"sources": [...]} and list format [...]
                 if isinstance(data, dict):
-                    return data.get('sources', [])
+                    sources = data.get('sources', [])
                 elif isinstance(data, list):
-                    return data
-                else:
-                    return []
+                    sources = data
             except json.JSONDecodeError:
-                # Fallback to text parsing
-                return self._parse_text_sources(result.stdout)
+                sources = self._parse_text_sources(result.stdout)
 
         except Exception as e:
             logger.error(f"[{self.client_id}] Error listing sources: {e}")
-            return []
+            return sources
+
+        self._cached_sources = sources
+        self._cache_time = time.time()
+        return sources
 
     def _parse_text_sources(self, output: str) -> List[Dict]:
         """Parse text-based source list as fallback."""
@@ -629,7 +648,10 @@ class SourceManager:
                 timeout=30
             )
 
-            return result.returncode == 0
+            if result.returncode == 0:
+                self._invalidate_source_cache()
+                return True
+            return False
 
         except Exception as e:
             logger.error(f"[{self.client_id}] Error deleting source {source_id}: {e}")

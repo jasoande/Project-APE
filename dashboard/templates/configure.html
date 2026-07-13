@@ -1189,6 +1189,184 @@
                 </div>
             </div>
 
+            <!-- Google Drive OAuth Setup Section (moved from tab) -->
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                    <div>
+                        <h4 style="font-size: 1rem; font-weight: 600; color: #e6edf3; margin-bottom: 8px;">
+                            🔑 Google Drive OAuth Setup
+                        </h4>
+                        <p class="form-help" style="margin: 0;">
+                            Configure OAuth credentials to access Google Drive files
+                        </p>
+                    </div>
+                    <div id="driveOAuthStatusBadge" style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 6px; background: rgba(139,148,158,0.1); border: 1px solid #8b949e;">
+                        <span style="font-size: 1.2rem;">🔑</span>
+                        <span style="font-weight: 600; color: #c0c8d0;">Check Status Below</span>
+                    </div>
+                </div>
+
+                <div class="wizard-container" style="margin: 0;">
+                    <div class="wizard-progress">
+                        <div class="step active" data-step="1">1</div>
+                        <div class="step" data-step="2">2</div>
+                        <div class="step" data-step="3">3</div>
+                        <div class="step" data-step="4">4</div>
+                        <div class="step" data-step="5">5</div>
+                    </div>
+
+                    <div class="wizard-step active" data-step="1">
+                        <h3>Step 1: Check Prerequisites</h3>
+                        <div id="oauth-status-check">
+                            <div class="status-item">
+                                <span class="status-label">OAuth Credentials:</span>
+                                <span id="creds-status-badge" class="status-badge">Checking...</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Authentication Token:</span>
+                                <span id="token-status-badge" class="status-badge">Checking...</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Drive Access:</span>
+                                <span id="access-status-badge" class="status-badge">Checking...</span>
+                            </div>
+                        </div>
+                        <div class="wizard-actions">
+                            <button class="btn btn-primary" onclick="nextWizardStep()">Next →</button>
+                        </div>
+                    </div>
+
+                    <div class="wizard-step" data-step="2">
+                        <h3>Step 2: Create OAuth Credentials</h3>
+                        <div class="instructions">
+                            <p>Follow these steps to create OAuth credentials in Google Cloud Console:</p>
+                            <ol>
+                                <li>
+                                    <input type="checkbox" id="check-gcp-project">
+                                    <label for="check-gcp-project">
+                                        Create or select a GCP project
+                                        <a href="https://console.cloud.google.com/projectcreate" target="_blank">Open GCP Console →</a>
+                                    </label>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="check-enable-api">
+                                    <label for="check-enable-api">
+                                        Enable Google Drive API
+                                        <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank">Enable API →</a>
+                                    </label>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="check-oauth-consent">
+                                    <label for="check-oauth-consent">
+                                        Configure OAuth consent screen (External, test users)
+                                        <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank">Configure →</a>
+                                    </label>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="check-create-creds">
+                                    <label for="check-create-creds">
+                                        Create OAuth Client ID (Application type: Desktop app)
+                                        <a href="https://console.cloud.google.com/apis/credentials/oauthclient" target="_blank">Create →</a>
+                                    </label>
+                                </li>
+                                <li>
+                                    <input type="checkbox" id="check-download">
+                                    <label for="check-download">
+                                        Download the JSON file (client_secret_*.json)
+                                    </label>
+                                </li>
+                            </ol>
+                        </div>
+                        <div class="wizard-actions">
+                            <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
+                            <button class="btn btn-primary" onclick="nextWizardStep()">Next →</button>
+                        </div>
+                    </div>
+
+                    <div class="wizard-step" data-step="3">
+                        <h3>Step 3: Upload Credentials</h3>
+                        <div class="upload-zone" id="oauth-upload-zone">
+                            <div class="upload-placeholder">
+                                <div class="upload-icon">📁</div>
+                                <div class="upload-text">
+                                    Drag and drop client_secret_*.json here
+                                    <br>or click to browse
+                                </div>
+                                <input type="file" id="oauth-file-input" accept=".json" hidden>
+                            </div>
+                            <div class="upload-success" style="display: none;">
+                                <div class="success-icon">✅</div>
+                                <div class="success-text">
+                                    Credentials uploaded successfully!
+                                    <br>
+                                    <span id="uploaded-filename"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="oauth-upload-progress" class="upload-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="oauth-progress-fill"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span class="progress-percent" id="oauth-progress-percent">0%</span>
+                                <span> - </span>
+                                <span class="progress-status" id="oauth-progress-status">Uploading...</span>
+                            </div>
+                        </div>
+                        <div class="wizard-actions">
+                            <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
+                            <button class="btn btn-primary" id="upload-next-btn" disabled onclick="nextWizardStep()">Next →</button>
+                        </div>
+                    </div>
+
+                    <div class="wizard-step" data-step="4">
+                        <h3>Step 4: Authenticate with Google</h3>
+                        <div class="auth-container">
+                            <p>Click the button below to open a browser window and grant project ape access to your Google Drive.</p>
+                            <div class="auth-status" id="auth-flow-status">
+                                <div class="status-message">Ready to authenticate</div>
+                            </div>
+                            <button class="btn btn-primary btn-large" id="start-oauth-btn" onclick="startOAuthFlow()">
+                                🔐 Authenticate with Google Drive
+                            </button>
+                        </div>
+                        <div class="wizard-actions">
+                            <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
+                            <button class="btn btn-primary" id="auth-next-btn" disabled onclick="nextWizardStep()">Next →</button>
+                        </div>
+                    </div>
+
+                    <div class="wizard-step" data-step="5">
+                        <h3>Step 5: Verify Drive Access</h3>
+                        <div class="verify-container">
+                            <div id="verify-status">
+                                <div class="status-checking">
+                                    <div class="spinner"></div>
+                                    <div>Testing Drive API access...</div>
+                                </div>
+                            </div>
+                            <div id="verify-results" style="display: none;">
+                                <div class="result-item">
+                                    <span class="label">Authenticated:</span>
+                                    <span id="auth-email" class="value">Yes</span>
+                                </div>
+                                <div class="result-item">
+                                    <span class="label">Accessible files:</span>
+                                    <span id="file-count" class="value"></span>
+                                </div>
+                                <div id="sample-files"></div>
+                            </div>
+                        </div>
+                        <div class="wizard-actions">
+                            <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
+                            <button class="btn btn-success" id="complete-btn" onclick="completeOAuthSetup()">
+                                ✅ Complete Setup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Google Drive Sources Section -->
             <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
@@ -1399,7 +1577,6 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab active" data-tab="clients">👥 Clients</button>
-            <button class="tab" data-tab="oauth-setup">🔑 Google Drive Setup</button>
             <button class="tab" data-tab="settings">⚙️ Global Settings</button>
             <button class="tab" data-tab="import">📥 Import/Export</button>
             <button class="tab" data-tab="preview">👁️ Preview</button>
@@ -1438,177 +1615,6 @@
                         📥 Download vars.py
                     </button>
                 </div>
-            </div>
-        </div>
-
-        <!-- OAuth Setup Tab -->
-        <div id="oauth-setup-panel" class="tab-panel">
-            <div class="wizard-container">
-
-                <!-- Progress Indicator -->
-                <div class="wizard-progress">
-                    <div class="step active" data-step="1">1</div>
-                    <div class="step" data-step="2">2</div>
-                    <div class="step" data-step="3">3</div>
-                    <div class="step" data-step="4">4</div>
-                    <div class="step" data-step="5">5</div>
-                </div>
-
-                <!-- Step 1: Check Prerequisites -->
-                <div class="wizard-step active" data-step="1">
-                    <h3>Step 1: Check Prerequisites</h3>
-                    <div id="oauth-status-check">
-                        <div class="status-item">
-                            <span class="status-label">OAuth Credentials:</span>
-                            <span id="creds-status-badge" class="status-badge">Checking...</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Authentication Token:</span>
-                            <span id="token-status-badge" class="status-badge">Checking...</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Drive Access:</span>
-                            <span id="access-status-badge" class="status-badge">Checking...</span>
-                        </div>
-                    </div>
-                    <div class="wizard-actions">
-                        <button class="btn btn-primary" onclick="nextWizardStep()">Next →</button>
-                    </div>
-                </div>
-
-                <!-- Step 2: Create Credentials -->
-                <div class="wizard-step" data-step="2">
-                    <h3>Step 2: Create OAuth Credentials</h3>
-                    <div class="instructions">
-                        <p>Follow these steps to create OAuth credentials in Google Cloud Console:</p>
-                        <ol>
-                            <li>
-                                <input type="checkbox" id="check-gcp-project">
-                                <label for="check-gcp-project">
-                                    Create or select a GCP project
-                                    <a href="https://console.cloud.google.com/projectcreate" target="_blank">Open GCP Console →</a>
-                                </label>
-                            </li>
-                            <li>
-                                <input type="checkbox" id="check-enable-api">
-                                <label for="check-enable-api">
-                                    Enable Google Drive API
-                                    <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank">Enable API →</a>
-                                </label>
-                            </li>
-                            <li>
-                                <input type="checkbox" id="check-oauth-consent">
-                                <label for="check-oauth-consent">
-                                    Configure OAuth consent screen (External, test users)
-                                    <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank">Configure →</a>
-                                </label>
-                            </li>
-                            <li>
-                                <input type="checkbox" id="check-create-creds">
-                                <label for="check-create-creds">
-                                    Create OAuth Client ID (Application type: Desktop app)
-                                    <a href="https://console.cloud.google.com/apis/credentials/oauthclient" target="_blank">Create →</a>
-                                </label>
-                            </li>
-                            <li>
-                                <input type="checkbox" id="check-download">
-                                <label for="check-download">
-                                    Download the JSON file (client_secret_*.json)
-                                </label>
-                            </li>
-                        </ol>
-                    </div>
-                    <div class="wizard-actions">
-                        <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
-                        <button class="btn btn-primary" onclick="nextWizardStep()">Next →</button>
-                    </div>
-                </div>
-
-                <!-- Step 3: Upload Credentials -->
-                <div class="wizard-step" data-step="3">
-                    <h3>Step 3: Upload Credentials</h3>
-                    <div class="upload-zone" id="oauth-upload-zone">
-                        <div class="upload-placeholder">
-                            <div class="upload-icon">📁</div>
-                            <div class="upload-text">
-                                Drag and drop client_secret_*.json here
-                                <br>or click to browse
-                            </div>
-                            <input type="file" id="oauth-file-input" accept=".json" hidden>
-                        </div>
-                        <div class="upload-success" style="display: none;">
-                            <div class="success-icon">✅</div>
-                            <div class="success-text">
-                                Credentials uploaded successfully!
-                                <br>
-                                <span id="uploaded-filename"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="oauth-upload-progress" class="upload-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="oauth-progress-fill"></div>
-                        </div>
-                        <div class="progress-text">
-                            <span class="progress-percent" id="oauth-progress-percent">0%</span>
-                            <span> - </span>
-                            <span class="progress-status" id="oauth-progress-status">Uploading...</span>
-                        </div>
-                    </div>
-                    <div class="wizard-actions">
-                        <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
-                        <button class="btn btn-primary" id="upload-next-btn" disabled onclick="nextWizardStep()">Next →</button>
-                    </div>
-                </div>
-
-                <!-- Step 4: Authenticate -->
-                <div class="wizard-step" data-step="4">
-                    <h3>Step 4: Authenticate with Google</h3>
-                    <div class="auth-container">
-                        <p>Click the button below to open a browser window and grant project ape access to your Google Drive.</p>
-                        <div class="auth-status" id="auth-flow-status">
-                            <div class="status-message">Ready to authenticate</div>
-                        </div>
-                        <button class="btn btn-primary btn-large" id="start-oauth-btn" onclick="startOAuthFlow()">
-                            🔐 Authenticate with Google Drive
-                        </button>
-                    </div>
-                    <div class="wizard-actions">
-                        <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
-                        <button class="btn btn-primary" id="auth-next-btn" disabled onclick="nextWizardStep()">Next →</button>
-                    </div>
-                </div>
-
-                <!-- Step 5: Verify -->
-                <div class="wizard-step" data-step="5">
-                    <h3>Step 5: Verify Drive Access</h3>
-                    <div class="verify-container">
-                        <div id="verify-status">
-                            <div class="status-checking">
-                                <div class="spinner"></div>
-                                <div>Testing Drive API access...</div>
-                            </div>
-                        </div>
-                        <div id="verify-results" style="display: none;">
-                            <div class="result-item">
-                                <span class="label">Authenticated:</span>
-                                <span id="auth-email" class="value">Yes</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="label">Accessible files:</span>
-                                <span id="file-count" class="value"></span>
-                            </div>
-                            <div id="sample-files"></div>
-                        </div>
-                    </div>
-                    <div class="wizard-actions">
-                        <button class="btn btn-secondary" onclick="prevWizardStep()">← Back</button>
-                        <button class="btn btn-success" id="complete-btn" onclick="completeOAuthSetup()">
-                            ✅ Complete Setup
-                        </button>
-                    </div>
-                </div>
-
             </div>
         </div>
 

@@ -140,7 +140,7 @@ class ClientPipeline:
                     with open(self.status_file, 'r') as f:
                         existing_data = json.load(f)
                         existing_start_time = existing_data.get('start_time')
-                except:
+                except (OSError, json.JSONDecodeError):
                     pass  # If file doesn't exist or is corrupted, proceed without start_time
 
             # Remove start_time from kwargs if it's None (don't let it override)

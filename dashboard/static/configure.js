@@ -542,13 +542,30 @@ async function saveAndLaunch() {
             return;
         }
 
-        // Step 2: Redirect to launch page
-        showMessage('success', '✅ Configuration saved! Launching workflow...');
+        // Step 2: Start workflow directly via API (no page navigation)
+        const workflowPayload = {
+            mode: globalSettings.mode || 'fast',
+            clients: clientsData.map(c => c.id),
+            flags: ['--skip-preflight']
+        };
 
-        // Give user a moment to see the success message
-        setTimeout(() => {
-            window.location.href = '/launch';
-        }, 1000);
+        const workflowResponse = await fetch('/api/start-workflow', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(workflowPayload)
+        });
+
+        const workflowData = await workflowResponse.json();
+
+        if (workflowData.success) {
+            showMessage('success', '✅ Configuration saved! Workflow started successfully. Redirecting to dashboard...');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        } else {
+            showMessage('error', 'Configuration saved but workflow failed to start: ' + (workflowData.error || 'Unknown error'));
+            setLoading(false);
+        }
 
     } catch (error) {
         showMessage('error', `Failed to save and launch: ${error.message}`);

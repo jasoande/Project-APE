@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Account Intelligence - Log Viewer</title>
+    <style>
+        :root {
+            --bg-primary: #0f1419;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #0d1117;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-red: #ee0000;
+            --border-primary: #30363d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Red Hat Text", "Roboto", Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--accent-red);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header-left img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border: 2px solid var(--accent-red);
+            border-radius: 6px;
+        }
+        .header-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .header-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .nav-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover {
+            border-color: var(--accent-red);
+            background: rgba(238,0,0,0.1);
+        }
+        .controls {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 12px 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+        .log-select {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            min-width: 280px;
+            cursor: pointer;
+        }
+        .log-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .log-btn:hover {
+            border-color: var(--accent-red);
+            background: rgba(238,0,0,0.1);
+        }
+        .log-btn.active {
+            border-color: #f0883e;
+            background: rgba(240,136,62,0.1);
+        }
+        .status-indicator {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3fb950;
+            animation: pulse 2s infinite;
+        }
+        .status-dot.paused {
+            background: #f0883e;
+            animation: none;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .log-viewer {
+            flex: 1;
+            background: var(--bg-tertiary);
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            border-left: 3px solid rgba(0,208,132,0.5);
+            transition: border-color 0.3s;
+        }
+        .log-viewer.paused {
+            border-left-color: rgba(255,185,0,0.5);
+        }
+        .log-content {
+            padding: 16px 24px;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .log-viewer::-webkit-scrollbar { width: 10px; }
+        .log-viewer::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        .log-viewer::-webkit-scrollbar-thumb { background: rgba(238,0,0,0.4); border-radius: 5px; }
+        .log-viewer::-webkit-scrollbar-thumb:hover { background: rgba(238,0,0,0.6); }
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-primary);
+            padding: 8px 24px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-align: center;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="{{ url_for('static', filename='kingkong.png') }}" alt="Logo">
+            <span class="header-title">Real-Time Log Viewer</span>
+        </div>
+        <div class="header-right">
+            <a href="/" class="nav-btn">← Back to Dashboard</a>
+            <a href="/configure" class="nav-btn">Configure</a>
+        </div>
+    </div>
+
+    <div class="controls">
+        <select class="log-select" id="logSelector">
+            <option value="overall">Loading log sources...</option>
+        </select>
+        <button type="button" class="log-btn" id="pauseBtn">Pause</button>
+        <button type="button" class="log-btn" id="clearBtn">Clear</button>
+        <button type="button" class="log-btn" id="downloadBtn">Download</button>
+        <div class="status-indicator">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Streaming</span>
+        </div>
+    </div>
+
+    <div class="log-viewer" id="logViewer">
+        <div class="log-content" id="logContent">Connecting to log stream...</div>
+    </div>
+
+    <div class="footer">
+        Log updates stream in real-time via SSE. Green border = auto-scrolling. Orange border = paused.
+    </div>
+
+    <script>
+        let eventSource = null;
+        let paused = false;
+        let autoScroll = true;
+
+        function loadLogSources() {
+            fetch('/api/available-logs')
+                .then(r => r.json())
+                .then(data => {
+                    const sel = document.getElementById('logSelector');
+                    if (data.success && data.logs) {
+                        sel.innerHTML = data.logs.map(log =>
+                            '<option value="' + log.token + '">' + log.label + '</option>'
+                        ).join('');
+                        if (data.logs.length > 0) startStream();
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('logContent').textContent = '[ERROR] Failed to load log sources: ' + err.message;
+                });
+        }
+
+        function startStream() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+
+            const token = document.getElementById('logSelector').value;
+            const url = '/logs/' + encodeURIComponent(token);
+
+            eventSource = new EventSource(url);
+
+            eventSource.onmessage = function(e) {
+                if (paused) return;
+
+                const logContent = document.getElementById('logContent');
+                const logViewer = document.getElementById('logViewer');
+                const line = document.createElement('div');
+
+                const text = e.data;
+                if (text.includes('ERROR') || text.includes('FAILED') || text.includes('Traceback')) {
+                    line.style.color = '#ff6b6b';
+                    line.style.fontWeight = '600';
+                } else if (text.includes('WARNING') || text.includes('⚠️')) {
+                    line.style.color = '#f0883e';
+                } else if (text.includes('SUCCESS') || text.includes('COMPLETE') || text.includes('✅') || text.includes('✓')) {
+                    line.style.color = '#3fb950';
+                    line.style.fontWeight = '600';
+                }
+
+                line.textContent = text;
+                logContent.appendChild(line);
+
+                if (autoScroll) {
+                    logViewer.scrollTop = logViewer.scrollHeight;
+                }
+            };
+
+            eventSource.onerror = function() {
+                const logContent = document.getElementById('logContent');
+                const line = document.createElement('div');
+                line.style.color = '#8b949e';
+                line.style.fontStyle = 'italic';
+                line.textContent = '[Stream disconnected - will retry automatically]';
+                logContent.appendChild(line);
+            };
+        }
+
+        document.getElementById('logSelector').addEventListener('change', function() {
+            document.getElementById('logContent').innerHTML = '';
+            startStream();
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', function() {
+            paused = !paused;
+            autoScroll = !paused;
+            const btn = this;
+            const viewer = document.getElementById('logViewer');
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+
+            if (paused) {
+                btn.textContent = 'Resume';
+                btn.classList.add('active');
+                viewer.classList.add('paused');
+                dot.classList.add('paused');
+                statusText.textContent = 'Paused';
+            } else {
+                btn.textContent = 'Pause';
+                btn.classList.remove('active');
+                viewer.classList.remove('paused');
+                dot.classList.remove('paused');
+                statusText.textContent = 'Streaming';
+                viewer.scrollTop = viewer.scrollHeight;
+            }
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            document.getElementById('logContent').innerHTML = '';
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const content = document.getElementById('logContent').textContent;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const ts = new Date().toISOString().replace(/[:.]/g, '-');
+            a.href = url;
+            a.download = 'project-ape-logs-' + ts + '.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('logViewer').addEventListener('scroll', function() {
+            const viewer = this;
+            const atBottom = viewer.scrollHeight - viewer.scrollTop - viewer.clientHeight < 50;
+            if (!paused) {
+                autoScroll = atBottom;
+            }
+        });
+
+        loadLogSources();
+    </script>
+</body>
+</html>

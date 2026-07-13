@@ -105,23 +105,16 @@ app = Flask(__name__,
             template_folder=str(SCRIPT_DIR / 'templates'),
             static_folder=str(SCRIPT_DIR / 'static'))
 
-# --- Security: CSRF Protection ---
-try:
-    from flask_wtf.csrf import CSRFProtect, generate_csrf
-    app.config['SECRET_KEY'] = os.urandom(32).hex()
-    app.config['WTF_CSRF_TIME_LIMIT'] = None
-    csrf = CSRFProtect(app)
-    print("✅ CSRF protection enabled", file=sys.stderr)
-except ImportError:
-    print("⚠️  flask-wtf not installed, CSRF protection disabled", file=sys.stderr)
-    csrf = None
-    generate_csrf = None
+# --- Security: CSRF Protection (mandatory) ---
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+app.config['SECRET_KEY'] = os.urandom(32).hex()
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+csrf = CSRFProtect(app)
+print("✅ CSRF protection enabled", file=sys.stderr)
 
 @app.context_processor
 def inject_csrf_token():
-    if generate_csrf:
-        return {'csrf_token': generate_csrf}
-    return {'csrf_token': lambda: ''}
+    return {'csrf_token': generate_csrf}
 
 # --- Security: Path Traversal Protection ---
 _SAFE_TOKEN_RE = re.compile(r'^[a-zA-Z0-9_-]+$')
@@ -396,6 +389,12 @@ def status():
             'run_id': None,
             'clients': []
         }), 500
+
+
+@app.route('/logs-viewer')
+def logs_viewer():
+    """Full-page log viewer with SSE streaming."""
+    return render_template('logs.html')
 
 
 @app.route('/logs/<client_token>')
@@ -688,7 +687,6 @@ def generate_config():
 
 
 @app.route('/api/validate-drive-url', methods=['POST'])
-@csrf.exempt if csrf else lambda f: f  # Read-only validation, no state modification
 def validate_drive_url():
     """Validate Drive URL format using regex (no API call)."""
     try:
@@ -996,6 +994,25 @@ def preview_config():
         }), 500
 
 
+@app.route('/api/detect-workflow')
+def detect_workflow_api():
+    """Return workflow configuration detected from vars.py."""
+    try:
+        if not WORKFLOW_DETECTOR_AVAILABLE:
+            return jsonify({'success': False, 'error': 'Workflow detector not available'}), 500
+
+        vars_path = PROJECT_ROOT / "vars.py"
+        if not vars_path.exists():
+            return jsonify({'success': False, 'error': 'Configuration file (vars.py) not found'}), 404
+
+        vars_module = workflow_detector.load_vars_module(vars_path)
+        workflow = workflow_detector.detect_workflow(vars_module)
+        workflow['success'] = True
+        return jsonify(workflow)
+    except Exception as e:
+        return jsonify({'success': False, 'error': _safe_error(e, "workflow detection")}), 500
+
+
 @app.route('/launch')
 def launch_page():
     """
@@ -1173,6 +1190,7 @@ def start_workflow():
 
 
 @app.route('/api/run-setup', methods=['GET', 'POST'])
+@csrf.exempt
 def run_setup():
     """
     Execute setup-environment.sh script with real-time output streaming.
@@ -1278,7 +1296,6 @@ def check_auth_status():
 
 
 @app.route('/api/notebooklm-login', methods=['POST'])
-@csrf.exempt if csrf else lambda f: f  # Login trigger doesn't modify state server-side
 def notebooklm_login():
     """
     Trigger NotebookLM login flow.
@@ -1601,7 +1618,7 @@ def refresh_sources():
 
 
 @app.route('/api/update-notebook-sources', methods=['POST'])
-@csrf.exempt if csrf else lambda f: f  # SSE streaming endpoint, CSRF handled by parent page
+@csrf.exempt
 def update_notebook_sources():
     """
     Update sources in existing NotebookLM notebooks.
@@ -2138,6 +2155,7 @@ def upload_oauth_credentials():
 
 
 @app.route('/api/start-oauth-flow', methods=['GET', 'POST'])
+@csrf.exempt
 def start_oauth_flow():
     """Trigger OAuth flow and stream progress via SSE."""
     def generate():
@@ -2541,7 +2559,7 @@ def setup_check_podman():
                                               capture_output=True, text=True, timeout=10)
                 if machine_result.returncode == 0:
                     machine_running = 'true' in machine_result.stdout.lower()
-            except:
+            except Exception:
                 pass
 
             return jsonify({
@@ -2735,7 +2753,7 @@ def setup_check_python():
                 if result.returncode == 0:
                     python_cmd = cmd
                     break
-            except:
+            except Exception:
                 continue
 
         if python_cmd:
@@ -3059,7 +3077,7 @@ def run_server(port=8765, debug=False):
         try:
             from werkzeug.serving import WSGIRequestHandler
             WSGIRequestHandler.protocol_version = "HTTP/1.1"  # Enable keep-alive
-        except:
+        except Exception:
             pass
         bind_host = os.environ.get('DASHBOARD_HOST', '127.0.0.1')
         app.run(host=bind_host, port=port, debug=debug, threaded=True, processes=1)

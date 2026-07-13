@@ -24,6 +24,7 @@ import re
 import shutil
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -145,6 +146,11 @@ class DriveManager:
         # Check cache (skip if force_refresh)
         if self.cache_enabled and not self.force_refresh and self._should_use_cache(self.folder_id):
             cache_dir = self._get_cache_dir(self.folder_id)
+            # Clean up zero-byte files left by failed downloads
+            zero_byte = [f for f in cache_dir.iterdir() if f.is_file() and f.stat().st_size == 0 and f.name != 'metadata.json']
+            for f in zero_byte:
+                f.unlink()
+                logger.info(f"[{self.client_id}]    🧹 Removed empty cached file: {f.name}")
             logger.info(f"[{self.client_id}] ✅ Using cached Drive files")
             logger.info(f"[{self.client_id}]    Cache: {cache_dir}")
             self.temp_dir = cache_dir
@@ -296,37 +302,43 @@ class DriveManager:
         files = self._list_folder_files(folder_id)
         logger.info(f"[{self.client_id}]    Found {len(files)} files in Drive folder")
 
-        downloaded = 0
+        downloadable = []
         for file_info in files:
+            file_size_mb = int(file_info.get('size', 0)) / (1024 * 1024)
+            if file_size_mb > self.max_file_size_mb:
+                logger.warning(
+                    f"[{self.client_id}]    ⚠️  Skipping {file_info['name']} "
+                    f"({file_size_mb:.1f}MB > {self.max_file_size_mb}MB limit)"
+                )
+                continue
+            downloadable.append(file_info)
+
+        def _download_one(file_info):
             file_id = file_info['id']
             file_name = file_info['name']
             mime_type = file_info['mimeType']
-
             try:
-                # Check file size
-                file_size_mb = int(file_info.get('size', 0)) / (1024 * 1024)
-                if file_size_mb > self.max_file_size_mb:
-                    logger.warning(
-                        f"[{self.client_id}]    ⚠️  Skipping {file_name} "
-                        f"({file_size_mb:.1f}MB > {self.max_file_size_mb}MB limit)"
-                    )
-                    continue
-
-                # Google Workspace file (Docs, Sheets, Slides)
                 if mime_type.startswith('application/vnd.google-apps.'):
                     if self.export_google_docs:
                         self._export_google_doc(file_id, file_name, mime_type, target_dir)
-                        downloaded += 1
+                        return True
                     else:
                         logger.info(f"[{self.client_id}]    ⏭️  Skipping Google Doc: {file_name}")
+                        return False
                 else:
-                    # Regular file
                     self._download_file(file_id, file_name, mime_type, target_dir)
-                    downloaded += 1
-
+                    return True
             except Exception as e:
                 logger.warning(f"[{self.client_id}]    ⚠️  Failed to download {file_name}: {e}")
-                continue
+                return False
+
+        downloaded = 0
+        max_workers = min(8, len(downloadable)) if downloadable else 1
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_download_one, f): f for f in downloadable}
+            for future in as_completed(futures):
+                if future.result():
+                    downloaded += 1
 
         return downloaded
 
@@ -421,11 +433,16 @@ class DriveManager:
         request = self.service.files().get_media(fileId=file_id)
         file_path = target_dir / file_name
 
-        with open(file_path, 'wb') as f:
-            downloader = MediaIoBaseDownload(f, request)
-            done = False
-            while not done:
-                status, done = downloader.next_chunk()
+        try:
+            with open(file_path, 'wb') as f:
+                downloader = MediaIoBaseDownload(f, request)
+                done = False
+                while not done:
+                    status, done = downloader.next_chunk()
+        except Exception:
+            if file_path.exists() and file_path.stat().st_size == 0:
+                file_path.unlink()
+            raise
 
     def _export_google_doc(
         self,
@@ -460,11 +477,16 @@ class DriveManager:
         request = self.service.files().export_media(fileId=file_id, mimeType=export_mime)
         file_path = target_dir / export_name
 
-        with open(file_path, 'wb') as f:
-            downloader = MediaIoBaseDownload(f, request)
-            done = False
-            while not done:
-                status, done = downloader.next_chunk()
+        try:
+            with open(file_path, 'wb') as f:
+                downloader = MediaIoBaseDownload(f, request)
+                done = False
+                while not done:
+                    status, done = downloader.next_chunk()
+        except Exception:
+            if file_path.exists() and file_path.stat().st_size == 0:
+                file_path.unlink()
+            raise
 
     # ==========================================================================
     # CACHING

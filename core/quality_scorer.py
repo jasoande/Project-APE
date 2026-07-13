@@ -239,7 +239,7 @@ class GeminiQualityScorer:
                     if domain:
                         domains.add(domain)
                     has_web = True
-                except:
+                except Exception:
                     pass
 
             # Check for PDF

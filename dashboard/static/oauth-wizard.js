@@ -12,42 +12,39 @@ let oauthFlowComplete = false;
  * Navigate to next wizard step
  */
 function nextWizardStep() {
-    if (currentWizardStep < 5) {
-        // Hide current step
-        document.querySelector(`.wizard-step[data-step="${currentWizardStep}"]`).classList.remove('active');
+    const container = document.querySelector('.wizard-container');
+    if (!container || currentWizardStep >= 5) return;
 
-        // Increment step
-        currentWizardStep++;
+    const current = container.querySelector(`.wizard-step[data-step="${currentWizardStep}"]`);
+    if (current) current.classList.remove('active');
 
-        // Show next step
-        document.querySelector(`.wizard-step[data-step="${currentWizardStep}"]`).classList.add('active');
+    currentWizardStep++;
 
-        // Update progress indicator
-        updateWizardProgress();
+    const next = container.querySelector(`.wizard-step[data-step="${currentWizardStep}"]`);
+    if (next) next.classList.add('active');
 
-        // Auto-run actions for certain steps
-        if (currentWizardStep === 1) checkOAuthStatusWizard();
-        if (currentWizardStep === 5) testDriveAccessWizard();
-    }
+    updateWizardProgress();
+
+    if (currentWizardStep === 1) checkOAuthStatusWizard();
+    if (currentWizardStep === 5) testDriveAccessWizard();
 }
 
 /**
  * Navigate to previous wizard step
  */
 function prevWizardStep() {
-    if (currentWizardStep > 1) {
-        // Hide current step
-        document.querySelector(`.wizard-step[data-step="${currentWizardStep}"]`).classList.remove('active');
+    const container = document.querySelector('.wizard-container');
+    if (!container || currentWizardStep <= 1) return;
 
-        // Decrement step
-        currentWizardStep--;
+    const current = container.querySelector(`.wizard-step[data-step="${currentWizardStep}"]`);
+    if (current) current.classList.remove('active');
 
-        // Show previous step
-        document.querySelector(`.wizard-step[data-step="${currentWizardStep}"]`).classList.add('active');
+    currentWizardStep--;
 
-        // Update progress indicator
-        updateWizardProgress();
-    }
+    const prev = container.querySelector(`.wizard-step[data-step="${currentWizardStep}"]`);
+    if (prev) prev.classList.add('active');
+
+    updateWizardProgress();
 }
 
 /**
@@ -439,12 +436,9 @@ function completeOAuthSetup() {
  * Initialize OAuth wizard when DOM is loaded
  */
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if we're on the OAuth tab
-    const oauthPanel = document.getElementById('oauth-setup-panel');
-    if (oauthPanel) {
+    const uploadZone = document.getElementById('oauth-upload-zone');
+    if (uploadZone) {
         initOAuthFileUpload();
-
-        // Check status on page load
         checkOAuthStatusWizard();
     }
 });

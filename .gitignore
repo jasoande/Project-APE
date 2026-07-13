@@ -116,6 +116,3 @@ Icon
 .worktree_*
 worktree-*/
 test-results/
-tests/
-*.test.py
-test_*.py

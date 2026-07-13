@@ -120,10 +120,10 @@ class ProcessManager:
                     try:
                         logger.info(f"   Killing stale process on port {DASHBOARD_PORT} (PID: {pid})")
                         subprocess.run(['kill', '-9', pid], timeout=2)
-                    except:
+                    except Exception:
                         pass
                 time.sleep(1)
-        except:
+        except Exception:
             pass  # lsof might not be available on all systems
 
         # Always use gevent server (supports HTTPS)
@@ -163,7 +163,7 @@ class ProcessManager:
                 dashboard_running = True
                 logger.info(f"   Dashboard responded after {0.5 + attempt * 0.3:.1f}s")
                 break
-            except:
+            except Exception:
                 if attempt < max_retries - 1:
                     time.sleep(0.3)  # Progressive polling every 300ms
                 else:
@@ -178,7 +178,7 @@ class ProcessManager:
                     error_lines = f.readlines()[-5:]
                     for line in error_lines:
                         logger.error(f"      {line.rstrip()}")
-            except:
+            except Exception:
                 pass
             raise RuntimeError(f"Dashboard failed to start - check {dashboard_log}")
 
@@ -189,9 +189,9 @@ class ProcessManager:
         try:
             webbrowser.open(DASHBOARD_URL)
             logger.info("   ✅ Dashboard opened in browser")
-        except:
+        except Exception:
             logger.warning("   Could not open browser automatically")
-            logger.info(f"   Please open: {dashboard_url}")
+            logger.info(f"   Please open: {DASHBOARD_URL}")
 
     def start_client_process(self, client_id: str, mode: str, refresh: bool = False) -> subprocess.Popen:
         """Start a single client process."""
