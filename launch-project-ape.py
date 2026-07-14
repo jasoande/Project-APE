@@ -122,7 +122,7 @@ def check_venv_functional(venv_python, debug=False):
         # Check all required imports in one test
         # Include OAuth packages since they're needed for Drive authentication
         # Include waitress since it's critical for deep mode dashboard stability
-        import_test = "import flask; import waitress; import pypdf; from PIL import Image; from google_auth_oauthlib.flow import InstalledAppFlow; from google.oauth2.credentials import Credentials"
+        import_test = "import flask; import flask_wtf; import waitress; import pypdf; from PIL import Image; from google_auth_oauthlib.flow import InstalledAppFlow; from google.oauth2.credentials import Credentials"
 
         result = subprocess.run(
             [str(venv_python), "-c", import_test],

@@ -692,6 +692,7 @@ echo "Installing web dashboard and core dependencies..."
 "$VENV_DIR/bin/python3" -m pip install \
     flask>=3.0.0 \
     werkzeug>=3.0.0 \
+    flask-wtf>=1.2.0 \
     waitress>=3.0.0 \
     gevent>=24.0.0 \
     greenlet>=3.0.0 \
