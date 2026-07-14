@@ -447,14 +447,22 @@
             border-radius: 4px;
             border: 1px solid #21262d;
             font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 44px;
         }
         .metric-label {
             color: #8b949e;
-            margin-right: 6px;
+            font-size: 0.7rem;
+            margin-bottom: 2px;
         }
         .metric-value {
             color: #e6edf3;
             font-weight: 600;
+            font-size: 0.85rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         /* Action Links */
@@ -886,12 +894,6 @@
                                     </div>
                                 </div>
                                 ${actionsHtml}
-                                ${client.log_file ? `
-                                <div style="margin-top: 12px; padding: 8px; background: #0d1117; border-radius: 4px; border: 1px solid #21262d;">
-                                    <div style="font-size: 0.7rem; color: #8b949e; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Log File</div>
-                                    <div style="font-size: 0.75rem; color: #58a6ff; font-family: monospace; word-break: break-all;">${client.log_file}</div>
-                                </div>
-                                ` : ''}
                             </div>
                         `;
                         }).join('');
