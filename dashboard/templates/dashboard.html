@@ -1069,7 +1069,7 @@
                             body: JSON.stringify({
                                 mode: workflow.mode,
                                 clients: workflow.clients,
-                                flags: workflow.flags || ['--skip-preflight']
+                                flags: (workflow.flags || ['--skip-preflight']).concat(['--no-dashboard'])
                             })
                         });
                         const startData = await startResp.json();

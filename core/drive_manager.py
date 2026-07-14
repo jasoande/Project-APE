@@ -116,6 +116,7 @@ class DriveManager:
 
         self.folder_id = None
         self.service = None
+        self._creds = None
         self.temp_dir = None
         self.using_cache = False
 
@@ -200,6 +201,7 @@ class DriveManager:
         """
         try:
             creds = self._oauth_authenticate()
+            self._creds = creds
             self.service = build('drive', 'v3', credentials=creds)
             logger.info(f"[{self.client_id}] 🔐 Authenticated with Google Drive")
             return True
@@ -317,23 +319,24 @@ class DriveManager:
             file_id = file_info['id']
             file_name = file_info['name']
             mime_type = file_info['mimeType']
+            thread_service = build('drive', 'v3', credentials=self._creds)
             try:
                 if mime_type.startswith('application/vnd.google-apps.'):
                     if self.export_google_docs:
-                        self._export_google_doc(file_id, file_name, mime_type, target_dir)
+                        self._export_google_doc(file_id, file_name, mime_type, target_dir, service=thread_service)
                         return True
                     else:
                         logger.info(f"[{self.client_id}]    ⏭️  Skipping Google Doc: {file_name}")
                         return False
                 else:
-                    self._download_file(file_id, file_name, mime_type, target_dir)
+                    self._download_file(file_id, file_name, mime_type, target_dir, service=thread_service)
                     return True
             except Exception as e:
                 logger.warning(f"[{self.client_id}]    ⚠️  Failed to download {file_name}: {e}")
                 return False
 
         downloaded = 0
-        max_workers = min(8, len(downloadable)) if downloadable else 1
+        max_workers = min(4, len(downloadable)) if downloadable else 1
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(_download_one, f): f for f in downloadable}
             for future in as_completed(futures):
@@ -418,7 +421,7 @@ class DriveManager:
             else:
                 raise DriveError(f"Failed to list folder files: {e}")
 
-    def _download_file(self, file_id: str, file_name: str, mime_type: str, target_dir: Path):
+    def _download_file(self, file_id: str, file_name: str, mime_type: str, target_dir: Path, service=None):
         """
         Download a single file.
 
@@ -427,10 +430,12 @@ class DriveManager:
             file_name: File name
             mime_type: File MIME type
             target_dir: Local directory to download to
+            service: Optional Drive API service (for thread safety)
         """
         logger.info(f"[{self.client_id}]       ⬇️  {file_name}")
 
-        request = self.service.files().get_media(fileId=file_id)
+        svc = service or self.service
+        request = svc.files().get_media(fileId=file_id)
         file_path = target_dir / file_name
 
         try:
@@ -449,7 +454,8 @@ class DriveManager:
         file_id: str,
         file_name: str,
         mime_type: str,
-        target_dir: Path
+        target_dir: Path,
+        service=None
     ):
         """
         Export Google Workspace file to compatible format.
@@ -459,6 +465,7 @@ class DriveManager:
             file_name: File name
             mime_type: Google Workspace MIME type
             target_dir: Local directory to export to
+            service: Optional Drive API service (for thread safety)
         """
         if mime_type not in self.EXPORT_FORMATS:
             logger.warning(
@@ -474,7 +481,8 @@ class DriveManager:
 
         logger.info(f"[{self.client_id}]       📄 {export_name} (exported from Google Doc)")
 
-        request = self.service.files().export_media(fileId=file_id, mimeType=export_mime)
+        svc = service or self.service
+        request = svc.files().export_media(fileId=file_id, mimeType=export_mime)
         file_path = target_dir / export_name
 
         try:

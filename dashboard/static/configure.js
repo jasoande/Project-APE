@@ -546,7 +546,7 @@ async function saveAndLaunch() {
         const workflowPayload = {
             mode: globalSettings.mode || 'fast',
             clients: clientsData.map(c => c.id),
-            flags: ['--skip-preflight']
+            flags: ['--skip-preflight', '--no-dashboard']
         };
 
         const workflowResponse = await fetch('/api/start-workflow', {

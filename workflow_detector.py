@@ -103,6 +103,7 @@ def detect_workflow(vars_module) -> Dict[str, Any]:
     if not cache_enabled:
         flags.append('--refresh')
     flags.append('--skip-preflight')
+    flags.append('--no-dashboard')
 
     # Get client details for display
     client_details = []
