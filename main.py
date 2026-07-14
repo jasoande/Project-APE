@@ -420,6 +420,14 @@ def main():
             old_status.unlink()
             logger.info(f"   Removed: {old_status.name}")
 
+    # Clean up old checkpoint files unless resuming
+    if not args.resume:
+        checkpoint_dir = LOGS_DIR / ".checkpoints"
+        if checkpoint_dir.exists():
+            for old_checkpoint in checkpoint_dir.glob("*.json"):
+                old_checkpoint.unlink()
+                logger.info(f"   Removed checkpoint: {old_checkpoint.name}")
+
     # Initialize process manager with unique run ID
     run_id = str(int(time.time()))
     manager = ProcessManager(run_id=run_id)

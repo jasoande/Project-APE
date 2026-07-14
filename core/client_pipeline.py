@@ -238,7 +238,7 @@ class ClientPipeline:
             True if successful, False otherwise
         """
         try:
-            # Load checkpoint for resume
+            # Load checkpoint for resume, or clear stale checkpoints
             if self.resume and self.checkpoint_mgr:
                 checkpoint = self.checkpoint_mgr.load()
                 if checkpoint:
@@ -249,6 +249,8 @@ class ClientPipeline:
                         self.industry = checkpoint.industry
                     if checkpoint.subsegments:
                         self.subsegments = checkpoint.subsegments
+            elif self.checkpoint_mgr:
+                self.checkpoint_mgr.clear()
 
             logger.info(f"[{self.client_id}] ========================================")
             logger.info(f"[{self.client_id}] Starting pipeline for {self.client_name}")
